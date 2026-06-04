@@ -268,6 +268,26 @@
   letter-spacing: 0.05em;
 }
 
+/* Alerta de Error estilizada con los tonos oscuros de tu paleta */
+.login-error-alert {
+  background-color: #fdf2f2;
+  border-left: 4px solid #de3434;
+  color: #9b1c1c;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Responsividad */
 @media (max-width: 480px) {
   .login-box-container {

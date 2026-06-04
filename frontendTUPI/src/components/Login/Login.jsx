@@ -1,31 +1,57 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, User, Lock, ExternalLink, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // Hook para navegación interna
+import { Eye, EyeOff, User, Lock, ExternalLink, Loader2, AlertCircle } from 'lucide-react';
+import axios from 'axios';
 import './Login.css';
 
 const Login = () => {
+  const navigate = useNavigate(); // Inicializamos el router para la redirección
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(''); // Estado para capturar errores del Backend
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
 
-    console.log('Autenticando en el ecosistema TUPI...', { identifier, password });
+    try {
+      // Uso de la variable de entorno según el estándar de Vite
+      const API_URL = import.meta.env.VITE_API_URL || 'ht:5000';
+      
+      const respuesta = await axios.post(`${API_URL}/api/auth/login`, {
+        identifier,
+        password
+      });
 
-    setTimeout(() => {
+
+      const { token, user, permisos } = respuesta.data;
+
+      // Guardamos los datos de la sesión de forma local
+      localStorage.setItem('tupi_token', token);
+      localStorage.setItem('tupi_user', JSON.stringify(user));
+      localStorage.setItem('tupi_permisos', JSON.stringify(permisos));
+
+      console.log(`¡Bienvenido ${user.nombre}! Permisos cargados.`);
+
+      // Redirección interna y limpia al Dashboard (activa tu spinner de carga inicial)
+      navigate('/dashboard');
+
+    } catch (err) {
+      // Capturamos el mensaje de error configurado en el authController
+      setError(err.response?.data?.message || 'Error de conexión con el servidor.');
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   return (
     <div className="login-container">
-      
-      {/* Contenedor centralizado (Box Container) */}
       <div className="login-box-container">
         
-        {/* Cabecera Institucional */}
+        {/* Cabecera */}
         <div className="login-header">
           <img 
             src="/logo-unne.png" 
@@ -36,11 +62,19 @@ const Login = () => {
           <p className="login-subtitle">Plan de Compras y Correlatos</p>
         </div>
 
+        {/* Feedback de Error Interactivo */}
+        {error && (
+          <div className="login-error-alert">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="login-form">
           
           <div className="form-group">
-            <label>Usuario / Legajo</label>
+            <label>Usuario / Correo / DNI</label>
             <div className="input-wrapper">
               <span className="input-icon-left">
                 <User size={16} />
@@ -50,7 +84,7 @@ const Login = () => {
                 required
                 disabled={isLoading}
                 className="login-input"
-                placeholder="ejemplo@unne.edu.ar"
+                placeholder="DNI, legajo o correo"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
               />
@@ -89,7 +123,6 @@ const Login = () => {
             </a>
           </div>
 
-          {/* Botón Dorado con Texto en Gris-Azul Oscuro */}
           <button type="submit" className="btn-submit" disabled={isLoading}>
             {isLoading ? (
               <>
@@ -104,7 +137,6 @@ const Login = () => {
 
         <div className="login-divider">O</div>
 
-        {/* Botón Entorno UNNE */}
         <button type="button" className="btn-unne" disabled={isLoading}>
           <span>Ingresar con Entorno UNNE</span>
           <ExternalLink size={14} />

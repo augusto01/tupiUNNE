@@ -1,0 +1,279 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  LayoutDashboard, 
+  FileSpreadsheet, 
+  Layers, 
+  Settings, 
+  LogOut, 
+  Building2, 
+  Menu,
+  FileCheck,
+  ChevronDown,
+  PlusCircle,
+  History,
+  ListFilter
+} from 'lucide-react';
+import './Dashboard.css';
+
+const Dashboard = () => {
+  // Estado para el spinner de carga de pantalla completa al montar el componente
+  const [isLoading, setIsLoading] = useState(true);
+  const [usuario, setUsuario] = useState({ nombre: 'Usuario', role: 'Operador' });
+  const [entorno, setEntorno] = useState({ facultad: 'UNNE', rol: 'Operador' });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Control individual de los submenús dinámicos (Dropdowns)
+  const [openDropdowns, setOpenDropdowns] = useState({
+    compras: false,
+    correlatos: false
+  });
+
+  // Estado temporal de control de navegación interna
+  const [currentSection, setCurrentSection] = useState('panel');
+
+  useEffect(() => {
+    // Sincronización del preloader con un micro-delay para la transición fluida
+    const timer = setTimeout(() => {
+      const userLocal = JSON.parse(localStorage.getItem('tupi_user'));
+      const permisosLocal = JSON.parse(localStorage.getItem('tupi_permisos'));
+
+      if (userLocal) {
+        setUsuario({
+          nombre: userLocal.nombre || 'Usuario',
+          role: userLocal.role || 'Operador'
+        });
+      }
+      
+      if (permisosLocal && permisosLocal.length > 0) {
+        setEntorno({
+          facultad: permisosLocal[0].facultad_codigo,
+          rol: permisosLocal[0].rol_nombre
+        });
+      }
+      
+      // Apagamos el spinner gigante de entrada
+      setIsLoading(false);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const toggleDropdown = (key) => {
+    setOpenDropdowns(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = '/';
+  };
+
+  const getIniciales = (name) => {
+    if (!name) return 'U';
+    return name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+  };
+
+  // ==========================================================================
+  // RENDER DEL PRELOADER / SPINNER INICIAL DE PANTALLA COMPLETA
+  // ==========================================================================
+  if (isLoading) {
+    return (
+      <div className="dashboard-preload-container">
+        <div className="big-spinner"></div>
+        <p className="preload-text">Iniciando Ecosistema TUPI</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="dashboard-layout content-section-fade">
+      
+      {/* CAPA DE CAPTURA PARA MÓVIL (BACKDROP BLUR) */}
+      <div 
+        className={`sidebar-overlay ${isMobileMenuOpen ? 'visible' : ''}`}
+        onClick={() => setIsMobileMenuOpen(false)}
+      ></div>
+      
+      {/* SIDEBAR LATERAL CON TRANSICIONES DE ACORDEÓN */}
+      <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+        <div className="sidebar-brand">
+          <img src="/logo-unne.png" alt="UNNE" className="sidebar-logo-img" />
+          <div className="sidebar-brand-text">TUPI<span>.</span></div>
+        </div>
+
+        <div className="sidebar-menu-wrapper">
+          <span className="menu-category">Módulos Core</span>
+          
+          <button 
+            onClick={() => { setCurrentSection('panel'); setIsMobileMenuOpen(false); }}
+            className={`sidebar-item ${currentSection === 'panel' ? 'active' : ''}`}
+          >
+            <div className="sidebar-item-content">
+              <LayoutDashboard size={16} />
+              <span>Panel Principal</span>
+            </div>
+          </button>
+
+          {/* DESPLEGABLE 1: PLANES DE COMPRAS */}
+          <div>
+            <button 
+              className="sidebar-dropdown-toggle"
+              onClick={() => toggleDropdown('compras')}
+            >
+              <div className="sidebar-item-content">
+                <FileSpreadsheet size={16} />
+                <span>Planes de Compras</span>
+              </div>
+              <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.compras ? 'rotated' : ''}`} />
+            </button>
+            <ul className={`sidebar-submenu ${openDropdowns.compras ? 'open' : ''}`}>
+              <div className="submenu-inner">
+                <li>
+                  <a href="#nueva-compra" className="sidebar-subitem">
+                    <PlusCircle size={12} />
+                    <span>Nueva Solicitud</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="#historial-compras" className="sidebar-subitem">
+                    <History size={12} />
+                    <span>Ver Historial</span>
+                  </a>
+                </li>
+              </div>
+            </ul>
+          </div>
+
+          {/* DESPLEGABLE 2: GESTIÓN DE CORRELATOS */}
+          <div>
+            <button 
+              className="sidebar-dropdown-toggle"
+              onClick={() => toggleDropdown('correlatos')}
+            >
+              <div className="sidebar-item-content">
+                <Layers size={16} />
+                <span>Gestión de Correlatos</span>
+              </div>
+              <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.correlatos ? 'rotated' : ''}`} />
+            </button>
+            <ul className={`sidebar-submenu ${openDropdowns.correlatos ? 'open' : ''}`}>
+              <div className="submenu-inner">
+                <li>
+                  <a href="#vincular" className="sidebar-subitem">
+                    <PlusCircle size={12} />
+                    <span>Vincular Ítems</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="#matrices" className="sidebar-subitem">
+                    <ListFilter size={12} />
+                    <span>Matrices de Control</span>
+                  </a>
+                </li>
+              </div>
+            </ul>
+          </div>
+
+          <span className="menu-category">Auditoría</span>
+          <button className="sidebar-item">
+            <div className="sidebar-item-content">
+              <FileCheck size={16} />
+              <span>Validaciones</span>
+            </div>
+          </button>
+
+          <span className="menu-category">Configuración</span>
+          <button className="sidebar-item">
+            <div className="sidebar-item-content">
+              <Settings size={16} />
+              <span>Ajustes</span>
+            </div>
+          </button>
+        </div>
+
+        <div className="sidebar-footer">
+          <button onClick={handleLogout} className="btn-logout">
+            <LogOut size={16} />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* CONTENEDOR DE CONTENIDOS PRINCIPAL */}
+      <div className="dashboard-main">
+        
+        {/* NAVBAR SUPERIOR ULTRA-MINIMALISTA */}
+        <nav className="dashboard-navbar">
+          <button 
+            className="menu-toggle-btn" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            <Menu size={18} />
+          </button>
+
+          {/* Solo el saludo esencial */}
+          <div className="nav-welcome">
+            <h2>Hola, {usuario.nombre.split(' ')[0]}</h2>
+          </div>
+
+          <div className="nav-profile-section">
+            {/* Badge estilizado del entorno */}
+            <div className="nav-faculty-badge">
+              <Building2 size={12} />
+              <span>{entorno.facultad}</span>
+            </div>
+
+            {/* Bloque de usuario con separador y avatar dorado */}
+            <div className="nav-user-info">
+              <div className="user-text-meta">
+                <span className="user-name-label">{usuario.nombre}</span>
+                <span className="user-role-tag">{entorno.rol}</span>
+              </div>
+              <div className="user-avatar-circle">
+                {getIniciales(usuario.nombre)}
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        {/* ÁREA DE TRABAJO DINÁMICA CON MARCA DE AGUA */}
+        <main className="dashboard-content-area">
+          <img 
+            src="/logo-unne.png" 
+            alt="UNNE" 
+            className="unne-watermark" 
+          />
+
+          <div className="content-wrapper-rel">
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700 }}>Resumen Operativo</h3>
+              <p style={{ color: '#64748b', margin: '0.2rem 0 0 0', fontSize: '0.85rem' }}>
+                Ecosistema unificado de control de presupuesto.
+              </p>
+            </div>
+
+            <div className="dashboard-cards-grid">
+              <div className="stat-card">
+                <h4 style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Planes Cargados</h4>
+                <p style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0.4rem 0 0 0', color: '#0a111e' }}>12</p>
+              </div>
+              <div className="stat-card">
+                <h4 style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Pendientes de Visado</h4>
+                <p style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0.4rem 0 0 0', color: '#A08D52' }}>4</p>
+              </div>
+              <div className="stat-card">
+                <h4 style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Correlatos Verificados</h4>
+                <p style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0.4rem 0 0 0', color: '#10b981' }}>98%</p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+    </div>
+  );
+};
+
+export default Dashboard;
