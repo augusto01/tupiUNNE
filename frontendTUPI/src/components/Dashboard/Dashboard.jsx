@@ -13,6 +13,7 @@ import {
   History,
   ListFilter
 } from 'lucide-react';
+import UsuariosCRUD from '../Usuarios/UsuariosCRUD'; // Importación del componente de gestión
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -22,10 +23,11 @@ const Dashboard = () => {
   const [entorno, setEntorno] = useState({ facultad: 'UNNE', rol: 'Operador' });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Control individual de los submenús dinámicos (Dropdowns)
+  // Control individual de los submenús dinámicos (Dropdowns unificados)
   const [openDropdowns, setOpenDropdowns] = useState({
     compras: false,
-    correlatos: false
+    correlatos: false,
+    usuarios: false 
   });
 
   // Estado temporal de control de navegación interna
@@ -105,6 +107,46 @@ const Dashboard = () => {
 
         <div className="sidebar-menu-wrapper">
           <span className="menu-category">Módulos Core</span>
+
+          {/* ACCESO EXCLUSIVO: DESPLEGABLE DE USUARIOS (SUPER USUARIO) */}
+          {entorno.rol === 'Superusuario' && (
+            <div>
+              <button 
+                className="sidebar-dropdown-toggle"
+                onClick={() => toggleDropdown('usuarios')}
+              >
+                <div className="sidebar-item-content">
+                  <Building2 size={16} />
+                  <span>Gestión de Usuarios</span>
+                </div>
+                <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.usuarios ? 'rotated' : ''}`} />
+              </button>
+              <ul className={`sidebar-submenu ${openDropdowns.usuarios ? 'open' : ''}`}>
+                <div className="submenu-inner">
+                  <li>
+                    <button 
+                      onClick={() => { setCurrentSection('usuarios-crear'); setIsMobileMenuOpen(false); }}
+                      className={`sidebar-subitem ${currentSection === 'usuarios-crear' ? 'active' : ''}`}
+                      style={{ background: 'transparent', border: 'none', width: '100%', textLeft: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <PlusCircle size={12} />
+                      <span>Agregar Usuario</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button 
+                      onClick={() => { setCurrentSection('usuarios-ver'); setIsMobileMenuOpen(false); }}
+                      className={`sidebar-subitem ${currentSection === 'usuarios-ver' ? 'active' : ''}`}
+                      style={{ background: 'transparent', border: 'none', width: '100%', textLeft: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
+                      <ListFilter size={12} />
+                      <span>Ver Usuarios</span>
+                    </button>
+                  </li>
+                </div>
+              </ul>
+            </div>
+          )}
           
           <button 
             onClick={() => { setCurrentSection('panel'); setIsMobileMenuOpen(false); }}
@@ -240,34 +282,23 @@ const Dashboard = () => {
 
         {/* ÁREA DE TRABAJO DINÁMICA CON MARCA DE AGUA */}
         <main className="dashboard-content-area">
-          <img 
-            src="/logo-unne.png" 
-            alt="UNNE" 
-            className="unne-watermark" 
-          />
-
+          <img src="/logo-unne.png" alt="UNNE" className="unne-watermark" />
+          
           <div className="content-wrapper-rel">
-            <div style={{ marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.35rem', margin: 0, fontWeight: 700 }}>Resumen Operativo</h3>
-              <p style={{ color: '#64748b', margin: '0.2rem 0 0 0', fontSize: '0.85rem' }}>
-                Ecosistema unificado de control de presupuesto.
-              </p>
-            </div>
+            {currentSection === 'panel' && (
+              <div className="content-section-fade">
+                {/* Acá va tu cuadrícula existente de tarjetas de Resumen Operativo */}
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Panel Principal</h3>
+                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Seleccione un módulo del menú lateral para comenzar a operar.</p>
+              </div>
+            )}
 
-            <div className="dashboard-cards-grid">
-              <div className="stat-card">
-                <h4 style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Planes Cargados</h4>
-                <p style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0.4rem 0 0 0', color: '#0a111e' }}>12</p>
-              </div>
-              <div className="stat-card">
-                <h4 style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Pendientes de Visado</h4>
-                <p style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0.4rem 0 0 0', color: '#A08D52' }}>4</p>
-              </div>
-              <div className="stat-card">
-                <h4 style={{ margin: 0, color: '#64748b', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Correlatos Verificados</h4>
-                <p style={{ fontSize: '1.75rem', fontWeight: 800, margin: '0.4rem 0 0 0', color: '#10b981' }}>98%</p>
-              </div>
-            </div>
+            {(currentSection === 'usuarios-ver' || currentSection === 'usuarios-crear') && (
+              <UsuariosCRUD 
+                sectionInicial={currentSection} 
+                setSection={setCurrentSection} 
+              />
+            )}
           </div>
         </main>
       </div>

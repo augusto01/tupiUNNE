@@ -1,298 +1,423 @@
-/* Paleta de Colores Ajustada (Mezcla Corporativa) */
+/* ==========================================================================
+   PALETA DE COLORES ECOSISTEMA TUPI (UNNE)
+   ========================================================================== */
 :root {
-  /* Tu nueva base: Gris oscuro mezclado con Azul Corporativo (Charcoal/Navy profundo) */
-  --dominante-oscuro: #0a111e; 
-  --dominante-suave: #141d2b;
-  
-  /* Tus Dorados de interacción y destaque */
+  --dominante-oscuro: #060a12; 
+  --dominante-suave: #0d131f;
   --dorado-principal: #A08D52;
-  --dorado-secundario: #A08A52;
-  
-  /* Tus Grises y ocres de soporte */
-  --gris-corporativo: #51493C;
-  --ocre-soporte: #817959;
-  
-  /* Auxiliares de interfaz */
-  --blanco-fondo: #ffffff;
-  --gris-claro: #f4f6f9; /* Fondo de pantalla suave */
   --gris-linea: #e2e8f0;
+  --gris-claro: #f8fafc;
+  
+  --blanco-fondo: #ffffff;
+  --texto-principal: #0f172a;
+  --texto-secundario: #64748b;
+  
+  --transicion-fluida: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Pantalla Completa */
-.login-container {
-  min-height: 100vh;
-  width: 100vw;
-  background-color: var(--gris-claro);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 1.5rem;
+/* RESET TOTAL PARA EVITAR SCROLL */
+*, *::before, *::after {
   box-sizing: border-box;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-}
-
-/* El Container del Formulario con bordes corporativos sutiles */
-.login-box-container {
-  width: 100%;
-  max-width: 420px;
-  background-color: var(--blanco-fondo);
-  border-radius: 6px;
-  box-shadow: 0 10px 30px rgba(10, 17, 30, 0.04); /* Sombra con el matiz azul-gris */
-  border-top: 4px solid var(--dominante-oscuro); /* Remate superior con la nueva mezcla */
-  padding: 2.75rem 2.25rem;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
-}
-
-/* Sección del Logo Central */
-.login-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.unne-logo-img {
-  width: auto;
-  height: 85px;
-  object-fit: contain;
-  margin-bottom: 1rem;
-}
-
-.login-title {
-  font-size: 1.85rem;
-  font-weight: 800;
-  color: var(--dominante-oscuro); /* Aplicado en el título */
   margin: 0;
-  letter-spacing: 0.06em;
-}
-
-.login-subtitle {
-  font-size: 0.75rem;
-  color: var(--gris-corporativo);
-  font-weight: 600;
-  text-transform: uppercase;
-  margin-top: 0.35rem;
-  letter-spacing: 0.12em;
-}
-
-/* Formulario */
-.login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.form-group label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--dominante-suave);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Inputs Transparentes Estilo Minimalista */
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon-left {
-  position: absolute;
-  left: 0.25rem;
-  color: var(--dominante-suave);
-  display: flex;
-  align-items: center;
-  pointer-events: none;
-  opacity: 0.7;
-}
-
-.login-input {
-  width: 100%;
-  padding: 0.65rem 1rem 0.65rem 2.25rem;
-  background-color: transparent;
-  border: none;
-  border-bottom: 2px solid var(--gris-linea);
-  border-radius: 0;
-  font-size: 0.95rem;
-  color: var(--dominante-oscuro);
-  outline: none;
-  transition: all 0.3s ease;
-  box-sizing: border-box;
-}
-
-/* El foco del input se activa con tu Dorado de destaque */
-.login-input:focus {
-  border-bottom-color: var(--dorado-principal);
-}
-
-.login-input-password {
-  padding-right: 2.5rem;
-}
-
-.password-toggle-btn {
-  position: absolute;
-  right: 0.25rem;
-  background: none;
-  border: none;
-  color: var(--gris-corporativo);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
   padding: 0;
 }
 
-.password-toggle-btn:hover {
-  color: var(--dorado-principal);
+html, body {
+  width: 100%;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  background-color: var(--dominante-oscuro);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.forgot-password-container {
-  text-align: right;
-  margin-top: -0.25rem;
+/* CONTENEDOR SPLIT AJUSTADO */
+.login-split-container {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
 }
 
-.forgot-password-link {
+/* ==========================================================================
+   ENTORNO OSCURO CONFIGURADO POR DEFECTO PARA MÓVILES
+   ========================================================================== */
+.login-form-side {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.25rem;
+  background-color: var(--dominante-oscuro);
+  background-image: radial-gradient(circle at center, var(--dominante-suave) 0%, var(--dominante-oscuro) 100%);
+}
+
+.login-inner-box {
+  width: 100%;
+  max-width: 350px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem; /* Espaciado compacto anti-scroll */
+}
+
+/* Cabecera e Identidad Visual Inline */
+.login-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.1rem;
+}
+
+.login-inline-logo {
+  height: 26px;
+  width: auto;
+  object-fit: contain;
+}
+
+.tupi-badge-logo {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.tupi-badge-logo span { color: var(--dorado-principal); }
+.login-title-modern { font-size: 1.55rem; font-weight: 800; color: #ffffff; letter-spacing: -0.02em; }
+.login-subtitle-modern { font-size: 0.8rem; color: #94a3b8; margin-top: 0.15rem; }
+
+/* Envoltorios de Formulario */
+.login-form-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.form-field-group label {
   font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--gris-corporativo);
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+/* Estilos de Contenedores de Inputs (Oscuro en móvil) */
+.input-interactive-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  transition: all 0.2s var(--transicion-fluida);
+}
+
+.input-interactive-container:focus-within {
+  border-color: var(--dorado-principal);
+  background-color: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 0 1px var(--dorado-principal);
+}
+
+.field-icon-left {
+  position: absolute;
+  left: 0.8rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.interactive-login-input {
+  width: 100%;
+  padding: 0.7rem 1rem 0.7rem 2.4rem;
+  background: transparent;
+  border: none;
+  font-size: 0.875rem;
+  color: #ffffff;
+  outline: none;
+}
+
+.input-password-padding { padding-right: 2.4rem; }
+
+.btn-toggle-password-view {
+  position: absolute;
+  right: 0.8rem;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+/* Captcha Adaptado */
+.captcha-minimal-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.captcha-challenge-box {
+  flex: 1.2;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffffff;
+  font-family: ui-monospace, monospace;
+}
+
+.btn-refresh-captcha {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.captcha-input-field {
+  flex: 1;
+  padding: 0.7rem;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #ffffff;
+  outline: none;
+  text-align: center;
+  font-weight: 600;
+}
+
+.captcha-input-field:focus { border-color: var(--dorado-principal); }
+
+.captcha-input-field::-webkit-outer-spin-button,
+.captcha-input-field::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.meta-options-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.link-forgot-password-modern {
+  font-size: 0.75rem;
+  color: #94a3b8;
   text-decoration: none;
 }
 
-.forgot-password-link:hover {
-  color: var(--dorado-principal);
+.link-forgot-password-modern:hover {
+  color: #ffffff;
   text-decoration: underline;
 }
 
-/* BOTÓN INICIAR SESIÓN - Dorado Principal con texto oscuro de alta legibilidad */
-.btn-submit {
-  background-color: var(--dorado-principal);
-  color: var(--dominante-oscuro); /* Texto en el gris-azul oscuro para contraste premium */
+/* Botones en Móvil */
+.btn-submit-modern {
+  background-color: #ffffff;
+  color: var(--dominante-oscuro);
   border: none;
-  border-radius: 4px;
-  padding: 0.9rem;
+  border-radius: 8px;
+  padding: 0.75rem;
   font-size: 0.875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
 }
 
-.btn-submit:hover:not(:disabled) {
-  background-color: var(--dorado-secundario);
-}
-
-.btn-submit:disabled {
-  background-color: var(--ocre-soporte);
-  color: var(--dominante-suave);
-  opacity: 0.6;
+.btn-submit-modern:disabled {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.18);
   cursor: not-allowed;
 }
 
-/* Spinner Animado */
-.spinner {
-  animation: rotate 1s linear infinite;
-  width: 18px;
-  height: 18px;
-}
-
-@keyframes rotate {
-  100% { transform: rotate(360deg); }
-}
-
-/* Divisor "O" */
-.login-divider {
+.ui-divider-text {
   display: flex;
   align-items: center;
   text-align: center;
-  color: var(--gris-corporativo);
-  font-size: 0.75rem;
-  font-weight: 600;
+  color: #475569;
+  font-size: 0.7rem;
 }
 
-.login-divider::before,
-.login-divider::after {
+.ui-divider-text::before, .ui-divider-text::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid var(--gris-linea);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
+.ui-divider-text:not(:empty)::before { margin-right: 0.75rem; }
+.ui-divider-text:not(:empty)::after { margin-left: 0.75rem; }
 
-.login-divider:not(:empty)::before { margin-right: 1rem; }
-.login-divider:not(:empty)::after { margin-left: 1rem; }
-
-/* Botón Entorno UNNE - Contorno con la nueva mezcla Gris/Azul */
-.btn-unne {
+.btn-alternative-unne {
   background-color: transparent;
-  color: var(--dominante-oscuro);
-  border: 1px solid var(--dominante-oscuro);
-  border-radius: 4px;
-  padding: 0.9rem;
-  font-size: 0.875rem;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.7rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
-  transition: all 0.2s ease;
-  width: 100%;
-  box-sizing: border-box;
 }
 
-.btn-unne:hover {
-  background-color: rgba(10, 17, 30, 0.03); /* Sutil feedback con la base mezclada */
-}
-
-/* Footer */
-.login-footer {
-  font-size: 0.75rem;
-  color: var(--gris-corporativo);
-  margin-top: 2rem;
+.login-form-side footer.login-footer-minimal {
+  font-size: 0.65rem;
+  color: #475569;
   text-align: center;
-  letter-spacing: 0.05em;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 0.7rem;
 }
 
-/* Alerta de Error estilizada con los tonos oscuros de tu paleta */
-.login-error-alert {
-  background-color: #fdf2f2;
-  border-left: 4px solid #de3434;
-  color: #9b1c1c;
-  padding: 0.75rem 1rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 500;
+/* Oculto por defecto en móvil */
+.login-visual-side { display: none; }
+
+.alert-error-modern {
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  animation: fadeIn 0.3s ease;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+.spinner-rotation {
+  animation: spin 1s linear infinite;
+  width: 14px;
+  height: 14px;
 }
+@keyframes spin { 100% { transform: rotate(360deg); } }
 
-/* Responsividad */
-@media (max-width: 480px) {
-  .login-box-container {
-    padding: 2rem 1.25rem;
-    box-shadow: none;
-    background-color: transparent;
+/* ==========================================================================
+   MEDIA QUERY: DESKTOP EXPERIENCES (Vistas >= 960px)
+   ========================================================================== */
+@media (min-width: 960px) {
+  .login-form-side {
+    flex: 1;
+    width: auto;
+    background-color: var(--blanco-fondo);
+    background-image: none;
+    padding: 2rem;
+  }
+
+/* Inversión Cromática Limpia para el Panel Operativo */
+.tupi-badge-logo { color: var(--texto-principal); }
+.login-title-modern { 
+    font-size: 1.55rem; 
+    font-weight: 800; 
+    color: var(--texto-principal);  
+    letter-spacing: -0.02em; 
+    margin-top: 2rem; 
+  }  
+.login-subtitle-modern { color: var(--texto-secundario); }
+  .form-field-group label { color: var(--texto-principal); }
+  
+  .input-interactive-container {
+    background-color: var(--gris-claro);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+  }
+  .input-interactive-container:focus-within {
+    border-color: var(--texto-principal);
+    background-color: var(--blanco-fondo);
+    box-shadow: 0 0 0 1px var(--texto-principal);
+  }
+  .interactive-login-input { color: var(--texto-principal); }
+  
+  .captcha-challenge-box {
+    background-color: var(--gris-claro);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    color: var(--texto-principal);
+  }
+  .captcha-input-field {
+    border: 1px solid var(--gris-linea);
+    color: var(--texto-principal);
+    background-color: var(--blanco-fondo);
+  }
+  .captcha-input-field:focus { border-color: var(--texto-principal); }
+  
+  .link-forgot-password-modern { color: var(--texto-secundario); }
+  .link-forgot-password-modern:hover { color: var(--texto-principal); }
+  
+  .btn-submit-modern {
+    background-color: var(--dominante-oscuro);
+    color: var(--blanco-fondo);
+  }
+  .btn-submit-modern:hover:not(:disabled) { background-color: #111827; }
+  .btn-submit-modern:disabled {
+    background-color: #f1f5f9;
+    color: #94a3b8;
+  }
+  
+  .ui-divider-text { color: #94a3b8; }
+  .ui-divider-text::before, .ui-divider-text::after { border-bottom: 1px solid var(--gris-linea); }
+  
+  .btn-alternative-unne {
+    background-color: var(--blanco-fondo);
+    color: var(--texto-principal);
+    border: 1px solid var(--gris-linea);
+  }
+  .btn-alternative-unne:hover { background-color: var(--gris-claro); }
+  .login-form-side footer.login-footer-minimal { border-top: 1px solid #f8fafc; color: #94a3b8; }
+  
+  .alert-error-modern {
+    background-color: #fef2f2;
+    border: 1px solid #fee2e2;
+    color: #991b1b;
+  }
+
+  /* Despliegue de Panel Derecho */
+  .login-visual-side {
+    display: flex;
+    flex: 1.2;
+    height: 100%;
+    background-color: var(--dominante-suave);
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(6, 10, 18, 0.95) 0, transparent 60%),
+      radial-gradient(at 100% 100%, rgba(160, 141, 82, 0.04) 0, transparent 50%);
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 3rem;
+  }
+
+  .visual-center-content {
+    max-width: 440px;
+    margin: auto 0;
+  }
+
+  .visual-hero-text {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.25;
+    margin-bottom: 1rem;
+    letter-spacing: -0.03em;
+  }
+  .visual-hero-text span { color: var(--dorado-principal); }
+  .visual-description-text { font-size: 0.92rem; color: #94a3b8; line-height: 1.6; }
+  
+  .visual-footer-metadata {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #475569;
   }
 }

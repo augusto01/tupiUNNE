@@ -500,3 +500,46 @@ html, body {
     width: 50%;
   }
 }
+
+/* ==========================================================================
+   BOTONES Y ACCIONES CRUDS (VERDE MINIMALISTA)
+   ========================================================================== */
+.btn-success-premium {
+  background-color: #e6f4ea !important; /* Verde muy suave de fondo */
+  color: #137333 !important;           /* Texto verde bosque para contraste */
+  border: 1px solid #ceead6 !important;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: var(--transicion-suave);
+}
+
+.btn-success-premium:hover {
+  background-color: #d2e9d6 !important;
+  color: #0b5121 !important;
+  transform: translateY(-1px);
+}
+
+/* Variante para el botón de confirmación del modal */
+.btn-success-solid {
+  background-color: #10b981 !important; /* Esmeralda limpio */
+  color: #ffffff !important;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transicion-suave);
+}
+
+.btn-success-solid:hover {
+  background-color: #059669 !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  transform: translateY(-1px);
+}
