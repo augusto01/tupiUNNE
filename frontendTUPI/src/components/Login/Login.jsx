@@ -6,69 +6,62 @@ const Login = () => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Estado para controlar el Spinner
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setIsLoading(true); // Activa el spinner
+    setIsLoading(true);
 
-    console.log('Enviando datos a TUPI Express...', { identifier, password });
+    console.log('Autenticando en el ecosistema TUPI...', { identifier, password });
 
-    // Simulamos una demora de red de 2 segundos (luego lo reemplazarás por tu Axios)
     setTimeout(() => {
-      setIsLoading(false); // Apaga el spinner
-    }, 2500);
-  };
-
-  const handleUNNELogin = () => {
-    console.log('Redireccionando al entorno central de la universidad...');
+      setIsLoading(false);
+    }, 2000);
   };
 
   return (
     <div className="login-container">
       
-      {/* Caja contenedor del Login (Container) */}
+      {/* Contenedor centralizado (Box Container) */}
       <div className="login-box-container">
         
-        {/* Encabezado Institucional */}
+        {/* Cabecera Institucional */}
         <div className="login-header">
           <img 
             src="/logo-unne.png" 
-            alt="Escudo Universidad Nacional del Nordeste" 
+            alt="UNNE Rectorado" 
             className="unne-logo-img"
           />
-          <h1 className="login-title">TUPÍ</h1>
+          <h1 className="login-title">TUPI</h1>
           <p className="login-subtitle">Plan de Compras y Correlatos</p>
         </div>
 
-        {/* Formulario Corporativo */}
+        {/* Formulario */}
         <form onSubmit={handleSubmit} className="login-form">
           
-          {/* Fila: Identificador de Usuario */}
           <div className="form-group">
             <label>Usuario / Legajo</label>
             <div className="input-wrapper">
               <span className="input-icon-left">
-                <User size={18} />
+                <User size={16} />
               </span>
               <input
                 type="text"
                 required
                 disabled={isLoading}
                 className="login-input"
-                placeholder="ejemplo@unne.edu.ar o usuario"
+                placeholder="ejemplo@unne.edu.ar"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Fila: Contraseña */}
           <div className="form-group">
             <label>Contraseña</label>
             <div className="input-wrapper">
               <span className="input-icon-left">
-                <Lock size={18} />
+                <Lock size={16} />
               </span>
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -85,24 +78,23 @@ const Login = () => {
                 className="password-toggle-btn"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </div>
 
-          {/* Recuperación de Acceso */}
           <div className="forgot-password-container">
             <a href="#" className="forgot-password-link">
-              Gestión de credenciales institucionales
+              Recuperar credenciales de acceso
             </a>
           </div>
 
-          {/* Botón Iniciar Sesión Dorado con Spinner condicional */}
+          {/* Botón Dorado con Texto en Gris-Azul Oscuro */}
           <button type="submit" className="btn-submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="spinner" />
-                <span>VERIFICANDO...</span>
+                <span>Verificando...</span>
               </>
             ) : (
               <span>Iniciar Sesión</span>
@@ -110,18 +102,16 @@ const Login = () => {
           </button>
         </form>
 
-        {/* Separación corporativa */}
         <div className="login-divider">O</div>
 
-        {/* Autenticación Externa */}
-        <button type="button" onClick={handleUNNELogin} className="btn-unne" disabled={isLoading}>
+        {/* Botón Entorno UNNE */}
+        <button type="button" className="btn-unne" disabled={isLoading}>
           <span>Ingresar con Entorno UNNE</span>
-          <ExternalLink size={16} />
+          <ExternalLink size={14} />
         </button>
 
       </div>
 
-      {/* Pie de página de la aplicación */}
       <p className="login-footer">
         &copy; {new Date().getFullYear()} TUPI — Rectorado Universidad Nacional del Nordeste
       </p>
