@@ -12,7 +12,7 @@ import {
   PlusCircle,
   History,
   ListFilter,
-  Users // <-- Añadido correctamente en la importación
+  Users 
 } from 'lucide-react';
 import UsuariosCRUD from '../Usuarios/UsuariosCRUD'; 
 import './Dashboard.css';
@@ -101,7 +101,14 @@ const Dashboard = () => {
       
       {/* SIDEBAR LATERAL CON TRANSICIONES DE ACORDEÓN */}
       <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-        <div className="sidebar-brand">
+        
+        {/* SOLUCIÓN: Cambiado setSection('inicio') por setCurrentSection('panel') */}
+        <div 
+          className="sidebar-brand" 
+          onClick={() => { setCurrentSection('panel'); setIsMobileMenuOpen(false); }} 
+          style={{ cursor: 'pointer' }}
+          title="Ir al Inicio"
+        >
           <img src="/logo-unne.png" alt="UNNE" className="sidebar-logo-img" />
           <div className="sidebar-brand-text">TUPI<span>.</span></div>
         </div>
@@ -117,7 +124,7 @@ const Dashboard = () => {
                 onClick={() => toggleDropdown('usuarios')}
               >
                 <div className="sidebar-item-content">
-                  <Users size={16} /> {/* <-- Solucionado el componente en mayúscula */}
+                  <Users size={16} />
                   <span>Gestión de Usuarios</span>
                 </div>
                 <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.usuarios ? 'rotated' : ''}`} />
@@ -256,19 +263,16 @@ const Dashboard = () => {
             <Menu size={18} />
           </button>
 
-          {/* Solo el saludo esencial */}
           <div className="nav-welcome">
             <h2>Hola, {usuario.nombre.split(' ')[0]}</h2>
           </div>
 
           <div className="nav-profile-section">
-            {/* Badge estilizado del entorno */}
             <div className="nav-faculty-badge">
               <Building2 size={12} />
               <span>{entorno.facultad}</span>
             </div>
 
-            {/* Bloque de usuario con separador y avatar dorado */}
             <div className="nav-user-info">
               <div className="user-text-meta">
                 <span className="user-name-label">{usuario.nombre}</span>
@@ -297,7 +301,7 @@ const Dashboard = () => {
               <UsuariosCRUD 
                 sectionInicial={currentSection} 
                 setSection={setCurrentSection} 
-                />
+              />
             )}
           </div>
         </main>

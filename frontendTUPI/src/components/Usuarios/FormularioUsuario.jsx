@@ -105,7 +105,7 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], onSave, onCancel })
           {userToEdit ? <UserCheck size={24} /> : <UserPlus size={24} />}
         </div>
         <div>
-          <h2>{userToEdit ? 'Modificar Atributos de Usuario' : 'Registrar Nuevo Operador'}</h2>
+          <h2>{userToEdit ? 'Modificar Atributos de Usuario' : 'Nuevo Usuario'}</h2>
           <p>{userToEdit ? 'Actualice las credenciales y la ubicación del agente.' : 'Complete el legajo digital para el alta en el sistema centralizado.'}</p>
         </div>
       </div>
@@ -256,7 +256,7 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], onSave, onCancel })
               ) : (
                 <>
                   <UserPlus size={16} />
-                  <span>Confirmar Alta de Agente</span>
+                  <span>Agregar Usuario</span>
                 </>
               )}
             </button>

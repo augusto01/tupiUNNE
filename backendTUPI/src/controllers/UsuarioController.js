@@ -9,7 +9,7 @@ class UsuarioController {
     try {
       // Traemos todos, ordenados por los más recientes primero
       const [rows] = await db.query(
-        'SELECT id, username, email, nombre, dni, celular, activo, creado_en FROM usuarios ORDER BY id DESC'
+        'SELECT id, username, email, nombre,apellido, dni, celular, activo, creado_en FROM usuarios ORDER BY id DESC'
       );
       return res.status(200).json(rows);
     } catch (error) {
@@ -21,10 +21,10 @@ class UsuarioController {
   // 2. DAR DE ALTA (CREAR)
   async crear(req, res) {
     try {
-      const { username, email, password, nombre, dni, celular } = req.body;
+      const { username, email, password, nombre, apellido, dni, celular } = req.body;
 
       // Validaciones básicas
-      if (!username || !email || !password || !nombre || !dni) {
+      if (!username || !email || !password || !nombre || !apellido || !dni) {
         return res.status(400).json({ error: 'Faltan campos mandatorios.' });
       }
 
@@ -33,7 +33,7 @@ class UsuarioController {
       const hashedPassword = await bcrypt.hash(password, salt);
 
       const [result] = await db.query(
-        `INSERT INTO usuarios (username, email, password, nombre, dni, celular, activo) 
+        `INSERT INTO usuarios (username, email, password, nombre, apellido, dni, celular, activo) 
          VALUES (?, ?, ?, ?, ?, ?, 1)`,
         [username, email, hashedPassword, nombre, dni, celular || null]
       );
@@ -43,6 +43,7 @@ class UsuarioController {
         username,
         email,
         nombre,
+        apellido,
         dni,
         celular,
         activo: true,
@@ -61,7 +62,7 @@ class UsuarioController {
   async modificar(req, res) {
     try {
       const { id } = req.params;
-      const { username, email, password, nombre, dni, celular } = req.body;
+      const { username, email, password, nombre, apellido, dni, celular } = req.body;
 
       // Verificamos si existe el usuario
       const [userExist] = await db.query('SELECT password FROM usuarios WHERE id = ?', [id]);
@@ -69,8 +70,8 @@ class UsuarioController {
         return res.status(404).json({ error: 'Usuario no encontrado.' });
       }
 
-      let query = `UPDATE usuarios SET username = ?, email = ?, nombre = ?, dni = ?, celular = ?`;
-      let params = [username, email, nombre, dni, celular || null];
+      let query = `UPDATE usuarios SET username = ?, email = ?, nombre = ?, apellido = ?, dni = ?, celular = ?`;
+      let params = [username, email, nombre, apellido, dni, celular || null];
 
       // Si el usuario envió una nueva contraseña, la hasheamos y la agregamos al query
       if (password && password.trim() !== '') {

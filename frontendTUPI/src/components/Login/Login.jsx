@@ -42,7 +42,7 @@ const Login = () => {
 
     try {
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const respuesta = await axios.post(`${API_URL}/api/auth/login`, {
+      const respuesta = await axios.post(`${API_URL}/auth/login`, {
         identifier,
         password
       });
