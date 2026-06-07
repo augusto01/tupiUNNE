@@ -4,13 +4,22 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 exports.login = async (req, res) => {
-  const { identifier, password } = req.body;
+  // Capturamos cualquier variante que envíe el Front para el login
+  const { identifier, email, correo, dni, password } = req.body;
+
+  // Consolidamos el valor en una sola variable (el primero que no sea undefined)
+  const loginInput = identifier || email || correo || dni;
+
+  // Validación rápida de entrada
+  if (!loginInput || !password) {
+    return res.status(400).json({ message: 'El identificador y la contraseña son requeridos.' });
+  }
 
   try {
-    // 1. Buscar los datos básicos del usuario
+    // 1. Buscar al usuario por cualquiera de las 3 vías principales utilizando la variable unificada
     const [userRows] = await pool.execute(
-      'SELECT * FROM usuarios WHERE username = ? OR email = ? OR dni = ?',
-      [identifier, identifier, identifier]
+      'SELECT * FROM usuarios WHERE email = ? OR dni = ? OR username = ?',
+      [loginInput, loginInput, loginInput]
     );
 
     if (userRows.length === 0) {
@@ -54,6 +63,7 @@ exports.login = async (req, res) => {
         id: usuario.id,
         username: usuario.username,
         nombre: usuario.nombre,
+        apellido: usuario.apellido,
         dni: usuario.dni,
         celular: usuario.celular
       },

@@ -43,6 +43,7 @@ const Dashboard = () => {
       if (userLocal) {
         setUsuario({
           nombre: userLocal.nombre || 'Usuario',
+          apellido: userLocal.apellido || 'Usuario',
           role: userLocal.role || 'Operador'
         });
       }
@@ -156,15 +157,7 @@ const Dashboard = () => {
             </div>
           )}
           
-          <button 
-            onClick={() => { setCurrentSection('panel'); setIsMobileMenuOpen(false); }}
-            className={`sidebar-item ${currentSection === 'panel' ? 'active' : ''}`}
-          >
-            <div className="sidebar-item-content">
-              <LayoutDashboard size={16} />
-              <span>Panel Principal</span>
-            </div>
-          </button>
+          
 
           {/* DESPLEGABLE 1: PLANES DE COMPRAS */}
           <div>
@@ -279,7 +272,7 @@ const Dashboard = () => {
                 <span className="user-role-tag">{entorno.rol}</span>
               </div>
               <div className="user-avatar-circle">
-                {getIniciales(usuario.nombre)}
+                {getIniciales(usuario.nombre + ' ' + usuario.apellido)}
               </div>
             </div>
           </div>

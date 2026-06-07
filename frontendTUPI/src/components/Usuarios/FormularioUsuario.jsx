@@ -93,12 +93,7 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], onSave, onCancel })
 
   return (
     <div className="formulario-usuario-container view-fade-in">
-      <div className="form-navigation-header">
-        <button type="button" className="btn-back-link" onClick={onCancel}>
-          <ArrowLeft size={16} />
-          <span>Volver al Ecosistema</span>
-        </button>
-      </div>
+      
 
       <div className="form-view-title-section">
         <div className="icon-wrapper-title">
