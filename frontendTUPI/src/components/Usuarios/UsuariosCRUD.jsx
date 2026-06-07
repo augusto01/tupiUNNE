@@ -1,177 +1,201 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Edit3, Trash2, RefreshCw } from 'lucide-react';
-import './UsuariosCRUD.css'; // <--- IMPORTACIÓN DEL NUEVO CSS
+import { FiPlusCircle, FiEdit3, FiTrash2, FiRefreshCw, FiShield } from 'react-icons/fi';
+import { useUsuarios } from '../hooks/useUsuarios';
+import FormularioUsuario from './FormularioUsuario';
+import ConfirmModal from '../Modals/ConfirmModal';
+import ToastNotification from '../Modals/ToastNotification';
+import './UsuariosCRUD.css';
 
 const UsuariosCRUD = ({ sectionInicial, setSection }) => {
-  const [listaUsuarios, setListaUsuarios] = useState([
-    { id: 1, nombre: 'Augusto Almirón', email: 'a.almiron@rectorado.unne.edu.ar', rol: 'Super_Usuario', facultad: 'RECTORADO', activo: true },
-    { id: 2, nombre: 'Dr. Ruben Bernal', email: 'r.bernal@academica.unne.edu.ar', rol: 'Administrador', facultad: 'RECTORADO', activo: true },
-    { id: 3, nombre: 'Operador Ejemplo', email: 'operador@exa.unne.edu.ar', rol: 'Operador', facultad: 'FACENA', activo: false }
-  ]);
+  const { 
+    listaUsuarios, 
+    loading, 
+    errorBackend, 
+    cargarUsuarios, 
+    guardarUsuario, 
+    toggleBajaLogica 
+  } = useUsuarios();
 
-  const [modalOpen, setModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  
-  const [formData, setFormData] = useState({
-    nombre: '',
-    email: '',
-    rol: 'Operador',
-    facultad: 'RECTORADO'
-  });
+  const [modalBajaConfig, setModalBajaConfig] = useState({ isOpen: false, tipo: '', titulo: '', mensaje: '', onConfirm: null });
+  const [toastConfig, setToastConfig] = useState({ visible: false, mensaje: '', tipo: '' });
 
   useEffect(() => {
-    if (sectionInicial === 'usuarios-crear') {
-      abrirFormularioNuevo();
+    cargarUsuarios();
+  }, [cargarUsuarios]);
+
+  useEffect(() => {
+    if (sectionInicial === 'usuarios-ver') {
+      setEditingUser(null);
     }
   }, [sectionInicial]);
 
-  const abrirFormularioNuevo = () => {
-    setEditingUser(null);
-    setFormData({ nombre: '', email: '', rol: 'Operador', facultad: 'RECTORADO' });
-    setModalOpen(true);
+  const mostrarToast = (mensaje, tipo = 'success') => {
+    setToastConfig({ visible: true, mensaje, tipo });
   };
 
-  const abrirEditar = (user) => {
+  const cerrarModalBaja = () => setModalBajaConfig(prev => ({ ...prev, isOpen: false }));
+
+  const irAEditar = (user) => {
     setEditingUser(user);
-    setFormData({
-      nombre: user.nombre,
-      email: user.email,
-      rol: user.rol,
-      facultad: user.facultad
-    });
-    setModalOpen(true);
+    setSection('usuarios-crear');
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (editingUser) {
-      setListaUsuarios(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...formData } : u));
-    } else {
-      const nuevo = { id: Date.now(), ...formData, activo: true };
-      setListaUsuarios(prev => [nuevo, ...prev]);
+  // --- PROCESADOR CENTRALIZADO CON RETORNO ---
+  const handleSaveUser = async (formData) => {
+    const esEdicion = !!editingUser;
+    const resultado = await guardarUsuario(formData, editingUser?.id);
+    
+    if (resultado.ok) {
+      // ÉXITO: Mostramos el Toast en el padre y volvemos a la grilla
+      mostrarToast(esEdicion ? 'Operador actualizado con éxito.' : 'Operador registrado con éxito.', 'success');
+      setEditingUser(null);
+      setSection('usuarios-ver');
     }
-    setModalOpen(false);
-    setSection('usuarios-ver');
+    
+    // Devolvemos el resultado completo al formulario para que evalúe si hubo errores
+    return resultado;
   };
 
-  const toggleBajaLogica = (id) => {
-    setListaUsuarios(prev => prev.map(u => u.id === id ? { ...u, activo: !u.activo } : u));
+  const handleToggleBaja = (usuario) => {
+    const iraAInactivo = usuario.activo;
+    
+    setModalBajaConfig({
+      isOpen: true,
+      tipo: iraAInactivo ? 'danger' : 'warning',
+      titulo: iraAInactivo ? '¿Procesar Baja Lógica?' : '¿Reactivar Operador?',
+      mensaje: iraAInactivo
+        ? `El operador ${usuario.nombre} perderá sus accesos inmediatos al sistema hasta su revocación.`
+        : `Se restaurará la jerarquía y permisos de acceso para ${usuario.nombre}.`,
+      onConfirm: async () => {
+        cerrarModalBaja();
+        const resultado = await toggleBajaLogica(usuario.id);
+        if (resultado.ok) {
+          mostrarToast(iraAInactivo ? 'Baja lógica procesada con éxito.' : 'Operador reactivado correctamente.', 'success');
+        } else {
+          mostrarToast('Error al modificar el estado en el servidor.', 'error');
+        }
+      }
+    });
   };
+
+  if (sectionInicial === 'usuarios-crear') {
+    return (
+      <FormularioUsuario 
+        userToEdit={editingUser} 
+        listaUsuarios={listaUsuarios}
+        onSave={handleSaveUser} 
+        onCancel={() => {
+          setEditingUser(null);
+          setSection('usuarios-ver');
+        }} 
+      />
+    );
+  }
 
   return (
-    <div className="usuarios-container content-section-fade">
-      
-      {/* HEADER */}
+    <div className="usuarios-container view-fade-in">
       <div className="usuarios-header">
         <div className="usuarios-header-titles">
           <h3>Ecosistema de Usuarios</h3>
-          <p>Control de accesos restringido exclusivamente para la Jerarquía de Super Usuario.</p>
+          <p>
+            <FiShield size={14} className="inline-icon" /> 
+            Control de accesos restringido exclusivamente para la Jerarquía de Super Usuario.
+          </p>
         </div>
-        <button className="btn-success-premium" onClick={abrirFormularioNuevo}>
-          <PlusCircle size={14} />
+        <button className="btn-success-premium" onClick={() => setSection('usuarios-crear')}>
+          <FiPlusCircle size={16} />
           <span>Nuevo Operador</span>
         </button>
       </div>
 
-      {/* GRID / TABLA */}
-      <div className="usuarios-grid-card">
-        <table className="usuarios-tabla">
-          <thead>
-            <tr>
-              <th>Usuario / Email</th>
-              <th>Dependencia</th>
-              <th>Rol Asignado</th>
-              <th>Estado</th>
-              <th style={{ textAlign: 'right', paddingRight: '1.5rem' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {listaUsuarios.map(u => (
-              <tr key={u.id} className={`usuarios-fila ${!u.activo ? 'baja-logica' : ''}`}>
-                <td>
-                  <div className="user-cell-name">{u.nombre}</div>
-                  <div className="user-cell-email">{u.email}</div>
-                </td>
-                <td className="user-cell-facultad">{u.facultad}</td>
-                <td>
-                  <span className={`badge-rol ${u.rol === 'Super_Usuario' ? 'super-user' : 'standard'}`}>
-                    {u.rol}
-                  </span>
-                </td>
-                <td>
-                  <span className={`status-indicator ${u.activo ? 'active' : 'inactive'}`}>
-                    <span className="status-dot"></span>
-                    {u.activo ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td>
-                  <div className="actions-wrapper" style={{ paddingRight: '0.5rem' }}>
-                    <button 
-                      onClick={() => abrirEditar(u)} 
-                      disabled={!u.activo}
-                      className="btn-action edit"
-                      style={{ opacity: u.activo ? 1 : 0.3, cursor: u.activo ? 'pointer' : 'not-allowed' }}
-                    >
-                      <Edit3 size={15} />
-                    </button>
-                    <button onClick={() => toggleBajaLogica(u.id)} className={`btn-action ${u.activo ? 'delete' : 'reactivate'}`}>
-                      {u.activo ? <Trash2 size={15} /> : <RefreshCw size={15} />}
-                    </button>
-                  </div>
-                </td>
+      {errorBackend && <div className="error-message-panel">{errorBackend}</div>}
+      
+      {loading ? (
+        <div className="loading-spinner-panel">Cargando operadores del sistema...</div>
+      ) : (
+        <div className="usuarios-grid-card">
+          <table className="usuarios-tabla">
+            <thead>
+              <tr>
+                <th>Personal / Email</th>
+                <th>DNI / Celular</th>
+                <th>Dirección</th>
+                <th>Dependencia</th>
+                <th>Rol Asignado</th>
+                <th>Estado</th>
+                <th style={{ textAlign: 'right', paddingRight: '1.5rem' }}>Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* MODAL */}
-      {modalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content content-section-fade">
-            <h4>{editingUser ? 'Modificar Atributos' : 'Registrar Operador'}</h4>
-            
-            <form onSubmit={handleSubmit} className="usuarios-form">
-              <div className="form-group">
-                <label>Nombre y Apellido</label>
-                <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} required />
-              </div>
-
-              <div className="form-group">
-                <label>Correo Electrónico Oficial</label>
-                <input type="email" name="email" value={formData.email} onChange={handleInputChange} required />
-              </div>
-
-              <div className="form-group">
-                <label>Rol de Sistema</label>
-                <select name="rol" value={formData.rol} onChange={handleInputChange}>
-                  <option value="Operador">Operador Estándar</option>
-                  <option value="Administrador">Administrador de Facultad</option>
-                  <option value="Super_Usuario">Super Usuario (Rectorado)</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Unidad Académica / Dependencia</label>
-                <input type="text" name="facultad" value={formData.facultad} onChange={handleInputChange} placeholder="Ej: FACENA, RECTORADO" required />
-              </div>
-
-              <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={() => { setModalOpen(false); setSection('usuarios-ver'); }}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-success-solid">
-                  {editingUser ? 'Guardar Cambios' : 'Confirmar Alta'}
-                </button>
-              </div>
-            </form>
-          </div>
+            </thead>
+            <tbody>
+              {listaUsuarios.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    No hay usuarios registrados en el sistema.
+                  </td>
+                </tr>
+              ) : (
+                listaUsuarios.map(u => (
+                  <tr key={u.id} className={`usuarios-fila ${!u.activo ? 'baja-logica' : ''}`}>
+                    <td>
+                      <div className="user-cell-name">{u.apellido || ''}, {u.nombre}</div>
+                      <div className="user-cell-email">{u.email}</div>
+                    </td>
+                    <td>
+                      <div className="user-cell-dni">DNI: {u.dni}</div>
+                      <div className="user-cell-phone">{u.celular || 'N/C'}</div>
+                    </td>
+                    <td>
+                      <div className="user-cell-address">
+                        {u.calle ? `${u.calle} ${u.numero}` : 'No especificada'}
+                      </div>
+                    </td>
+                    <td className="user-cell-facultad">{u.facultad || 'RECTORADO'}</td>
+                    <td>
+                      <span className={`badge-rol ${u.rol === 'Super_Usuario' ? 'super-user' : 'standard'}`}>
+                        {u.rol || 'Operador'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`status-indicator ${u.activo ? 'active' : 'inactive'}`}>
+                        <span className="status-dot"></span>
+                        {u.activo ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="actions-wrapper">
+                        <button onClick={() => irAEditar(u)} disabled={!u.activo} className="btn-action edit">
+                          <FiEdit3 size={15} />
+                        </button>
+                        <button onClick={() => handleToggleBaja(u)} className={`btn-action ${u.activo ? 'delete' : 'reactivate'}`}>
+                          {u.activo ? <FiTrash2 size={15} /> : <FiRefreshCw size={15} />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
+      )}
+
+      <ConfirmModal 
+        isOpen={modalBajaConfig.isOpen}
+        tipo={modalBajaConfig.tipo}
+        titulo={modalBajaConfig.titulo}
+        mensaje={modalBajaConfig.mensaje}
+        onConfirm={modalBajaConfig.onConfirm}
+        onCancel={cerrarModalBaja}
+      />
+
+      {/* TOAST EXCLUSIVO DEL PADRE (Para Bajas, Reactivaciones y Éxitos de Formulario) */}
+      {toastConfig.visible && (
+        <ToastNotification 
+          mensaje={toastConfig.mensaje}
+          tipo={toastConfig.tipo}
+          onClose={() => setToastConfig(prev => ({ ...prev, visible: false }))}
+        />
       )}
     </div>
   );

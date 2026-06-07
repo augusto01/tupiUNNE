@@ -11,9 +11,10 @@ import {
   ChevronDown,
   PlusCircle,
   History,
-  ListFilter
+  ListFilter,
+  Users // <-- Añadido correctamente en la importación
 } from 'lucide-react';
-import UsuariosCRUD from '../Usuarios/UsuariosCRUD'; // Importación del componente de gestión
+import UsuariosCRUD from '../Usuarios/UsuariosCRUD'; 
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -116,7 +117,7 @@ const Dashboard = () => {
                 onClick={() => toggleDropdown('usuarios')}
               >
                 <div className="sidebar-item-content">
-                  <Building2 size={16} />
+                  <Users size={16} /> {/* <-- Solucionado el componente en mayúscula */}
                   <span>Gestión de Usuarios</span>
                 </div>
                 <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.usuarios ? 'rotated' : ''}`} />
@@ -127,7 +128,7 @@ const Dashboard = () => {
                     <button 
                       onClick={() => { setCurrentSection('usuarios-crear'); setIsMobileMenuOpen(false); }}
                       className={`sidebar-subitem ${currentSection === 'usuarios-crear' ? 'active' : ''}`}
-                      style={{ background: 'transparent', border: 'none', width: '100%', textLeft: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                      style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       <PlusCircle size={12} />
                       <span>Agregar Usuario</span>
@@ -137,7 +138,7 @@ const Dashboard = () => {
                     <button 
                       onClick={() => { setCurrentSection('usuarios-ver'); setIsMobileMenuOpen(false); }}
                       className={`sidebar-subitem ${currentSection === 'usuarios-ver' ? 'active' : ''}`}
-                      style={{ background: 'transparent', border: 'none', width: '100%', textLeft: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                      style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       <ListFilter size={12} />
                       <span>Ver Usuarios</span>
@@ -287,7 +288,6 @@ const Dashboard = () => {
           <div className="content-wrapper-rel">
             {currentSection === 'panel' && (
               <div className="content-section-fade">
-                {/* Acá va tu cuadrícula existente de tarjetas de Resumen Operativo */}
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Panel Principal</h3>
                 <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Seleccione un módulo del menú lateral para comenzar a operar.</p>
               </div>
@@ -297,7 +297,7 @@ const Dashboard = () => {
               <UsuariosCRUD 
                 sectionInicial={currentSection} 
                 setSection={setCurrentSection} 
-              />
+                />
             )}
           </div>
         </main>

@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const authRoutes = require('./src/routes/authRoutes');
+const usuarioRoutes = require('./src/routes/usuarioRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -13,7 +14,7 @@ app.use(express.json());
 
 // Declaración de Rutas
 app.use('/api/auth', authRoutes);
-
+app.use('/api/usuarios', usuarioRoutes);
 // Ruta base de chequeo rápido
 app.get('/', (req, res) => {
   res.send('API de TUPI - Ecosistema Rectorado UNNE corriendo.');

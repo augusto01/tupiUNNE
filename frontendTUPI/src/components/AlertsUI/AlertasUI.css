@@ -1,0 +1,136 @@
+/* ==========================================================================
+   SISTEMA DE MODALES DE CONFIRMACIÓN
+   ========================================================================== */
+.modal-overlay-alert {
+  position: fixed; /* Forzado absoluto e inmóvil sobre el viewport */
+  top: 0;
+  left: 0;
+  width: 100vw; /* Toma la totalidad del ancho del navegador */
+  height: 100vh; /* Toma la totalidad del alto del navegador */
+  background: rgba(15, 23, 42, 0.65); /* Opacidad premium gris azulada oscura */
+  backdrop-filter: blur(4px); /* Difumina de manera elegante el fondo del sistema */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999999; /* Se posiciona por encima de CUALQUIER elemento del DOM */
+  animation: fadeInOverlay 0.2s ease forwards;
+}
+
+.modal-box-alert {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+  transform: scale(0.95);
+  animation: scaleUpModal 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal-alert-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.modal-alert-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+/* Variantes de color según la acción */
+.modal-alert-icon.danger { background: #fee2e2; color: #ef4444; }
+.modal-alert-icon.warning { background: #fef3c7; color: #d97706; }
+.modal-alert-icon.success { background: #d1fae5; color: #10b981; }
+
+.modal-alert-header h4 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.modal-alert-body p {
+  margin: 0 0 1.5rem 0;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.modal-alert-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.btn-alert-cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+  padding: 0.55rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-alert-cancel:hover { background: #e2e8f0; }
+
+.btn-alert-confirm {
+  color: #ffffff;
+  border: none;
+  padding: 0.55rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-alert-confirm:hover { opacity: 0.9; }
+.btn-alert-confirm.danger { background: #ef4444; }
+.btn-alert-confirm.warning { background: #3b82f6; }
+.btn-alert-confirm.success { background: #10b981; }
+
+/* ==========================================================================
+   TOASTS / NOTIFICACIONES FLOTANTES (FEEDBACK POST-ACCIÓN)
+   ========================================================================== */
+/* Buscá la clase contenedora de tu componente ToastNotification y ponela así: */
+.toast-notification-container {
+  position: fixed; /* Clave: No importa dónde se renderice, se ata a la pantalla */
+  bottom: 24px;    /* Lo ubica abajo del todo de la pantalla */
+  right: 24px;     /* Lo ubica a la derecha */
+  z-index: 999999; /* Por encima de cualquier formulario, modal o tabla */
+  display: flex;
+  align-items: center;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  /* Tus otros estilos de animación, padding y bordes... */
+}
+
+.toast-item {
+  background: #0f172a;
+  color: #ffffff;
+  padding: 0.85rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 280px;
+  animation: slideInToast 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.toast-item.success { border-left: 4px solid #10b981; }
+.toast-item.error { border-left: 4px solid #ef4444; }
+
+/* ANIMACIONES */
+@keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleUpModal { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes slideInToast { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }

@@ -1,78 +1,101 @@
 /* ==========================================================================
-   ESTILOS ESPECÍFICOS: GESTIÓN DE USUARIOS
+   VARIABLES Y ANIMACIONES
    ========================================================================== */
-
-.usuarios-container {
-  width: 100%;
-  box-sizing: border-box;
+:root {
+  --bg-card: #ffffff;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border-color: #e2e8f0;
+  --primary-premium: #0f172a;
+  --success-solid: #10b981;
+  --success-hover: #059669;
+  --danger-solid: #ef4444;
+  --reactive-solid: #3b82f6;
 }
 
-/* Cabecera del Módulo */
+@keyframes fadeInView {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.view-fade-in {
+  animation: fadeInView 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ==========================================================================
+   ESTRUCTURA GENERAL
+   ========================================================================== */
+.usuarios-container, .formulario-usuario-container {
+  padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--text-primary);
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.inline-icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* HEADER */
 .usuarios-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .usuarios-header-titles h3 {
-  font-size: 1.35rem;
-  margin: 0;
+  font-size: 1.6rem;
   font-weight: 700;
-  color: var(--texto-oscuro);
+  margin: 0 0 0.4rem 0;
+  color: var(--primary-premium);
 }
 
 .usuarios-header-titles p {
-  color: var(--gris-texto-muted);
-  margin: 0.2rem 0 0 0;
-  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin: 0;
 }
 
-/* Botonería Minimalista (Verde Suave / SaaS Mint) */
+/* BOTONES */
 .btn-success-premium {
-  background-color: #e6f4ea !important;
-  color: #137333 !important;
-  border: 1px solid #ceead6 !important;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
+  background: var(--primary-premium);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
   font-weight: 600;
+  font-size: 0.88rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: var(--transicion-suave);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
 }
 
 .btn-success-premium:hover {
-  background-color: #d2e9d6 !important;
-  color: #0b5121 !important;
   transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.25);
 }
 
-.btn-success-solid {
-  background-color: #10b981 !important;
-  color: #ffffff !important;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transicion-suave);
-}
-
-.btn-success-solid:hover {
-  background-color: #059669 !important;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
-  transform: translateY(-1px);
-}
-
-/* Tabla y Contenedor del Grid */
+/* ==========================================================================
+   ESTILOS DE LA TABLA
+   ========================================================================== */
 .usuarios-grid-card {
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
 
@@ -80,193 +103,357 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.85rem;
-}
-
-.usuarios-tabla thead tr {
-  background-color: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-  color: var(--gris-texto-muted);
+  font-size: 0.92rem;
 }
 
 .usuarios-tabla th {
-  padding: 1rem;
+  background: #f8fafc;
+  padding: 1rem 1.25rem;
   font-weight: 600;
-}
-
-.usuarios-fila {
-  border-bottom: 1px solid #f1f5f9;
-  transition: var(--transicion-suave);
-}
-
-.usuarios-fila.baja-logica {
-  opacity: 0.55;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
 }
 
 .usuarios-tabla td {
-  padding: 1rem;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }
 
-.user-cell-name {
+.usuarios-fila {
+  transition: background 0.15s ease;
+}
+
+.usuarios-fila:hover {
+  background: #f8fafc;
+}
+
+.usuarios-fila.baja-logica {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
+/* CELDAS DETALLES */
+.user-cell-name { font-weight: 600; color: var(--primary-premium); }
+.user-cell-email { font-size: 0.82rem; color: var(--text-secondary); }
+.user-cell-dni { font-weight: 500; font-size: 0.88rem; }
+.user-cell-phone, .user-cell-address { font-size: 0.85rem; color: var(--text-secondary); }
+.user-cell-facultad { font-weight: 500; font-size: 0.88rem; }
+
+/* BADGES Y ESTADOS */
+.badge-rol {
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
   font-weight: 600;
-  color: var(--texto-oscuro);
 }
+.badge-rol.super-user { background: #fee2e2; color: #991b1b; }
+.badge-rol.standard { background: #e0f2fe; color: #0369a1; }
 
-.user-cell-email {
-  font-size: 0.75rem;
-  color: var(--gris-texto-muted);
-}
-
-.user-cell-facultad {
-  color: #334155;
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
   font-weight: 500;
 }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; }
+.status-indicator.active .status-dot { background: #10b981; }
+.status-indicator.inactive .status-dot { background: #94a3b8; }
 
-/* Badges de Roles */
-.badge-rol {
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.badge-rol.super-user {
-  background-color: rgba(160, 141, 82, 0.1);
-  color: var(--dorado-secundario);
-}
-
-.badge-rol.standard {
-  background-color: rgba(15, 23, 42, 0.05);
-  color: var(--dominante-oscuro);
-}
-
-/* Indicadores de Estado */
-.status-indicator {
-  font-weight: 600;
-  font-size: 0.75rem;
+/* ACCIONES ACCESIBLES */
+/* ==========================================================================
+   ESTILOS DE BOTONES DE ACCIÓN (LÁPIZ Y BASURA)
+   ========================================================================== */
+   .btn-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: transparent; /* Fondo transparente asegurado */
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
 }
-
-.status-indicator.active { color: #10b981; }
-.status-indicator.inactive { color: #ef4444; }
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-.status-indicator.active .status-dot { background-color: #10b981; }
-.status-indicator.inactive .status-dot { background-color: #ef4444; }
-
-/* Acciones en la Tabla */
 .actions-wrapper {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
 }
 
-.btn-action {
+/* ==========================================================================
+   RESCATE E INYECCIÓN FORZADA PARA SVG DE REACT-ICONS
+   ========================================================================== */
+.btn-action svg, 
+.btn-success-premium svg,
+.inline-icon {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 1em !important;
+  height: 1em !important;
+  stroke: currentColor !important; /* Fuerza a que tome el color del CSS del botón */
+  fill: none !important;
+}
+
+/* Forzar que el lápiz use su color si el SVG interno viene pisado */
+.btn-action.edit svg {
+  color: #64748b !important;
+}
+
+/* Forzar que la basura use su color si el SVG interno viene pisado */
+.btn-action.delete svg {
+  color: #ef4444 !important;
+}
+
+/* Forzar reactivación */
+.btn-action.reactivate svg {
+  color: #3b82f6 !important;
+}
+
+/* ==========================================================================
+   ESTILOS NUEVA VISTA FORMULARIO (PANTALLA COMPLETA)
+   ========================================================================== */
+.form-navigation-header {
+  margin-bottom: 1.5rem;
+}
+
+.btn-back-link {
   background: none;
   border: none;
-  cursor: pointer;
-  color: var(--gris-texto-muted);
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: var(--transicion-suave);
-}
-
-.btn-action:hover {
-  background-color: #f1f5f9;
-}
-
-.btn-action.edit:hover { color: var(--dominante-oscuro); }
-.btn-action.delete:hover { color: #ef4444; }
-.btn-action.reactivate:hover { color: #10b981; }
-
-/* Estructura del Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(10, 17, 30, 0.4);
-  backdrop-filter: blur(4px);
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 2000;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.4rem 0;
+  transition: color 0.2s;
 }
 
-.modal-content {
-  background-color: #ffffff;
-  padding: 2rem;
-  border-radius: 8px;
-  width: 400px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+.btn-back-link:hover {
+  color: var(--primary-premium);
 }
 
-.modal-content h4 {
-  margin: 0 0 1rem 0;
-  font-size: 1.1rem;
+.form-view-title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.icon-wrapper-title {
+  background: #f1f5f9;
+  color: var(--primary-premium);
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-view-title-section h2 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.5rem;
   font-weight: 700;
-  color: var(--texto-oscuro);
 }
 
-.usuarios-form {
+.form-view-title-section p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* TARJETA DEL FORMULARIO Y SECCIONES GRID */
+.form-card-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02);
+}
+
+.usuarios-form-grid {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 2.2rem;
 }
 
+.form-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.form-section-block h3 {
+  margin: 0 0 0.2rem 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--primary-premium);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.6rem;
+}
+
+/* FILAS DEL FORMULARIO */
+.form-row {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.form-row.row-2 > .form-group {
+  flex: 1;
+}
+
+.form-row.row-flex-address {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.flex-grow-3 { flex: 3; }
+.flex-grow-1 { flex: 1; }
+
+/* COMPONENTES DE ENTRADA (INPUTS / SELECTS) */
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.45rem;
 }
 
 .form-group label {
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: #475569;
 }
 
 .form-group input, .form-group select {
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: 1px solid #cbd5e1;
-  font-size: 0.85rem;
-  outline: none;
-  transition: var(--transicion-suave);
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  background-color: #fff;
+  transition: all 0.15s ease;
 }
 
 .form-group input:focus, .form-group select:focus {
-  border-color: var(--dorado-principal);
-  box-shadow: 0 0 0 2px rgba(160, 141, 82, 0.1);
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.12);
 }
 
-.modal-actions {
+.form-group input::placeholder {
+  color: #cbd5e1;
+}
+
+/* BARRA INFERIOR DE SUBMIT */
+.form-submit-bar {
   display: flex;
-  gap: 0.75rem;
-  margin-top: 1rem;
   justify-content: flex-end;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
 }
 
 .btn-cancel {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
   cursor: pointer;
-  font-size: 0.8rem;
-  color: #64748b;
-  transition: var(--transicion-suave);
+  transition: background 0.2s;
 }
 
 .btn-cancel:hover {
-  background-color: #f8fafc;
-  color: var(--texto-oscuro);
+  background: #e2e8f0;
+}
+
+.btn-success-solid {
+  background: var(--success-solid);
+  color: #fff;
+  border: none;
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-success-solid:hover {
+  background: var(--success-hover);
+}
+
+/* Bordes y sombras de error para inputs duplicados */
+.input-error-border {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+  background-color: #fef2f2 !important;
+}
+
+/* Mensajes de aviso bajo el input */
+.error-text-msg {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+
+/* Botón deshabilitado por validación */
+.btn-disabled {
+  background-color: #cbd5e1 !important;
+  color: #64748b !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+/* Bordes y sombras de error para inputs duplicados */
+.input-error-border {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+  background-color: #fef2f2 !important;
+}
+
+/* Mensajes de aviso bajo el input */
+.error-text-msg {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+}
+
+/* Botón deshabilitado por validación */
+.btn-disabled {
+  background-color: #cbd5e1 !important;
+  color: #64748b !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .form-card-container {
+    padding: 1.5rem;
+  }
 }
