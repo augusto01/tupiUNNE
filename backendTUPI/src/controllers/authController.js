@@ -44,7 +44,8 @@ exports.login = async (req, res) => {
       `SELECT 
         d.id AS facultad_codigo, 
         d.nombre AS facultad_nombre, 
-        t.nombre AS rol_nombre,
+        t.nombre AS rol_nombre
+        ${/* Agrupamos slugs de permisos */ ''},
         GROUP_CONCAT(p.slug) AS secciones_permitidas
        FROM usuarios u
        JOIN dependencias d ON u.dependencia_id = d.id
@@ -65,6 +66,9 @@ exports.login = async (req, res) => {
       permisos: entorno.secciones_permitidas ? entorno.secciones_permitidas.split(',') : []
     }));
 
+    // Extraemos de forma segura los nombres dinámicos de las relaciones encontradas
+    const infoRelacional = permisosRows[0] || {};
+
     // 4. Firmar el Token inyectando el mapa de permisos procesado de la UNNE
     const token = jwt.sign(
       { 
@@ -83,10 +87,20 @@ exports.login = async (req, res) => {
       user: {
         id: usuario.id,
         username: usuario.username,
+        email: usuario.email,
         nombre: usuario.nombre,
         apellido: usuario.apellido,
         dni: usuario.dni,
-        celular: usuario.celular
+        celular: usuario.celular,
+        activo: usuario.activo,
+        
+        // Atributos relacionales numéricos directos de la tabla base
+        tipo_usuario_id: usuario.tipo_usuario_id, 
+        dependencia_id: usuario.dependencia_id, 
+        
+        // 🔥 CORRECCIÓN: Inyectamos los nombres de texto recuperados en el JOIN del paso 3
+        rol: infoRelacional.rol_nombre || 'Sin Rol Asignado',               // Ej: 'Administrador'
+        dependencia: infoRelacional.facultad_nombre || 'Sin Dependencia'    // Ej: 'Rectorado UNNE'
       },
       permisos: entornosProcesados 
     });

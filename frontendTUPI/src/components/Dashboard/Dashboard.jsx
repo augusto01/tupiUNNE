@@ -18,9 +18,30 @@ import UsuariosCRUD from '../Usuarios/UsuariosCRUD';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [usuario, setUsuario] = useState({ nombre: 'Usuario', role: 'Operador' });
-  const [entorno, setEntorno] = useState({ facultad: 'UNNE', rol: 'Operador', permisos: [] });
+  // Inicializamos los estados directamente desde localStorage para evitar delays y spinners innecesarios
+  const [usuario, setUsuario] = useState(() => {
+    const userLocal = JSON.parse(localStorage.getItem('tupi_user'));
+    return {
+      nombre: userLocal?.nombre || 'Usuario',
+      apellido: userLocal?.apellido || '',
+      rol: userLocal?.rol || 'Operador', // Leído desde tu nuevo res.json ({ user: { rol } })
+      dependencia: userLocal?.dependencia || 'UNNE' // Leído desde tu nuevo res.json
+    };
+  });
+
+  const [entorno, setEntorno] = useState(() => {
+    const permisosLocal = JSON.parse(localStorage.getItem('tupi_permisos'));
+    if (permisosLocal && permisosLocal.length > 0) {
+      return {
+        facultad: permisosLocal[0].facultad_nombre, // Cambiado de facultad_codigo a facultad_nombre para mostrar el texto real
+        rol: permisosLocal[0].rol_nombre,
+        permisos: permisosLocal[0].permisos || []
+      };
+    }
+    return { facultad: 'UNNE', rol: 'Operador', permisos: [] };
+  });
+
+  const [isLoading, setIsLoading] = useState(false); // Ya no requiere delay, los datos se cargan síncronos
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Control individual de los submenús dinámicos
@@ -30,35 +51,8 @@ const Dashboard = () => {
     usuarios: false 
   });
 
-  // Estado de control de navegación interna (Inicia en 'panel')
+  // Estado de control de navegación interna
   const [currentSection, setCurrentSection] = useState('panel');
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const userLocal = JSON.parse(localStorage.getItem('tupi_user'));
-      const permisosLocal = JSON.parse(localStorage.getItem('tupi_permisos')); 
-
-      if (userLocal) {
-        setUsuario({
-          nombre: userLocal.nombre || 'Usuario',
-          role: userLocal.role || 'Operador'
-        });
-      }
-      
-      if (permisosLocal && permisosLocal.length > 0) {
-        // Tomamos el primer entorno asignado por defecto para la sesión
-        setEntorno({
-          facultad: permisosLocal[0].facultad_codigo,
-          rol: permisosLocal[0].rol_nombre,
-          permisos: permisosLocal[0].permisos || [] // Array de slugs: ['panel', 'usuarios', etc]
-        });
-      }
-      
-      setIsLoading(false);
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // Función Helper para comprobar dinámicamente si el rol tiene asignado el permiso
   const tieneAcceso = (slugPermiso) => {
@@ -156,6 +150,7 @@ const Dashboard = () => {
               </ul>
             </div>
           )}
+
           {/* ACCESO DINÁMICO: PLANES DE COMPRAS */}
           {tieneAcceso('compras') && (
             <div>
@@ -270,15 +265,15 @@ const Dashboard = () => {
           </div>
 
           <div className="nav-profile-section">
-            <div className="nav-faculty-badge">
+            <div className="nav-faculty-badge" title={`Asignación: ${usuario.dependencia}`}>
               <Building2 size={12} />
-              <span>{entorno.facultad}</span>
+              <span>{entorno.facultad}</span> 
             </div>
 
             <div className="nav-user-info">
               <div className="user-text-meta">
-                <span className="user-name-label">{usuario.nombre}</span>
-                <span className="user-role-tag">{entorno.rol}</span>
+                <span className="user-name-label">{usuario.nombre} {usuario.apellido}</span>
+                <span className="user-role-tag">{usuario.rol}</span>
               </div>
               <div className="user-avatar-circle">
                 {getIniciales(usuario.nombre)}
