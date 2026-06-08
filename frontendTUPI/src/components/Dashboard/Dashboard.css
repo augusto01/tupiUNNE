@@ -275,7 +275,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 2rem;
+  padding: 0 1rem;
   flex-shrink: 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.03); /* Línea imperceptible de división */
 }
@@ -342,7 +342,8 @@ html, body {
   height: 32px;
   border-radius: 50%;
   background-color: var(--dorado-principal); /* Fondo dorado */
-  color: var(--dominante-oscuro); /* Letras oscuras para contraste limpio */
+  color: var(--blanco-card);    
+ /* Letras oscuras para contraste limpio */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -397,7 +398,7 @@ html, body {
    ÁREA DE CONTENIDO (CON TRANSICIÓN INTERNA)
    ========================================================================== */
 .dashboard-content-area {
-  padding: 0.5rem 2rem 2rem 2rem;
+  padding: 2rem;
   flex-grow: 1;
   position: relative;
   overflow-y: auto;
@@ -421,7 +422,7 @@ html, body {
   transform: translate(-50%, -50%);
   width: 30%;
   max-width: 340px;
-  opacity: 0.015;
+  opacity: 0.05;
   pointer-events: none;
   user-select: none;
 }

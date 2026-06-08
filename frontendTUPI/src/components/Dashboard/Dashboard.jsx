@@ -18,49 +18,52 @@ import UsuariosCRUD from '../Usuarios/UsuariosCRUD';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  // Estado para el spinner de carga de pantalla completa al montar el componente
   const [isLoading, setIsLoading] = useState(true);
   const [usuario, setUsuario] = useState({ nombre: 'Usuario', role: 'Operador' });
-  const [entorno, setEntorno] = useState({ facultad: 'UNNE', rol: 'Operador' });
+  const [entorno, setEntorno] = useState({ facultad: 'UNNE', rol: 'Operador', permisos: [] });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Control individual de los submenús dinámicos (Dropdowns unificados)
+  // Control individual de los submenús dinámicos
   const [openDropdowns, setOpenDropdowns] = useState({
     compras: false,
     correlatos: false,
     usuarios: false 
   });
 
-  // Estado temporal de control de navegación interna
+  // Estado de control de navegación interna (Inicia en 'panel')
   const [currentSection, setCurrentSection] = useState('panel');
 
   useEffect(() => {
-    // Sincronización del preloader con un micro-delay para la transición fluida
     const timer = setTimeout(() => {
       const userLocal = JSON.parse(localStorage.getItem('tupi_user'));
-      const permisosLocal = JSON.parse(localStorage.getItem('tupi_permisos'));
+      const permisosLocal = JSON.parse(localStorage.getItem('tupi_permisos')); 
 
       if (userLocal) {
         setUsuario({
           nombre: userLocal.nombre || 'Usuario',
-          apellido: userLocal.apellido || 'Usuario',
           role: userLocal.role || 'Operador'
         });
       }
       
       if (permisosLocal && permisosLocal.length > 0) {
+        // Tomamos el primer entorno asignado por defecto para la sesión
         setEntorno({
           facultad: permisosLocal[0].facultad_codigo,
-          rol: permisosLocal[0].rol_nombre
+          rol: permisosLocal[0].rol_nombre,
+          permisos: permisosLocal[0].permisos || [] // Array de slugs: ['panel', 'usuarios', etc]
         });
       }
       
-      // Apagamos el spinner gigante de entrada
       setIsLoading(false);
     }, 400);
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Función Helper para comprobar dinámicamente si el rol tiene asignado el permiso
+  const tieneAcceso = (slugPermiso) => {
+    return entorno.permisos.includes(slugPermiso);
+  };
 
   const toggleDropdown = (key) => {
     setOpenDropdowns(prev => ({
@@ -79,9 +82,6 @@ const Dashboard = () => {
     return name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
   };
 
-  // ==========================================================================
-  // RENDER DEL PRELOADER / SPINNER INICIAL DE PANTALLA COMPLETA
-  // ==========================================================================
   if (isLoading) {
     return (
       <div className="dashboard-preload-container">
@@ -100,10 +100,10 @@ const Dashboard = () => {
         onClick={() => setIsMobileMenuOpen(false)}
       ></div>
       
-      {/* SIDEBAR LATERAL CON TRANSICIONES DE ACORDEÓN */}
+      {/* SIDEBAR LATERAL */}
       <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
         
-        {/* SOLUCIÓN: Cambiado setSection('inicio') por setCurrentSection('panel') */}
+        {/* LOGO: Resetea el contenedor central al Panel Principal */}
         <div 
           className="sidebar-brand" 
           onClick={() => { setCurrentSection('panel'); setIsMobileMenuOpen(false); }} 
@@ -117,8 +117,8 @@ const Dashboard = () => {
         <div className="sidebar-menu-wrapper">
           <span className="menu-category">Módulos Core</span>
 
-          {/* ACCESO EXCLUSIVO: DESPLEGABLE DE USUARIOS (SUPER USUARIO) */}
-          {entorno.rol === 'Superusuario' && (
+          {/* ACCESO DINÁMICO: GESTIÓN DE USUARIOS */}
+          {tieneAcceso('usuarios') && (
             <div>
               <button 
                 className="sidebar-dropdown-toggle"
@@ -156,84 +156,95 @@ const Dashboard = () => {
               </ul>
             </div>
           )}
-          
-          
-
-          {/* DESPLEGABLE 1: PLANES DE COMPRAS */}
-          <div>
-            <button 
-              className="sidebar-dropdown-toggle"
-              onClick={() => toggleDropdown('compras')}
-            >
-              <div className="sidebar-item-content">
-                <FileSpreadsheet size={16} />
-                <span>Planes de Compras</span>
-              </div>
-              <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.compras ? 'rotated' : ''}`} />
-            </button>
-            <ul className={`sidebar-submenu ${openDropdowns.compras ? 'open' : ''}`}>
-              <div className="submenu-inner">
-                <li>
-                  <a href="#nueva-compra" className="sidebar-subitem">
-                    <PlusCircle size={12} />
-                    <span>Nueva Solicitud</span>
-                  </a>
-                </li>
-                <li>
-                  <a href="#historial-compras" className="sidebar-subitem">
-                    <History size={12} />
-                    <span>Ver Historial</span>
-                  </a>
-                </li>
-              </div>
-            </ul>
-          </div>
-
-          {/* DESPLEGABLE 2: GESTIÓN DE CORRELATOS */}
-          <div>
-            <button 
-              className="sidebar-dropdown-toggle"
-              onClick={() => toggleDropdown('correlatos')}
-            >
-              <div className="sidebar-item-content">
-                <Layers size={16} />
-                <span>Gestión de Correlatos</span>
-              </div>
-              <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.correlatos ? 'rotated' : ''}`} />
-            </button>
-            <ul className={`sidebar-submenu ${openDropdowns.correlatos ? 'open' : ''}`}>
-              <div className="submenu-inner">
-                <li>
-                  <a href="#vincular" className="sidebar-subitem">
-                    <PlusCircle size={12} />
-                    <span>Vincular Ítems</span>
-                  </a>
-                </li>
-                <li>
-                  <a href="#matrices" className="sidebar-subitem">
-                    <ListFilter size={12} />
-                    <span>Matrices de Control</span>
-                  </a>
-                </li>
-              </div>
-            </ul>
-          </div>
-
-          <span className="menu-category">Auditoría</span>
-          <button className="sidebar-item">
-            <div className="sidebar-item-content">
-              <FileCheck size={16} />
-              <span>Validaciones</span>
+          {/* ACCESO DINÁMICO: PLANES DE COMPRAS */}
+          {tieneAcceso('compras') && (
+            <div>
+              <button 
+                className="sidebar-dropdown-toggle"
+                onClick={() => toggleDropdown('compras')}
+              >
+                <div className="sidebar-item-content">
+                  <FileSpreadsheet size={16} />
+                  <span>Planes de Compras</span>
+                </div>
+                <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.compras ? 'rotated' : ''}`} />
+              </button>
+              <ul className={`sidebar-submenu ${openDropdowns.compras ? 'open' : ''}`}>
+                <div className="submenu-inner">
+                  <li>
+                    <a href="#nueva-compra" className="sidebar-subitem">
+                      <PlusCircle size={12} />
+                      <span>Nueva Solicitud</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#historial-compras" className="sidebar-subitem">
+                      <History size={12} />
+                      <span>Ver Historial</span>
+                    </a>
+                  </li>
+                </div>
+              </ul>
             </div>
-          </button>
+          )}
 
-          <span className="menu-category">Configuración</span>
-          <button className="sidebar-item">
-            <div className="sidebar-item-content">
-              <Settings size={16} />
-              <span>Ajustes</span>
+          {/* ACCESO DINÁMICO: GESTIÓN DE CORRELATOS */}
+          {tieneAcceso('correlatos') && (
+            <div>
+              <button 
+                className="sidebar-dropdown-toggle"
+                onClick={() => toggleDropdown('correlatos')}
+              >
+                <div className="sidebar-item-content">
+                  <Layers size={16} />
+                  <span>Gestión de Correlatos</span>
+                </div>
+                <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.correlatos ? 'rotated' : ''}`} />
+              </button>
+              <ul className={`sidebar-submenu ${openDropdowns.correlatos ? 'open' : ''}`}>
+                <div className="submenu-inner">
+                  <li>
+                    <a href="#vincular" className="sidebar-subitem">
+                      <PlusCircle size={12} />
+                      <span>Vincular Ítems</span>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#matrices" className="sidebar-subitem">
+                      <ListFilter size={12} />
+                      <span>Matrices de Control</span>
+                    </a>
+                  </li>
+                </div>
+              </ul>
             </div>
-          </button>
+          )}
+
+          {/* ACCESO DINÁMICO: AUDITORÍA */}
+          {tieneAcceso('auditoria') && (
+            <>
+              <span className="menu-category">Auditoría</span>
+              <button className="sidebar-item">
+                <div className="sidebar-item-content">
+                  <FileCheck size={16} />
+                  <span>Validaciones</span>
+                </div>
+              </button>
+            </>
+          )}
+
+          {/* ACCESO DINÁMICO: CONFIGURACIÓN */}
+          {tieneAcceso('configuracion') && (
+            <>
+              <span className="menu-category">Configuración</span>
+              <button className="sidebar-item">
+                <div className="sidebar-item-content">
+                  <Settings size={16} />
+                  <span>Ajustes</span>
+                </div>
+              </button>
+            </>
+          )}
         </div>
 
         <div className="sidebar-footer">
@@ -246,8 +257,6 @@ const Dashboard = () => {
 
       {/* CONTENEDOR DE CONTENIDOS PRINCIPAL */}
       <div className="dashboard-main">
-        
-        {/* NAVBAR SUPERIOR ULTRA-MINIMALISTA */}
         <nav className="dashboard-navbar">
           <button 
             className="menu-toggle-btn" 
@@ -272,13 +281,13 @@ const Dashboard = () => {
                 <span className="user-role-tag">{entorno.rol}</span>
               </div>
               <div className="user-avatar-circle">
-                {getIniciales(usuario.nombre + ' ' + usuario.apellido)}
+                {getIniciales(usuario.nombre)}
               </div>
             </div>
           </div>
         </nav>
 
-        {/* ÁREA DE TRABAJO DINÁMICA CON MARCA DE AGUA */}
+        {/* ÁREA DE TRABAJO CON MARCA DE AGUA */}
         <main className="dashboard-content-area">
           <img src="/logo-unne.png" alt="UNNE" className="unne-watermark" />
           

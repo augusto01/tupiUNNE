@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, UserCheck, ArrowLeft, User, IdCard, Phone, MapPin, Mail, Shield, Key, AlertCircle } from 'lucide-react';
+import { UserPlus, UserCheck, User, IdCard, Phone, MapPin, Mail, Shield, Key, AlertCircle } from 'lucide-react';
 import ConfirmModal from '../Modals/ConfirmModal';
 import ToastNotification from '../Modals/ToastNotification';
 import './UsuariosCRUD.css';
 
-const FormularioUsuario = ({ userToEdit, listaUsuarios = [], onSave, onCancel }) => {
+const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], dependencias = [], onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -15,23 +15,57 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], onSave, onCancel })
     celular: '',
     calle: '',
     numero: '',
-    rol: 'Operador',
-    facultad: 'RECTORADO'
+    tipo_usuario_id: '', 
+    dependencia_id: ''   
   });
 
   const [modalConfirmar, setModalConfirmar] = useState(false);
   const [toastConfig, setToastConfig] = useState({ visible: false, mensaje: '', tipo: '' });
   const [erroresDuplicados, setErroresDuplicados] = useState({ dniExiste: false, emailExiste: false });
 
+  // Efecto para cargar los datos en caso de edición mapeando correctamente las FKs sueltas u objetos anidados
   useEffect(() => {
     if (userToEdit) {
+      console.log("👉 Datos originales del backend al editar:", userToEdit);
+
+      // 1. Buscamos el ID del rol por propiedad directa o resolviendo el texto contra el array de tiposUsuario
+      let normalizarRol = userToEdit.tipo_usuario_id || userToEdit.id_tipo_usuario || userToEdit.rol_id || '';
+      if (!normalizarRol && userToEdit.rol && tiposUsuario.length > 0) {
+        const encontrado = tiposUsuario.find(t => t.nombre === userToEdit.rol);
+        if (encontrado) normalizarRol = encontrado.id;
+      }
+
+      // 2. Buscamos el ID de la dependencia por propiedad directa o resolviendo el texto contra el array de dependencias
+      let normalizarDependencia = userToEdit.dependencia_id || userToEdit.id_dependencia || '';
+      if (!normalizarDependencia && userToEdit.dependencia && dependencias.length > 0) {
+        const encontrada = dependencias.find(d => d.nombre === userToEdit.dependencia);
+        if (encontrada) normalizarDependencia = encontrada.id;
+      }
+
       setFormData({ 
-        ...userToEdit,
+        id: userToEdit.id,
+        username: userToEdit.username || '',
+        email: userToEdit.email || '',
+        nombre: userToEdit.nombre || '',
+        apellido: userToEdit.apellido || '',
+        dni: userToEdit.dni || '',
+        celular: userToEdit.celular || '',
+        calle: userToEdit.calle || '',
+        numero: userToEdit.numero || '',
+        tipo_usuario_id: normalizarRol ? normalizarRol.toString() : '', 
+        dependencia_id: normalizarDependencia ? normalizarDependencia.toString() : '',
         password: '' 
       });
+    } else {
+      // Limpiamos el formulario si es una creación limpia
+      setFormData({
+        username: '', email: '', password: '', nombre: '', apellido: '',
+        dni: '', celular: '', calle: '', numero: '', tipo_usuario_id: '', dependencia_id: ''
+      });
     }
-  }, [userToEdit]);
+  }, [userToEdit, tiposUsuario, dependencias]); // Escucha cambios en los catálogos para resolver nombres si es necesario
 
+  // Validación de duplicados en tiempo real (excluyendo al usuario que se está editando)
   useEffect(() => {
     const usuariosAComprobar = userToEdit 
       ? listaUsuarios.filter(u => u.id !== userToEdit.id)
@@ -68,17 +102,24 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], onSave, onCancel })
       return;
     }
 
+    if (!formData.tipo_usuario_id || !formData.dependencia_id) {
+      setToastConfig({
+        visible: true,
+        mensaje: "Debe seleccionar un Rol y una Dependencia válidos de la UNNE.",
+        tipo: "error"
+      });
+      return;
+    }
+
     setModalConfirmar(true);
   };
 
-  // --- EVALUADOR LOCAL DEL RESULTADO ---
   const ejecutarGuardadoConfirmado = async () => {
     setModalConfirmar(false);
     
-    // Esperamos a ver qué dice la base de datos a través del padre
-    const resultado = await onSave(formData);
+    // Le pasamos el formData y el ID si es una edición
+    const resultado = await onSave(formData, userToEdit ? formData.id : null);
     
-    // Si la API falló, capturamos el error y levantamos la alerta en el formulario
     if (resultado && !resultado.ok) {
       setToastConfig({
         visible: true,
@@ -86,7 +127,6 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], onSave, onCancel })
         tipo: 'error'
       });
     }
-    // Si dio OK, el padre se encargará de desmontar este formulario y disparar su éxito.
   };
 
   const botonDeshabilitado = erroresDuplicados.dniExiste || erroresDuplicados.emailExiste;
@@ -94,7 +134,6 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], onSave, onCancel })
   return (
     <div className="formulario-usuario-container view-fade-in">
       
-
       <div className="form-view-title-section">
         <div className="icon-wrapper-title">
           {userToEdit ? <UserCheck size={24} /> : <UserPlus size={24} />}
@@ -176,7 +215,7 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], onSave, onCancel })
           <div className="form-section-block">
             <h3><Shield size={16} /> Asignación Institucional</h3>
             <div className={`form-group ${erroresDuplicados.emailExiste ? 'input-error-shake' : ''}`}>
-              <label><Mail size={14} /> Correo Electrónico Oficial (Debe ser @unne.edu.ar) *</label>
+              <label><Mail size={14} /> Correo Electrónico Oficial *</label>
               <input 
                 type="email" 
                 name="email" 
@@ -195,16 +234,37 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], onSave, onCancel })
 
             <div className="form-row row-2">
               <div className="form-group">
-                <label>Rol de Sistema</label>
-                <select name="rol" value={formData.rol} onChange={handleInputChange}>
-                  <option value="Operador">Operador Estándar</option>
-                  <option value="Administrador">Administrador de Facultad</option>
-                  <option value="Super_Usuario">Super Usuario (Rectorado)</option>
+                <label>Rol de Sistema *</label>
+                <select 
+                  name="tipo_usuario_id" 
+                  value={formData.tipo_usuario_id} 
+                  onChange={handleInputChange} 
+                  required
+                >
+                  <option value="">Seleccione un Rol...</option>
+                  {tiposUsuario.map(rol => (
+                    <option key={rol.id} value={rol.id.toString()}>
+                      {rol.nombre}
+                    </option>
+                  ))}
                 </select>
               </div>
+              
               <div className="form-group">
-                <label>Unidad Académica / Dependencia</label>
-                <input type="text" name="facultad" value={formData.facultad} onChange={handleInputChange} required placeholder="Ej: RECTORADO, FACENA" />
+                <label>Unidad Académica / Dependencia *</label>
+                <select 
+                  name="dependencia_id" 
+                  value={formData.dependencia_id} 
+                  onChange={handleInputChange} 
+                  required
+                >
+                  <option value="">Seleccione Dependencia...</option>
+                  {dependencias.map(dep => (
+                    <option key={dep.id} value={dep.id.toString()}>
+                      {dep.nombre}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
@@ -271,7 +331,6 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], onSave, onCancel })
         onCancel={() => setModalConfirmar(false)}
       />
 
-      {/* TOAST INTERNO DEL FORMULARIO (Maneja exclusivamente los ERRORES de guardado en la pantalla actual) */}
       {toastConfig.visible && (
         <ToastNotification 
           mensaje={toastConfig.mensaje}
