@@ -447,6 +447,296 @@
   box-shadow: none !important;
 }
 
+/* Pestañas de Navegación */
+.tabs-navigation-bar {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 1.5rem;
+  padding-top: 0.5rem;
+}
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.75rem 1.2rem;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s ease;
+}
+.tab-btn:hover {
+  color: #1e293b;
+}
+.tab-btn.active {
+  color: #0284c7;
+  border-bottom: 2px solid #0284c7;
+}
+
+/* Grid de Checkboxes */
+.permisos-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.permiso-checkbox-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.permiso-checkbox-card:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+.permiso-checkbox-card.selected-item {
+  border-color: #0ea5e9;
+  background: #f0f9ff;
+}
+.permiso-slug-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  font-family: monospace;
+  background: #e2e8f0;
+  color: #334155;
+  border-radius: 4px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.permiso-checkbox-card.selected-item .permiso-slug-badge {
+  background: #bae6fd;
+  color: #0369a1;
+}
+.permiso-nombre-desc {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Modal personalizado de ficha */
+.modal-custom-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.modal-custom-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+  width: 90%;
+  max-width: 500px;
+  overflow: hidden;
+}
+.modal-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+.modal-detail-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.detail-data-item {
+  font-size: 0.9rem;
+  color: #334155;
+  border-bottom: 1px dashed #f1f5f9;
+  padding-bottom: 6px;
+}
+.modal-detail-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: flex-end;
+}
+.close-x-btn {
+  background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8;
+}
+
+/* Checkboxes Estilo Dorado UNNE */
+input[type="checkbox"].gold-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #ffffff;
+  margin: 0;
+  font: inherit;
+  color: #b59410;
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 2px solid #cbd5e1;
+  border-radius: 4px;
+  transform: translateY(2px);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+input[type="checkbox"].gold-checkbox::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+  background-color: #ffffff;
+  /* Icono de check via clip-path */
+  transform-origin: center;
+  clip-path: polygon(14% 44%, 0 58%, 38% 96%, 100% 16%, 86% 2%, 38% 68%);
+}
+
+input[type="checkbox"].gold-checkbox:checked {
+  background-color: #d4af37;
+  border-color: #b59410;
+}
+
+input[type="checkbox"].gold-checkbox:checked::before {
+  transform: scale(1);
+}
+
+input[type="checkbox"].gold-checkbox:focus {
+  outline: 2px solid rgba(212, 175, 55, 0.3);
+}
+
+/* Ajuste del contorno del item seleccionado */
+.permiso-checkbox-card.selected-item {
+  border-color: #d4af37 !important;
+  background: #fdfbf7 !important;
+}
+
+/* Ficha del Agente Estilos Internos */
+.ficha-detalles-grid .detail-data-item {
+  font-size: 0.95rem;
+  color: #334155;
+  border-bottom: 1px dashed #e2e8f0;
+  padding-bottom: 8px;
+}
+.ficha-detalles-grid .detail-data-item strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+/* --- DISEÑO PREMIUM DE LA FICHA DEL AGENTE --- */
+.ficha-agente-container {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.ficha-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid #f1f5f9;
+  margin-bottom: 2rem;
+}
+
+.ficha-avatar-large {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #d4af37 0%, #b59410 100%);
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(212, 175, 55, 0.25);
+}
+
+.ficha-profile-titles h4 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.25rem 0;
+}
+
+.ficha-profile-titles p {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.ficha-detalles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.ficha-item {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.ficha-item:hover {
+  transform: translateY(-2px);
+  border-color: #e2e8f0;
+}
+
+.ficha-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+}
+
+.ficha-valor {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+/* Variación para estados o elementos críticos de la ficha */
+.ficha-valor.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ficha-valor.badge-status.active {
+  background-color: #ecfdf5;
+  color: #065f46;
+}
+
+.ficha-valor.badge-status.inactive {
+  background-color: #fef2f2;
+  color: #991b1b;
+}
+.close-x-btn:hover { color: #475569; }
 /* RESPONSIVE DESIGN */
 @media (max-width: 768px) {
   .form-row {

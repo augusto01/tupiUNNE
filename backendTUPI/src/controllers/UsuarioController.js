@@ -10,37 +10,38 @@ async listar(req, res) {
   try {
     const [rows] = await db.query(`
       SELECT 
-        u.id, 
-        u.username, 
-        u.email, 
-        u.nombre,
-        u.apellido, 
-        u.dni, 
-        u.celular, 
-        u.activo, 
-        u.creado_en,
-        u.tipo_usuario_id,   
-        u.dependencia_id,    
-        t.nombre AS rol,
-        d.nombre AS dependencia 
+        u.id, u.username, u.email, u.nombre, u.apellido, u.dni, u.celular, u.activo,
+        u.tipo_usuario_id, u.dependencia_id,
+        tu.nombre AS rol,
+        d.nombre AS dependencia,
+        IFNULL(GROUP_CONCAT(p.slug), '') AS permisos_raw
       FROM usuarios u
-      JOIN tipos_usuario t ON u.tipo_usuario_id = t.id
-      JOIN dependencias d ON u.dependencia_id = d.id 
-      ORDER BY u.id DESC
+      JOIN tipos_usuario tu ON u.tipo_usuario_id = tu.id
+      JOIN dependencias d ON u.dependencia_id = d.id
+      LEFT JOIN usuario_permiso up ON u.id = up.usuario_id
+      LEFT JOIN permisos p ON up.permiso_id = p.id
+      GROUP BY u.id
+      ORDER BY u.apellido ASC, u.nombre ASC
     `);
-    
-    return res.status(200).json(rows);
+
+    // Mapeamos las filas para convertir el string de permisos en un Array de JS compatible con el Front
+    const usuariosConPermisos = rows.map(user => ({
+      ...user,
+      permisos: user.permisos_raw ? user.permisos_raw.split(',') : []
+    }));
+
+    return res.status(200).json(usuariosConPermisos);
   } catch (error) {
-    console.error('Error al listar usuarios estructurados:', error);
+    console.error('❌ Error al listar usuarios:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
-
   // 2. DAR DE ALTA (CREAR)
   async crear(req, res) {
   try {
     const { username, email, password, nombre, apellido, dni, celular, tipo_usuario_id, dependencia_id } = req.body;
 
+    // 1. Validaciones de control mandatorias de la UNNE
     if (!username || !email || !password || !nombre || !apellido || !dni || !tipo_usuario_id || !dependencia_id) {
       return res.status(400).json({ error: 'Faltan campos mandatorios.' });
     }
@@ -48,7 +49,7 @@ async listar(req, res) {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Quitamos 'calle' y 'numero' de la query
+    // 2. Registro base del operador centralizado
     const [result] = await db.query(
       `INSERT INTO usuarios (
         username, email, password, nombre, apellido, 
@@ -57,8 +58,45 @@ async listar(req, res) {
       [username, email, hashedPassword, nombre, apellido, dni, celular || null, tipo_usuario_id, dependencia_id]
     );
 
+    const nuevoUsuarioId = result.insertId;
+
+    // 3. MATRIZ DE PERMISOS POR DEFECTO (Reglas de Negocio Centrales)
+    // Buscamos los slugs correspondientes para mapear a IDs reales de tu tabla de permisos
+    let slugsPorDefecto = [];
+    const ID_ROL = Number(tipo_usuario_id);
+
+    if (ID_ROL === 1) {
+      // Superusuario: Acceso absoluto a todo el ecosistema TUPI
+      slugsPorDefecto = ['panel', 'usuarios', 'compras', 'correlatos'];
+    } else if (ID_ROL === 2) {
+      // Administrador: Gestión operacional sin administración de personal (seguridad cruzada)
+      slugsPorDefecto = ['panel', 'compras', 'correlatos'];
+    } else if (ID_ROL === 3) {
+      // Operador: Carga básica de matrices de control, excluido de compras y usuarios
+      slugsPorDefecto = ['panel', 'correlatos'];
+    }
+
+    // 4. Inyección atómica a la tabla intermedia 'usuario_permiso'
+    if (slugsPorDefecto.length > 0) {
+      // Obtenemos los IDs reales de los permisos basados en los slugs requeridos
+      const placeholders = slugsPorDefecto.map(() => '?').join(',');
+      const [permisosRows] = await db.query(
+        `SELECT id FROM permisos WHERE slug IN (${placeholders})`,
+        slugsPorDefecto
+      );
+
+      // Vinculamos cada permiso al nuevo usuario de forma directa e independiente
+      for (const permiso of permisosRows) {
+        await db.query(
+          `INSERT INTO usuario_permiso (usuario_id, permiso_id) VALUES (?, ?)`,
+          [nuevoUsuarioId, permiso.id]
+        );
+      }
+    }
+
+    // 5. Retorno de estructura limpia al cliente
     return res.status(201).json({
-      id: result.insertId,
+      id: nuevoUsuarioId,
       username,
       email,
       nombre,
@@ -68,93 +106,77 @@ async listar(req, res) {
       tipo_usuario_id,
       dependencia_id,
       activo: true,
-      message: 'Operador registrado exitosamente.'
+      permisosAsignados: slugsPorDefecto,
+      message: 'Operador registrado y matriz de permisos inicializada con éxito.'
     });
+
   } catch (error) {
-    console.error('Error al crear usuario:', error);
+    console.error('❌ Error crítico al crear usuario con permisos:', error);
+    
     if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-      return res.status(400).json({ error: 'El Rol o la Dependencia seleccionada no son válidos.' });
+      return res.status(400).json({ error: 'El Rol o la Dependencia seleccionada no existen en la base de datos.' });
     }
     if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'El username, email o DNI ya se encuentra registrado.' });
+      return res.status(409).json({ error: 'Conflicto de integridad: El username, email o DNI ya se encuentra registrado.' });
     }
+    
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
-
   // 3. MODIFICAR (ACTUALIZAR)
   async modificar(req, res) {
   try {
     const { id } = req.params;
-    
-    // 🔥 Extraemos solo los campos que REALMENTE existen en tu tabla de MySQL
-    const { 
-      username, 
-      email, 
-      password, 
-      nombre, 
-      apellido, 
-      dni, 
-      celular, 
-      tipo_usuario_id, 
-      dependencia_id 
-    } = req.body;
+    const { username, email, nombre, apellido, dni, celular, tipo_usuario_id, dependencia_id, permisos } = req.body;
 
-    // Verificamos si existe el usuario
-    const [userExist] = await db.query('SELECT password FROM usuarios WHERE id = ?', [id]);
-    if (userExist.length === 0) {
-      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    // 1. Validaciones de control de campos obligatorios
+    if (!username || !email || !nombre || !apellido || !dni || !tipo_usuario_id || !dependencia_id) {
+      return res.status(400).json({ error: 'Faltan campos mandatorios para actualizar el legajo.' });
     }
 
-    // 🔥 Query ajustado estrictamente a la estructura de tu BD
-    let query = `
-      UPDATE usuarios 
-      SET username = ?, 
-          email = ?, 
-          nombre = ?, 
-          apellido = ?, 
-          dni = ?, 
-          celular = ?, 
-          tipo_usuario_id = ?, 
-          dependencia_id = ?
-    `;
-    
-    let params = [
-      username, 
-      email, 
-      nombre, 
-      apellido, 
-      dni, 
-      celular || null,
-      tipo_usuario_id,
-      dependencia_id
-    ];
+    // 2. Actualizamos los atributos personales del operador
+    await db.query(
+      `UPDATE usuarios 
+       SET username = ?, email = ?, nombre = ?, apellido = ?, dni = ?, celular = ?, 
+           tipo_usuario_id = ?, dependencia_id = ? 
+       WHERE id = ?`,
+      [username, email, nombre, apellido, dni, celular || null, tipo_usuario_id, dependencia_id, id]
+    );
 
-    // Si viene password para cambio, la hasheamos
-    if (password && password.trim() !== '') {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(password, salt);
-      query += `, password = ?`;
-      params.push(hashedPassword);
+    // 3. SINCRO DE PERMISOS (Checkboxes Dorados)
+    // Limpiamos la matriz de permisos anterior para este usuario específico
+    await db.query('DELETE FROM usuario_permiso WHERE usuario_id = ?', [id]);
+
+    // Si el Front envió slugs en el array de permisos, los vinculamos uno a uno
+    if (permisos && permisos.length > 0) {
+      // Buscamos las IDs reales correspondientes a los slugs seleccionados
+      const placeholders = permisos.map(() => '?').join(',');
+      const [permisosRows] = await db.query(
+        `SELECT id FROM permisos WHERE slug IN (${placeholders})`,
+        permisos
+      );
+
+      // Inyección en la tabla intermedia
+      for (const p of permisosRows) {
+        await db.query(
+          'INSERT INTO usuario_permiso (usuario_id, permiso_id) VALUES (?, ?)',
+          [id, p.id]
+        );
+      }
     }
 
-    query += ` WHERE id = ?`;
-    params.push(id);
+    return res.status(200).json({ 
+      ok: true, 
+      message: 'Legajo y matriz de permisos actualizados correctamente.' 
+    });
 
-    // Ejecutamos la consulta limpia
-    await db.query(query, params);
-
-    return res.status(200).json({ message: 'Ecosistema de usuario actualizado correctamente.' });
   } catch (error) {
-    console.error('Error al modificar usuario:', error);
-    
-    if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-      return res.status(400).json({ error: 'El Rol o la Dependencia seleccionada no existen en los registros base.' });
-    }
+    console.error('❌ Error crítico al modificar usuario con permisos:', error);
     
     if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'Conflicto de duplicados: El username, email o DNI ya existen.' });
+      return res.status(409).json({ error: 'El username, email o DNI ya se encuentra registrado por otro operador.' });
     }
+    
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 }

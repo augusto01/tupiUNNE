@@ -53,6 +53,15 @@ CREATE TABLE IF NOT EXISTS usuarios (
     FOREIGN KEY (dependencia_id) REFERENCES dependencias(id)
 );
 
+-- 6. Nueva Tabla Intermedia: Permisos Dinámicos Directos por Usuario
+CREATE TABLE IF NOT EXISTS usuario_permiso (
+    usuario_id INT NOT NULL,
+    permiso_id INT NOT NULL,
+    PRIMARY KEY (usuario_id, permiso_id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (permiso_id) REFERENCES permisos(id) ON DELETE CASCADE
+);
+
 --- ==========================================================================
 --- LOTE DE DATOS COMPLETO DE LA UNNE (DEPENDENCIAS)
 --- ==========================================================================
