@@ -1,7 +1,6 @@
 import db from '../config/db.js';
 
-// 1. Obtener el estado del Plan Anual (Verifica si está habilitado la carga)
-// 1. Obtener el estado del Plan Anual (Verifica si la carga está habilitada)
+// 1. Obtener el estado del Plan Anual
 export const getEstadoPlan = async (req, res) => {
   try {
     const query = `
@@ -18,16 +17,14 @@ export const getEstadoPlan = async (req, res) => {
       });
     }
 
-    // Si no hay registros, devuelve habilitado por defecto
     res.json({ habilitado: true, mensaje: '' });
   } catch (error) {
-    console.error('Advertencia al consultar configuracion_plan_compras:', error.message);
-    // Retorna fallback por defecto para que la app no colapse en desarrollo
+    console.error('Error al verificar estado del plan:', error.message);
     res.json({ habilitado: true, mensaje: '' });
   }
 };
 
-// 2. Obtener la lista única de Rubros / Categorías disponibles
+// 2. Obtener lista de Rubros
 export const getRubros = async (req, res) => {
   try {
     const query = `
@@ -37,7 +34,6 @@ export const getRubros = async (req, res) => {
       ORDER BY rubro ASC
     `;
     const [rows] = await db.query(query);
-
     const listaRubros = rows.map((r) => r.rubro);
     res.json(listaRubros);
   } catch (error) {
@@ -46,7 +42,7 @@ export const getRubros = async (req, res) => {
   }
 };
 
-// 3. Obtener el catálogo de bienes filtrados por Rubro (Lee precio_unitario e observacion)
+// 3. Obtener bienes por Rubro
 export const getBienesPorRubro = async (req, res) => {
   const { rubro } = req.query;
 
@@ -55,7 +51,6 @@ export const getBienesPorRubro = async (req, res) => {
   }
 
   try {
-    // Si precio_unitario está en 0 o NULL, calcula un valor base aleatorio para desarrollo
     const query = `
       SELECT 
         id,
@@ -77,7 +72,7 @@ export const getBienesPorRubro = async (req, res) => {
   }
 };
 
-// 4. Actualizar estado y configuración del Plan Anual
+// 4. Configuración del Plan
 export const updateConfiguracionPlan = async (req, res) => {
   const { habilitado, mensaje } = req.body;
 
@@ -87,7 +82,6 @@ export const updateConfiguracionPlan = async (req, res) => {
       VALUES (?, ?)
     `;
     await db.query(query, [habilitado ? 1 : 0, mensaje || '']);
-
     res.json({ message: 'Configuración del plan actualizada correctamente' });
   } catch (error) {
     console.error('Error al actualizar la configuración:', error);
@@ -95,10 +89,11 @@ export const updateConfiguracionPlan = async (req, res) => {
   }
 };
 
-// 5. Crear una nueva Solicitud de Compras guardando los renglones (solicitudes_compras y solicitudes_renglones)
+// 5. Crear Solicitud (Soporta BORRADOR o PENDIENTE) -> Apunta a 'solicitudes' y 'solicitud_renglones'
 export const crearSolicitud = async (req, res) => {
-  const { nro_convocatoria, bienes_seleccionados } = req.body;
+  const { nro_convocatoria, bienes_seleccionados, estado } = req.body;
   const usuarioId = req.usuario ? req.usuario.id : null;
+  const estadoFinal = estado || 'PENDIENTE';
 
   if (!bienes_seleccionados || !Array.isArray(bienes_seleccionados) || bienes_seleccionados.length === 0) {
     return res.status(400).json({ error: 'Debe enviar al menos un bien para generar la solicitud.' });
@@ -109,31 +104,30 @@ export const crearSolicitud = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // 1. Insertar la cabecera en solicitudes_compras
+    // Insertar cabecera en la tabla 'solicitudes'
     const [solicitudResult] = await connection.query(
-      `INSERT INTO solicitudes_compras (usuario_id, nro_convocatoria, fecha_creacion, estado) 
-       VALUES (?, ?, NOW(), 'PENDIENTE')`,
-      [usuarioId, nro_convocatoria || 'CDC:2026/01']
+      `INSERT INTO solicitudes (usuario_id, nro_convocatoria, fecha_creacion, estado) 
+       VALUES (?, ?, NOW(), ?)`,
+      [usuarioId, nro_convocatoria || 'CDC:2026/01', estadoFinal]
     );
 
     const solicitudId = solicitudResult.insertId;
 
-    // 2. Mapear los ítems para la tabla solicitudes_renglones
-    const detalleValores = bienes_seleccionados.map((item) => [
-      solicitudId,
-      item.bien_id,
-      item.cantidad_solicitada || 1,
-      item.precio_unitario || 0.00,
-      item.observacion || ''
-    ]);
-
-    // 3. Insertar renglones en lote (batch insert)
-    await connection.query(
-      `INSERT INTO solicitudes_renglones 
-       (solicitud_id, bien_id, cantidad, precio_unitario, observacion) 
-       VALUES ?`,
-      [detalleValores]
-    );
+    // Insertar renglones en la tabla 'solicitud_renglones'
+    for (const item of bienes_seleccionados) {
+      await connection.query(
+        `INSERT INTO solicitud_renglones 
+         (solicitud_id, bien_id, cantidad, precio_unitario, observacion) 
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          solicitudId,
+          item.bien_id,
+          item.cantidad_solicitada || item.cantidad || 1,
+          item.precio_unitario || 0.00,
+          item.observacion || ''
+        ]
+      );
+    }
 
     await connection.commit();
 
@@ -145,6 +139,111 @@ export const crearSolicitud = async (req, res) => {
     await connection.rollback();
     console.error('Error al guardar la solicitud de compras:', error);
     res.status(500).json({ error: 'Ocurrió un error al procesar la solicitud en la base de datos.' });
+  } finally {
+    connection.release();
+  }
+};
+
+// 6. Obtener Historial de Solicitudes (Lee desde 'solicitudes' y 'solicitud_renglones')
+export const getHistorialSolicitudes = async (req, res) => {
+  try {
+    const querySolicitudes = `
+      SELECT id, nro_convocatoria, fecha_creacion, estado 
+      FROM solicitudes 
+      ORDER BY id DESC
+    `;
+    const [solicitudes] = await db.query(querySolicitudes);
+
+    if (solicitudes.length === 0) {
+      return res.json([]);
+    }
+
+    const ids = solicitudes.map((s) => s.id);
+
+    const queryRenglones = `
+      SELECT 
+        sr.id,
+        sr.solicitud_id,
+        sr.bien_id,
+        sr.cantidad,
+        sr.precio_unitario,
+        sr.observacion,
+        b.descripcion AS bien_descripcion
+      FROM solicitud_renglones sr
+      JOIN bienes b ON sr.bien_id = b.id
+      WHERE sr.solicitud_id IN (?)
+    `;
+    const [renglones] = await db.query(queryRenglones, [ids]);
+
+    const historialCompleto = solicitudes.map((sol) => ({
+      ...sol,
+      renglones: renglones.filter((r) => r.solicitud_id === sol.id)
+    }));
+
+    res.json(historialCompleto);
+  } catch (error) {
+    console.error('Error al obtener el historial:', error);
+    res.status(500).json({ error: 'Error al consultar el historial de solicitudes.' });
+  }
+};
+
+// 7. Actualizar Solicitud / Borrador
+export const updateSolicitud = async (req, res) => {
+  const { id } = req.params;
+  const { estado, renglones } = req.body;
+
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    if (estado) {
+      await connection.query(
+        `UPDATE solicitudes SET estado = ? WHERE id = ?`,
+        [estado, id]
+      );
+    }
+
+    if (Array.isArray(renglones)) {
+      for (const r of renglones) {
+        await connection.query(
+          `UPDATE solicitud_renglones 
+           SET cantidad = ?, observacion = ? 
+           WHERE id = ? AND solicitud_id = ?`,
+          [r.cantidad, r.observacion || '', r.id, id]
+        );
+      }
+    }
+
+    await connection.commit();
+    res.json({ message: 'Solicitud actualizada correctamente.' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error al actualizar la solicitud:', error);
+    res.status(500).json({ error: 'Error al actualizar la solicitud.' });
+  } finally {
+    connection.release();
+  }
+};
+
+// 8. Eliminar Borrador
+export const deleteSolicitud = async (req, res) => {
+  const { id } = req.params;
+
+  const connection = await db.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    await connection.query(`DELETE FROM solicitud_renglones WHERE solicitud_id = ?`, [id]);
+    await connection.query(`DELETE FROM solicitudes WHERE id = ?`, [id]);
+
+    await connection.commit();
+    res.json({ message: 'Solicitud eliminada correctamente.' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error al eliminar la solicitud:', error);
+    res.status(500).json({ error: 'Error al eliminar la solicitud.' });
   } finally {
     connection.release();
   }

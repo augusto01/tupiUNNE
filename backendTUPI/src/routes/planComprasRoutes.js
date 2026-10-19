@@ -1,28 +1,33 @@
+// src/routes/PlanComprasRoutes.js
 const { Router } = require('express');
-
 const { 
-    getEstadoPlan, 
-    updateConfiguracionPlan, 
-    getRubros, 
-    getBienesPorRubro, 
-    crearSolicitud 
-} = require('../controllers/planComprasController.js');
-
-// 👈 Importar usando el nombre correcto del archivo
-const authMiddleware = require('../middlewares/authMiddleware.js');
+  getEstadoPlan, 
+  getRubros, 
+  getBienesPorRubro, 
+  updateConfiguracionPlan, 
+  crearSolicitud,
+  getHistorialSolicitudes,
+  updateSolicitud,
+  deleteSolicitud
+} = require('../controllers/planComprasController');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = Router();
 
-// 🔒 Aplicar middleware a todas las rutas
+// Aplicar middleware de autenticación
 router.use(authMiddleware);
 
-// Rutas de administración de fechas y estado
+// Rutas del Plan Anual de Compras
 router.get('/estado', getEstadoPlan);
-router.put('/configuracion', updateConfiguracionPlan);
-
-// Rutas para generación de solicitudes (Checklist)
 router.get('/rubros', getRubros);
 router.get('/bienes-por-rubro', getBienesPorRubro);
-router.post('/solicitudes', crearSolicitud);
+router.put('/configuracion', updateConfiguracionPlan);
 
+// Rutas de Solicitudes, Borradores e Historial
+router.post('/solicitudes', crearSolicitud);
+router.get('/solicitudes-historial', getHistorialSolicitudes);
+router.put('/solicitudes/:id', updateSolicitud);
+router.delete('/solicitudes/:id', deleteSolicitud);
+
+// Exportación mediante CommonJS
 module.exports = router;

@@ -6,7 +6,7 @@ const authRoutes = require('./src/routes/authRoutes');
 const usuarioRoutes = require('./src/routes/usuarioRoutes');
 const apiRoutes = require('./src/routes/apiRoutes');
 const expedienteRoutes = require('./src/routes/expedienteRoutes');
-const planComprasRoutes = require('./src/routes/PlanComprasRoutes'); // <-- Importar las rutas del Plan Anual de Compras
+const planComprasRoutes  = require ('./src/routes/planComprasRoutes.js');
 
 const app = express();
 const PORT = process.env.PORT || 5000;

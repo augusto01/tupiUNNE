@@ -370,6 +370,102 @@ select option {
 }
 
 /* ==========================================
+   POP-UP FLOTANTE (TOAST NOTIFICATIONS)
+   ========================================== */
+
+.tupi-toast-popup {
+  position: fixed;
+  top: 25px;
+  right: 25px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.2rem;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  font-size: 0.9rem;
+  font-weight: 600;
+  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 300px;
+  max-width: 450px;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.tupi-toast-popup.success {
+  background-color: #065f46;
+  color: #ffffff;
+  border-left: 5px solid #10b981;
+}
+
+.tupi-toast-popup.error {
+  background-color: #991b1b;
+  color: #ffffff;
+  border-left: 5px solid #ef4444;
+}
+
+.toast-popup-content {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.toast-close-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+
+.toast-close-btn:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Animación de rotación del Spinner */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner-rotation {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner-rotation {
+  animation: spin 1s linear infinite;
+}
+
+/* ==========================================
    RESPONSIVIDAD Y MEDIA QUERIES
    ========================================== */
 

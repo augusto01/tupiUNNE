@@ -17,10 +17,11 @@ import {
 import UsuariosCRUD from '../Usuarios/UsuariosCRUD'; 
 import { AnalizadorExpediente } from '../Expedientes/AnalizadorExp';
 import PlanComprasABM from '../PAC/PlanComprasABM';
+import Historial from '../PAC/Historial'; // 👈 Importación agregada del componente Historial
 import './Dashboard.css';
 
 const Dashboard = () => {
-  // 1. Declaración de la variable isLoading que faltaba
+  // Declaración de la variable isLoading
   const [isLoading, setIsLoading] = useState(false);
 
   // Inicialización segura del usuario desde localStorage
@@ -105,7 +106,6 @@ const Dashboard = () => {
     return name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
   };
 
-  // Evaluación de pantalla de carga (Línea 86 corregida)
   if (isLoading) {
     return (
       <div className="dashboard-preload-container">
@@ -351,6 +351,11 @@ const Dashboard = () => {
 
             {currentSection === 'compras-nueva' && (
               <PlanComprasABM />
+            )}
+
+            {/* 👇 RENDERIZADO DEL COMPONENTE HISTORIAL 👇 */}
+            {currentSection === 'compras-historial' && (
+              <Historial />
             )}
 
             {(currentSection === 'usuarios-ver' || currentSection === 'usuarios-crear') && (

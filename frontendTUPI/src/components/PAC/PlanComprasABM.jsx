@@ -1,32 +1,38 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Search, ShoppingCart, Trash2, Send, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Send, Save, AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react';
 import './PlanComprasABM.css';
 
 const PlanComprasABM = () => {
   const { fetchAuth, token } = useAuth();
 
-  // Estados de datos dinámicos desde la API
   const [rubros, setRubros] = useState([]);
   const [rubroSeleccionado, setRubroSeleccionado] = useState('');
   const [bienesCatalogo, setBienesCatalogo] = useState([]);
 
-  // Filtros Avanzados
   const [busquedaTexto, setBusquedaTexto] = useState('');
   const [filtroInciso, setFiltroInciso] = useState('TODOS');
-
-  // Estado para los ítems seleccionados en la Solicitud
   const [solicitudItems, setSolicitudItems] = useState({});
 
-  // Estados de control UI y mensajes
   const [planEstado, setPlanEstado] = useState({ habilitado: true, mensaje: '' });
   const [nroConvocatoria, setNroConvocatoria] = useState('CDC:2026/01');
   const [loadingRubros, setLoadingRubros] = useState(true);
   const [loadingBienes, setLoadingBienes] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingAction, setSubmittingAction] = useState(null);
 
-  // 1. Cargar estado del Plan Anual y Rubros al iniciar
+  // Estado para controlar el Pop-up flotante
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  const mostrarPopUp = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    // Ocultar automáticamente a los 4 segundos
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  };
+
   useEffect(() => {
     const currentToken = token || localStorage.getItem('tupi_token') || localStorage.getItem('token');
     if (!currentToken) return;
@@ -47,14 +53,10 @@ const PlanComprasABM = () => {
           setRubros([]);
         }
       })
-      .catch((err) => {
-        console.error('Error al cargar rubros:', err.message);
-        setErrorMsg('No se pudieron obtener los rubros del servidor.');
-      })
+      .catch(() => mostrarPopUp('No se pudieron obtener los rubros del servidor.', 'error'))
       .finally(() => setLoadingRubros(false));
   }, [token]);
 
-  // 2. Cargar bienes del catálogo
   useEffect(() => {
     const currentToken = token || localStorage.getItem('tupi_token') || localStorage.getItem('token');
     if (!currentToken || !rubroSeleccionado) return;
@@ -63,26 +65,18 @@ const PlanComprasABM = () => {
     fetchAuth(`/plan-compras/bienes-por-rubro?rubro=${encodeURIComponent(rubroSeleccionado)}`)
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) {
-          setBienesCatalogo(data);
-        } else {
-          setBienesCatalogo([]);
-        }
+        setBienesCatalogo(Array.isArray(data) ? data : []);
       })
       .catch((err) => console.error('Error al cargar bienes:', err.message))
       .finally(() => setLoadingBienes(false));
   }, [rubroSeleccionado, token]);
 
-  // Helper para normalizar el precio traído de la BD
   const obtenerPrecioBD = (bien) => {
-    // Busca las distintas variantes de nombre que pueda devolver la consulta
-    const precio = bien.precio_unitario ?? bien.precio ?? bien.precio_ref;
+    const precio = bien.precio_unitario ?? bien.precio;
     const num = parseFloat(precio);
-    // Si viene en NULL, 0 o inválido, le asignamos un precio base estandarizado
     return (!isNaN(num) && num > 0) ? num : 15000;
   };
 
-  // 3. Filtrar catálogo en tiempo real
   const bienesFiltrados = useMemo(() => {
     return bienesCatalogo.filter((bien) => {
       const coincideTexto = bien.descripcion.toLowerCase().includes(busquedaTexto.toLowerCase());
@@ -96,8 +90,8 @@ const PlanComprasABM = () => {
     return ['TODOS', ...new Set(lista)];
   }, [bienesCatalogo]);
 
-  // 4. Marcar / Desmarcar bien del catálogo
   const handleToggleProducto = (bien) => {
+    if (isSubmitting) return;
     setSolicitudItems((prev) => {
       const existe = prev[bien.id];
       if (existe) {
@@ -106,8 +100,6 @@ const PlanComprasABM = () => {
         return nuevo;
       } else {
         const precioBase = obtenerPrecioBD(bien);
-        const cantidadInicial = 1;
-
         return {
           ...prev,
           [bien.id]: {
@@ -115,18 +107,18 @@ const PlanComprasABM = () => {
             descripcion: bien.descripcion,
             inciso: bien.inciso,
             partida_principal: bien.partida_principal,
-            cantidad_solicitada: cantidadInicial,
-            precio_unitario: precioBase, // 👈 Fijado automáticamente desde la BD
+            cantidad_solicitada: 1,
+            precio_unitario: precioBase,
             observacion: '',
-            subtotal: cantidadInicial * precioBase
+            subtotal: precioBase
           }
         };
       }
     });
   };
 
-  // 5. Eliminar ítem de la solicitud
   const handleRemoveItem = (bienId) => {
+    if (isSubmitting) return;
     setSolicitudItems((prev) => {
       const nuevo = { ...prev };
       delete nuevo[bienId];
@@ -134,20 +126,14 @@ const PlanComprasABM = () => {
     });
   };
 
-  // 6. Actualizar únicamente Cantidad u Observación
   const handleValueChange = (bienId, campo, valor) => {
+    if (isSubmitting) return;
     setSolicitudItems((prev) => {
       const item = prev[bienId];
       if (!item) return prev;
 
       if (campo === 'observacion') {
-        return {
-          ...prev,
-          [bienId]: {
-            ...item,
-            observacion: valor
-          }
-        };
+        return { ...prev, [bienId]: { ...item, observacion: valor } };
       }
 
       if (campo === 'cantidad_solicitada') {
@@ -166,21 +152,22 @@ const PlanComprasABM = () => {
     });
   };
 
-  // 7. Enviar Solicitud a la API
-  const handleSubmitSolicitud = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
+  const handleProcesarSolicitud = async (nuevoEstado) => {
+    if (isSubmitting) return;
 
     const itemsAEnviar = Object.values(solicitudItems);
 
     if (itemsAEnviar.length === 0) {
-      setErrorMsg('Debe seleccionar al menos un producto en su solicitud.');
+      mostrarPopUp('Debe seleccionar al menos un producto antes de continuar.', 'error');
       return;
     }
 
+    setIsSubmitting(true);
+    setSubmittingAction(nuevoEstado);
+
     const payload = {
       nro_convocatoria: nroConvocatoria,
+      estado: nuevoEstado,
       bienes_seleccionados: itemsAEnviar.map((i) => ({
         bien_id: i.bien_id,
         cantidad_solicitada: i.cantidad_solicitada,
@@ -198,14 +185,22 @@ const PlanComprasABM = () => {
       const data = await res.json();
 
       if (res.ok) {
-        setSuccessMsg(`¡Solicitud #${data.solicitudId} registrada exitosamente!`);
+        mostrarPopUp(
+          nuevoEstado === 'BORRADOR'
+            ? `¡Borrador #${data.solicitudId} guardado con éxito!`
+            : `¡Solicitud #${data.solicitudId} enviada para su revisión!`,
+          'success'
+        );
         setSolicitudItems({});
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        setErrorMsg(data.error || 'Ocurrió un error al procesar la solicitud.');
+        mostrarPopUp(data.error || 'Ocurrió un error al procesar la solicitud.', 'error');
       }
     } catch (err) {
-      setErrorMsg(err.message || 'Error de conexión con el servidor.');
+      mostrarPopUp(err.message || 'Error de conexión con el servidor.', 'error');
+    } finally {
+      setIsSubmitting(false);
+      setSubmittingAction(null);
     }
   };
 
@@ -225,6 +220,20 @@ const PlanComprasABM = () => {
 
   return (
     <div className="abm-container">
+
+      {/* POP-UP FLOTANTE (TOAST) */}
+      {toast.show && (
+        <div className={`tupi-toast-popup ${toast.type}`}>
+          <div className="toast-popup-content">
+            {toast.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+            <span>{toast.message}</span>
+          </div>
+          <button className="toast-close-btn" onClick={() => setToast({ ...toast, show: false })}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       <div className="abm-header">
         <div>
           <h1 className="abm-title">Plan Anual de Compras 2026</h1>
@@ -232,20 +241,7 @@ const PlanComprasABM = () => {
         </div>
       </div>
 
-      {errorMsg && (
-        <div className="alert alert-danger mb-4 d-flex align-items-center gap-2">
-          <AlertCircle size={18} />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-      {successMsg && (
-        <div className="alert alert-success mb-4 d-flex align-items-center gap-2">
-          <CheckCircle2 size={18} />
-          <span>{successMsg}</span>
-        </div>
-      )}
-
-      {/* Datos de Convocatoria */}
+      {/* IDENTIFICADOR CONVOCATORIA */}
       <div className="abm-card mb-4">
         <div className="card-header">
           <h2 className="card-title">1. Identificador de la Convocatoria</h2>
@@ -256,6 +252,7 @@ const PlanComprasABM = () => {
             <input
               type="text"
               className="form-control"
+              disabled={isSubmitting}
               value={nroConvocatoria}
               onChange={(e) => setNroConvocatoria(e.target.value)}
               placeholder="Ej: CDC:2026/01"
@@ -264,7 +261,7 @@ const PlanComprasABM = () => {
         </div>
       </div>
 
-      {/* SECCIÓN 1: CATÁLOGO DE BIENES */}
+      {/* CATÁLOGO DE BIENES */}
       <div className="abm-card mb-4">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h2 className="card-title">2. Selección del Catálogo de Bienes</h2>
@@ -281,6 +278,7 @@ const PlanComprasABM = () => {
             ) : (
               <select
                 className="form-control"
+                disabled={isSubmitting}
                 value={rubroSeleccionado}
                 onChange={(e) => setRubroSeleccionado(e.target.value)}
               >
@@ -298,7 +296,8 @@ const PlanComprasABM = () => {
               <input
                 type="text"
                 className="form-control search-input"
-                placeholder="Buscar por nombre o descripción del bien..."
+                disabled={isSubmitting}
+                placeholder="Buscar bien..."
                 value={busquedaTexto}
                 onChange={(e) => setBusquedaTexto(e.target.value)}
               />
@@ -306,9 +305,10 @@ const PlanComprasABM = () => {
           </div>
 
           <div className="filter-item">
-            <label>Filtrar por Inciso</label>
+            <label>Inciso</label>
             <select
               className="form-control"
+              disabled={isSubmitting}
               value={filtroInciso}
               onChange={(e) => setFiltroInciso(e.target.value)}
             >
@@ -332,15 +332,9 @@ const PlanComprasABM = () => {
             </thead>
             <tbody>
               {loadingBienes ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-4">Cargando catálogo...</td>
-                </tr>
+                <tr><td colSpan="5" className="text-center py-4">Cargando catálogo...</td></tr>
               ) : bienesFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="text-center py-4 text-muted">
-                    No se encontraron bienes con los criterios de búsqueda aplicados.
-                  </td>
-                </tr>
+                <tr><td colSpan="5" className="text-center py-4 text-muted">No se encontraron bienes.</td></tr>
               ) : (
                 bienesFiltrados.map((bien) => {
                   const estaEnSolicitud = !!solicitudItems[bien.id];
@@ -352,16 +346,13 @@ const PlanComprasABM = () => {
                         <input
                           type="checkbox"
                           className="checkbox-custom"
+                          disabled={isSubmitting}
                           checked={estaEnSolicitud}
                           onChange={() => handleToggleProducto(bien)}
                         />
                       </td>
-                      <td>
-                        <strong>{bien.descripcion}</strong>
-                      </td>
-                      <td>
-                        <small className="text-gray">{bien.inciso} | {bien.partida_principal}</small>
-                      </td>
+                      <td><strong>{bien.descripcion}</strong></td>
+                      <td><small className="text-gray">{bien.inciso} | {bien.partida_principal}</small></td>
                       <td className="text-right font-bold">
                         ${precioMuestra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </td>
@@ -381,116 +372,140 @@ const PlanComprasABM = () => {
         </div>
       </div>
 
-      {/* SECCIÓN 2: DETALLE DE SOLICITUD (SOLO CANTIDAD Y OBSERVACIÓN EDITABLES) */}
-      <div className="abm-card" id="seccion-solicitud">
+      {/* DETALLE DE REQUERIMIENTOS */}
+      <div className="abm-card">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h2 className="card-title d-flex align-items-center gap-2">
-            <ShoppingCart size={20} /> 3. Detalle de Requerimientos a Solicitar
+            <ShoppingCart size={20} /> 3. Detalle de Requerimientos
           </h2>
-          <span className="text-muted small">Ajuste únicamente la cantidad y especifique observaciones</span>
         </div>
 
-        <form onSubmit={handleSubmitSolicitud}>
-          <div className="table-wrapper">
-            <table className="abm-table">
-              <thead>
+        <div className="table-wrapper">
+          <table className="abm-table">
+            <thead>
+              <tr>
+                <th>Bien Seleccionado</th>
+                <th className="text-center" style={{ width: '100px' }}>Cantidad</th>
+                <th className="text-right" style={{ width: '150px' }}>Precio Unit ($)</th>
+                <th className="text-right" style={{ width: '150px' }}>Subtotal ($)</th>
+                <th style={{ width: '320px' }}>Observación</th>
+                <th className="text-center" style={{ width: '50px' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {listaSolicitud.length === 0 ? (
                 <tr>
-                  <th>Bien Seleccionado</th>
-                  <th className="text-center" style={{ width: '100px' }}>Cantidad</th>
-                  <th className="text-right" style={{ width: '150px' }}>Precio Unit ($)</th>
-                  <th className="text-right" style={{ width: '150px' }}>Subtotal ($)</th>
-                  <th style={{ width: '320px' }}>Observaciones / Especificación Técnica</th>
-                  <th className="text-center" style={{ width: '50px' }}></th>
+                  <td colSpan="6" className="text-center py-5 text-muted">
+                    No ha seleccionado productos aún. Marque las casillas en el catálogo para comenzar.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {listaSolicitud.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="text-center py-5 text-muted">
-                      No ha agregado ningún producto. Marque las casillas en el catálogo superior para armar su solicitud.
+              ) : (
+                listaSolicitud.map((item) => (
+                  <tr key={item.bien_id}>
+                    <td>
+                      <strong>{item.descripcion}</strong>
+                      <br />
+                      <small className="text-gray">{item.inciso} | {item.partida_principal}</small>
+                    </td>
+                    <td className="text-center">
+                      <input
+                        type="number"
+                        min="1"
+                        disabled={isSubmitting}
+                        className="form-control form-control-sm text-center"
+                        value={item.cantidad_solicitada}
+                        onChange={(e) => handleValueChange(item.bien_id, 'cantidad_solicitada', e.target.value)}
+                      />
+                    </td>
+                    <td className="text-right">
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        className="form-control form-control-sm text-right bg-readonly"
+                        value={`$${item.precio_unitario.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
+                      />
+                    </td>
+                    <td className="text-right font-bold text-primary">
+                      ${(item.subtotal || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        disabled={isSubmitting}
+                        className="form-control form-control-sm"
+                        placeholder="Nota técnica..."
+                        value={item.observacion || ''}
+                        onChange={(e) => handleValueChange(item.bien_id, 'observacion', e.target.value)}
+                      />
+                    </td>
+                    <td className="text-center">
+                      <button
+                        type="button"
+                        disabled={isSubmitting}
+                        className="btn-action-icon delete"
+                        onClick={() => handleRemoveItem(item.bien_id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </td>
                   </tr>
-                ) : (
-                  listaSolicitud.map((item) => (
-                    <tr key={item.bien_id}>
-                      <td>
-                        <strong>{item.descripcion}</strong>
-                        <br />
-                        <small className="text-gray">{item.inciso} | {item.partida_principal}</small>
-                      </td>
-                      {/* EDITABLE: Cantidad */}
-                      <td className="text-center">
-                        <input
-                          type="number"
-                          min="1"
-                          className="form-control form-control-sm text-center"
-                          value={item.cantidad_solicitada}
-                          onChange={(e) => handleValueChange(item.bien_id, 'cantidad_solicitada', e.target.value)}
-                        />
-                      </td>
-                      {/* NO EDITABLE: Precio traído de la BD */}
-                      <td className="text-right">
-                        <input
-                          type="text"
-                          readOnly
-                          disabled
-                          className="form-control form-control-sm text-right bg-readonly"
-                          value={`$${item.precio_unitario.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
-                        />
-                      </td>
-                      {/* CÁLCULO: Subtotal */}
-                      <td className="text-right font-bold text-primary">
-                        ${(item.subtotal || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                      </td>
-                      {/* EDITABLE: Observación */}
-                      <td>
-                        <input
-                          type="text"
-                          className="form-control form-control-sm"
-                          placeholder="Ej: Marca sugerida, especificación técnica..."
-                          value={item.observacion || ''}
-                          onChange={(e) => handleValueChange(item.bien_id, 'observacion', e.target.value)}
-                        />
-                      </td>
-                      <td className="text-center">
-                        <button
-                          type="button"
-                          className="btn-action-icon delete"
-                          title="Eliminar de la lista"
-                          onClick={() => handleRemoveItem(item.bien_id)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* BOTONES */}
+        <div className="solicitud-summary-bar mt-4">
+          <div className="summary-info">
+            <div><span className="text-muted">Total de ítems:</span> <strong>{listaSolicitud.length}</strong></div>
+            <div className="summary-total">
+              <span>Monto Total Estimado:</span>
+              <span className="total-amount">${totalGeneral.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+            </div>
           </div>
 
-          <div className="solicitud-summary-bar mt-4">
-            <div className="summary-info">
-              <div>
-                <span className="text-muted">Total de ítems:</span>{' '}
-                <strong>{listaSolicitud.length}</strong>
-              </div>
-              <div className="summary-total">
-                <span>Monto Total Estimado:</span>
-                <span className="total-amount">${totalGeneral.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-              </div>
-            </div>
+          <div className="d-flex gap-2">
+            <button
+              type="button"
+              className="btn btn-outline-primary btn-lg d-flex align-items-center gap-2"
+              disabled={listaSolicitud.length === 0 || isSubmitting}
+              onClick={() => handleProcesarSolicitud('BORRADOR')}
+            >
+              {isSubmitting && submittingAction === 'BORRADOR' ? (
+                <>
+                  <Loader2 size={18} className="spinner-rotation" />
+                  <span>Guardando...</span>
+                </>
+              ) : (
+                <>
+                  <Save size={18} />
+                  <span>Guardar Borrador</span>
+                </>
+              )}
+            </button>
 
             <button
-              type="submit"
+              type="button"
               className="btn btn-primary btn-lg d-flex align-items-center gap-2"
-              disabled={listaSolicitud.length === 0}
+              disabled={listaSolicitud.length === 0 || isSubmitting}
+              onClick={() => handleProcesarSolicitud('PENDIENTE')}
             >
-              <Send size={18} />
-              <span>Enviar Solicitud Final</span>
+              {isSubmitting && submittingAction === 'PENDIENTE' ? (
+                <>
+                  <Loader2 size={18} className="spinner-rotation" />
+                  <span>Enviando...</span>
+                </>
+              ) : (
+                <>
+                  <Send size={18} />
+                  <span>Enviar Solicitud Final</span>
+                </>
+              )}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
