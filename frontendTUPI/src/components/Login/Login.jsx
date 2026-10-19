@@ -7,7 +7,7 @@ import './Login.css';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, API_URL } = useAuth(); // 👈 Usamos el AuthContext
+  const { login, API_URL } = useAuth(); // Usamos AuthContext si está disponible
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -35,6 +35,7 @@ const Login = () => {
     setIsLoading(true);
     setError('');
 
+    // Validación del Captcha
     const correctAnswer = captchaChallenge.num1 + captchaChallenge.num2;
     if (parseInt(captchaUserAnswer, 10) !== correctAnswer) {
       setError('El resultado del captcha es incorrecto.');
@@ -44,7 +45,7 @@ const Login = () => {
     }
 
     try {
-      // Normalizamos la URL base
+      // Normalización de la URL de la API
       const baseUrl = API_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
       const endpoint = baseUrl.endsWith('/api') ? `${baseUrl}/auth/login` : `${baseUrl}/api/auth/login`;
 
@@ -53,21 +54,32 @@ const Login = () => {
         password
       });
 
-      const { token, user, permisos } = respuesta.data;
+      const { token, user, permisos, entornos } = respuesta.data;
 
-      // 💡 Guardamos en AuthContext (y mantenemos backup tupi_token)
+      // Determinamos los datos de permisos a guardar (Priorizamos la estructura de entornos esperada por Dashboard.jsx)
+      const datosPermisosGuardar = (entornos && entornos.length > 0) ? entornos : permisos;
+
+      // 1. Guardar en localStorage con los nombres requeridos por TUPI Dashboard
+      localStorage.setItem('tupi_token', token);
+      localStorage.setItem('token', token);
+      localStorage.setItem('tupi_user', JSON.stringify(user));
+      localStorage.setItem('usuario', JSON.stringify(user));
+      localStorage.setItem('tupi_permisos', JSON.stringify(datosPermisosGuardar));
+      localStorage.setItem('permisos', JSON.stringify(datosPermisosGuardar));
+
+      // 2. Notificar al AuthContext si está instanciado
       if (login) {
-        login(token, user);
-      } else {
-        localStorage.setItem('token', token);
-        localStorage.setItem('tupi_token', token);
-        localStorage.setItem('tupi_user', JSON.stringify(user));
-        localStorage.setItem('tupi_permisos', JSON.stringify(permisos));
+        login(token, user, datosPermisosGuardar);
       }
 
+      // 3. Redirigir al Dashboard principal
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Error de conexión con el servidor.');
+      setError(
+        err.response?.data?.message || 
+        err.response?.data?.error || 
+        'Error de conexión con el servidor.'
+      );
       generateCaptcha();
     } finally {
       setIsLoading(false);
@@ -81,7 +93,7 @@ const Login = () => {
       <section className="login-form-side">
         <div className="login-inner-box">
           
-          {/* Cabecera: Logo inline junto a TUPI */}
+          {/* Cabecera */}
           <header className="login-header-minimal">
             <div className="login-brand-group">
               <img src="/logo-unne.png" alt="Logo UNNE" className="login-inline-logo" />
@@ -99,7 +111,7 @@ const Login = () => {
             </div>
           )}
 
-          {/* Formulario */}
+          {/* Formulario de Login */}
           <form onSubmit={handleSubmit} className="login-form-wrapper">
             
             {/* Campo Identificador */}

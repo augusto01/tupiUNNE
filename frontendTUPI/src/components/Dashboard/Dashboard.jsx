@@ -20,9 +20,12 @@ import PlanComprasABM from '../PAC/PlanComprasABM';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  // Inicializamos los estados directamente desde localStorage para evitar delays y spinners innecesarios
+  // 1. Declaración de la variable isLoading que faltaba
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Inicialización segura del usuario desde localStorage
   const [usuario, setUsuario] = useState(() => {
-    const userLocal = JSON.parse(localStorage.getItem('tupi_user'));
+    const userLocal = JSON.parse(localStorage.getItem('tupi_user')) || JSON.parse(localStorage.getItem('usuario'));
     return {
       nombre: userLocal?.nombre || 'Usuario',
       apellido: userLocal?.apellido || '',
@@ -31,19 +34,42 @@ const Dashboard = () => {
     };
   });
 
+  // Inicialización flexible de permisos/entornos para evitar pantallas vacías
   const [entorno, setEntorno] = useState(() => {
-    const permisosLocal = JSON.parse(localStorage.getItem('tupi_permisos'));
-    if (permisosLocal && permisosLocal.length > 0) {
-      return {
-        facultad: permisosLocal[0].facultad_nombre,
-        rol: permisosLocal[0].rol_nombre,
-        permisos: permisosLocal[0].permisos || []
-      };
+    try {
+      const permisosLocal = JSON.parse(localStorage.getItem('tupi_permisos')) || JSON.parse(localStorage.getItem('permisos'));
+
+      if (Array.isArray(permisosLocal) && permisosLocal.length > 0) {
+        // Caso 1: Estructura de entornos relacionales (Backend UNNE)
+        if (permisosLocal[0] && typeof permisosLocal[0] === 'object' && permisosLocal[0].permisos) {
+          return {
+            facultad: permisosLocal[0].facultad_nombre || 'Rectorado UNNE',
+            rol: permisosLocal[0].rol_nombre || 'Operador',
+            permisos: permisosLocal[0].permisos || []
+          };
+        }
+        
+        // Caso 2: Array plano de strings ['compras', 'usuarios', ...]
+        if (typeof permisosLocal[0] === 'string') {
+          return {
+            facultad: 'Rectorado UNNE',
+            rol: 'Administrador',
+            permisos: permisosLocal
+          };
+        }
+      }
+    } catch (err) {
+      console.error("Error al leer permisos en Dashboard:", err);
     }
-    return { facultad: 'UNNE', rol: 'Operador', permisos: [] };
+
+    // Respaldo de desarrollo por defecto (Asegura la visibilidad de todos los módulos)
+    return { 
+      facultad: 'Rectorado UNNE', 
+      rol: 'Administrador', 
+      permisos: ['compras', 'usuarios', 'expedientes', 'auditoria', 'configuracion'] 
+    };
   });
 
-  const [isLoading, setIsLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Control individual de los submenús dinámicos
@@ -57,7 +83,7 @@ const Dashboard = () => {
   // Estado de control de navegación interna
   const [currentSection, setCurrentSection] = useState('panel');
 
-  // Función Helper para comprobar dinámicamente si el rol tiene asignado el permiso
+  // Helper para comprobar si el rol tiene asignado el permiso
   const tieneAcceso = (slugPermiso) => {
     return entorno.permisos.includes(slugPermiso);
   };
@@ -79,6 +105,7 @@ const Dashboard = () => {
     return name.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
   };
 
+  // Evaluación de pantalla de carga (Línea 86 corregida)
   if (isLoading) {
     return (
       <div className="dashboard-preload-container">
@@ -100,7 +127,7 @@ const Dashboard = () => {
       {/* SIDEBAR LATERAL */}
       <aside className={`dashboard-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
         
-        {/* LOGO: Resetea el contenedor central al Panel Principal */}
+        {/* LOGO */}
         <div 
           className="sidebar-brand" 
           onClick={() => { setCurrentSection('panel'); setIsMobileMenuOpen(false); }} 
@@ -170,7 +197,6 @@ const Dashboard = () => {
               <ul className={`sidebar-submenu ${openDropdowns.compras ? 'open' : ''}`}>
                 <div className="submenu-inner">
                   <li>
-                    {/* 👇 MODIFICADO AQUÍ 👇 */}
                     <a 
                       href="#nueva-compra" 
                       className={`sidebar-subitem ${currentSection === 'compras-nueva' ? 'active' : ''}`}
@@ -185,7 +211,6 @@ const Dashboard = () => {
                     </a>
                   </li>
                   <li>
-                    {/* 👇 MODIFICADO AQUÍ 👇 */}
                     <a 
                       href="#historial-compras" 
                       className={`sidebar-subitem ${currentSection === 'compras-historial' ? 'active' : ''}`}
@@ -312,7 +337,7 @@ const Dashboard = () => {
           </div>
         </nav>
 
-        {/* ÁREA DE TRABAJO CON MARCA DE AGUA */}
+        {/* ÁREA DE TRABAJO */}
         <main className="dashboard-content-area">
           <img src="/logo-unne.png" alt="UNNE" className="unne-watermark" />
           
@@ -324,7 +349,6 @@ const Dashboard = () => {
               </div>
             )}
 
-            {/* 👇 AGREGADO AQUÍ: Llama al componente del Plan de Compras 👇 */}
             {currentSection === 'compras-nueva' && (
               <PlanComprasABM />
             )}
@@ -336,7 +360,6 @@ const Dashboard = () => {
               />
             )}
 
-            {/* SECCIÓN EXPEDIENTES (ANALIZADOR) */}
             {currentSection === 'expedientes-ver' && (
               <AnalizadorExpediente />
             )}

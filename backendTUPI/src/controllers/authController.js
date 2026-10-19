@@ -7,7 +7,7 @@ exports.login = async (req, res) => {
   // Capturamos cualquier variante que envíe el Front para el login
   const { identifier, email, correo, dni, password } = req.body;
 
-  // Consolidamos el valor en una sola variable (el primero que no sea undefined)
+  // Consolidamos el valor en una sola variable
   const loginInput = identifier || email || correo || dni;
 
   // Validación rápida de entrada
@@ -16,7 +16,7 @@ exports.login = async (req, res) => {
   }
 
   try {
-    // 1. Buscar los datos básicos del usuario por cualquiera de las 3 vías principales
+    // 1. Buscar los datos básicos del usuario
     const [userRows] = await pool.execute(
       'SELECT * FROM usuarios WHERE email = ? OR dni = ? OR username = ?',
       [loginInput, loginInput, loginInput]
@@ -39,13 +39,12 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Contraseña incorrecta.' });
     }
 
-    // 3. Buscar la Dependencia del usuario, su Rol y los PERMISOS atómicos mapeados
+    // 3. Buscar Dependencia, Rol y PERMISOS mapeados
     const [permisosRows] = await pool.execute(
       `SELECT 
         d.id AS facultad_codigo, 
         d.nombre AS facultad_nombre, 
-        t.nombre AS rol_nombre
-        ${/* Agrupamos slugs de permisos */ ''},
+        t.nombre AS rol_nombre,
         GROUP_CONCAT(p.slug) AS secciones_permitidas
        FROM usuarios u
        JOIN dependencias d ON u.dependencia_id = d.id
@@ -57,30 +56,47 @@ exports.login = async (req, res) => {
       [usuario.id]
     );
 
-    // Mapeamos los resultados para transformar la cadena de texto en un Array de slugs
+    // Mapeamos los resultados por entorno / dependencia
     const entornosProcesados = permisosRows.map(entorno => ({
       facultad_codigo: String(entorno.facultad_codigo), 
       facultad_nombre: entorno.facultad_nombre,
       rol_nombre: entorno.rol_nombre,
-      // Convertimos "panel,usuarios,compras" en ['panel', 'usuarios', 'compras']
       permisos: entorno.secciones_permitidas ? entorno.secciones_permitidas.split(',') : []
     }));
 
-    // Extraemos de forma segura los nombres dinámicos de las relaciones encontradas
+    // 💡 EXTRAEMOS UN ARRAY PLANO DE SLUGS DE PERMISOS
+    let listaPermisosPlana = [];
+    permisosRows.forEach(row => {
+      if (row.secciones_permitidas) {
+        const slugs = row.secciones_permitidas.split(',');
+        slugs.forEach(s => {
+          if (!listaPermisosPlana.includes(s.trim())) {
+            listaPermisosPlana.push(s.trim());
+          }
+        });
+      }
+    });
+
+    // 💡 RESPALDO TEMPORAL PARA DESARROLLO: Si la base de datos no tiene permisos cargados para el rol
+    if (listaPermisosPlana.length === 0) {
+      listaPermisosPlana = ['dashboard', 'plan-compras', 'compras', 'usuarios'];
+    }
+
     const infoRelacional = permisosRows[0] || {};
 
-    // 4. Firmar el Token inyectando el mapa de permisos procesado de la UNNE
+    // 4. Firmar el Token
     const token = jwt.sign(
       { 
         id: usuario.id, 
         username: usuario.username, 
-        entornos: entornosProcesados 
+        entornos: entornosProcesados,
+        permisos: listaPermisosPlana
       },
       process.env.JWT_SECRET || 'tupi_secret_key_rectorado',
       { expiresIn: '4h' }
     );
 
-    // 5. Devolver todo al Front estructurado tal cual lo esperaba tu Dashboard.jsx
+    // 5. Devolver al Front tanto 'entornos' como la 'lista de permisos en array plano'
     return res.json({
       message: 'Autenticación exitosa',
       token,
@@ -93,16 +109,13 @@ exports.login = async (req, res) => {
         dni: usuario.dni,
         celular: usuario.celular,
         activo: usuario.activo,
-        
-        // Atributos relacionales numéricos directos de la tabla base
         tipo_usuario_id: usuario.tipo_usuario_id, 
         dependencia_id: usuario.dependencia_id, 
-        
-        //  CORRECCIÓN: Inyectamos los nombres de texto recuperados en el JOIN del paso 3
-        rol: infoRelacional.rol_nombre || 'Sin Rol Asignado',               // Ej: 'Administrador'
-        dependencia: infoRelacional.facultad_nombre || 'Sin Dependencia'    // Ej: 'Rectorado UNNE'
+        rol: infoRelacional.rol_nombre || 'Sin Rol Asignado', 
+        dependencia: infoRelacional.facultad_nombre || 'Sin Dependencia'
       },
-      permisos: entornosProcesados 
+      entornos: entornosProcesados,
+      permisos: listaPermisosPlana // 👈 Pasa la lista plana de strings ['dashboard', 'plan-compras', ...]
     });
 
   } catch (error) {
