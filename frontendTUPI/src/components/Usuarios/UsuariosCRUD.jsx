@@ -43,8 +43,7 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
     { slug: 'usuarios', nombre: 'Gestión Completa de Personal (CRUD)' },
     { slug: 'compras', nombre: 'Administración de Planes de Compras' },
     { slug: 'correlatos', nombre: 'Vincular ítems y Matrices de Control' },
-    { slug: 'auditoria', nombre: 'Validaciones Avanzadas de Auditoría' },
-    { slug: 'configuracion', nombre: 'Ajustes Críticos de Infraestructura' }
+    { slug: 'expedientes', nombre: 'Gestión de Expedientes' },
   ];
 
   useEffect(() => {

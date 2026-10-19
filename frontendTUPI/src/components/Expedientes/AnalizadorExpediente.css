@@ -1,0 +1,279 @@
+/* ==========================================================================
+   ANALIZADOR DE EXPEDIENTES - ECOSISTEMA TUPI UNNE
+   ========================================================================== */
+
+.analizador-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.analizador-header {
+  margin-bottom: 24px;
+}
+
+.analizador-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.analizador-header p {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* CARDA DE CARGA Y FORMULARIO */
+.analizador-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+}
+
+.upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.file-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-input-wrapper label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.file-input-custom {
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  background-color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.file-input-custom:hover {
+  border-color: #0284c7;
+  background-color: #f0f9ff;
+}
+
+.file-input-custom input[type="file"] {
+  display: none;
+}
+
+.file-input-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.file-name-selected {
+  font-weight: 600;
+  color: #0284c7;
+}
+
+.btn-analizar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #0284c7;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  width: 100%;
+}
+
+.btn-analizar:hover:not(:disabled) {
+  background-color: #0369a1;
+}
+
+.btn-analizar:disabled {
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* MENSAJE DE ERROR */
+.analizador-alert-error {
+  background-color: #fef2f2;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin-bottom: 20px;
+}
+
+/* SECCIÓN DE RESULTADOS */
+.resultado-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.resultado-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.resultado-section h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+}
+
+.resumen-texto {
+  font-size: 0.925rem;
+  color: #334155;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* BADGES DE EXAMEN TÉCNICO */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-status.positiivo {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.badge-status.negativo {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.detalle-tecnico-box {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #f8fafc;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #475569;
+  border-left: 3px solid #0284c7;
+}
+
+/* TABLA RESPONSIVA DE BIENES */
+.table-responsive-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bienes-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+  margin-top: 8px;
+}
+
+.bienes-tabla th {
+  background-color: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.bienes-tabla td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.bienes-tabla tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.badge-estado {
+  display: inline-block;
+  padding: 2px 8px;
+  background-color: #e2e8f0;
+  color: #334155;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.sin-bienes-msg {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-style: italic;
+  margin: 0;
+}
+
+
+
+/* ==========================================================================
+   ADAPTACIONES RESPONSIVAS (TABLETS Y MÓVILES)
+   ========================================================================== */
+
+@media (min-width: 640px) {
+  .upload-form {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+
+  .file-input-wrapper {
+    flex: 1;
+  }
+
+  .btn-analizar {
+    width: auto;
+    height: 48px;
+  }
+}
+
+@media (max-width: 639px) {
+  .analizador-card {
+    padding: 16px;
+  }
+
+  .resultado-section {
+    padding: 16px;
+  }
+
+  .bienes-tabla th, 
+  .bienes-tabla td {
+    padding: 8px 10px;
+  }
+}

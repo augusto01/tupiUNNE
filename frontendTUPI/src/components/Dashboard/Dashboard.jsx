@@ -15,6 +15,8 @@ import {
   Users 
 } from 'lucide-react';
 import UsuariosCRUD from '../Usuarios/UsuariosCRUD'; 
+import { AnalizadorExpediente } from '../Expedientes/AnalizadorExp';
+import PlanComprasABM from '../PAC/PlanComprasABM';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -24,8 +26,8 @@ const Dashboard = () => {
     return {
       nombre: userLocal?.nombre || 'Usuario',
       apellido: userLocal?.apellido || '',
-      rol: userLocal?.rol || 'Operador', // Leído desde tu nuevo res.json ({ user: { rol } })
-      dependencia: userLocal?.dependencia || 'UNNE' // Leído desde tu nuevo res.json
+      rol: userLocal?.rol || 'Operador',
+      dependencia: userLocal?.dependencia || 'UNNE'
     };
   });
 
@@ -33,7 +35,7 @@ const Dashboard = () => {
     const permisosLocal = JSON.parse(localStorage.getItem('tupi_permisos'));
     if (permisosLocal && permisosLocal.length > 0) {
       return {
-        facultad: permisosLocal[0].facultad_nombre, // Cambiado de facultad_codigo a facultad_nombre para mostrar el texto real
+        facultad: permisosLocal[0].facultad_nombre,
         rol: permisosLocal[0].rol_nombre,
         permisos: permisosLocal[0].permisos || []
       };
@@ -41,14 +43,15 @@ const Dashboard = () => {
     return { facultad: 'UNNE', rol: 'Operador', permisos: [] };
   });
 
-  const [isLoading, setIsLoading] = useState(false); // Ya no requiere delay, los datos se cargan síncronos
+  const [isLoading, setIsLoading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Control individual de los submenús dinámicos
   const [openDropdowns, setOpenDropdowns] = useState({
     compras: false,
     correlatos: false,
-    usuarios: false 
+    usuarios: false,
+    expedientes: false
   });
 
   // Estado de control de navegación interna
@@ -127,24 +130,24 @@ const Dashboard = () => {
               <ul className={`sidebar-submenu ${openDropdowns.usuarios ? 'open' : ''}`}>
                 <div className="submenu-inner">
                   <li>
-                    <button 
-                      onClick={() => { setCurrentSection('usuarios-crear'); setIsMobileMenuOpen(false); }}
+                    <a 
+                      href="#usuarios-crear"
+                      onClick={(e) => { e.preventDefault(); setCurrentSection('usuarios-crear'); setIsMobileMenuOpen(false); }}
                       className={`sidebar-subitem ${currentSection === 'usuarios-crear' ? 'active' : ''}`}
-                      style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       <PlusCircle size={12} />
                       <span>Agregar Usuario</span>
-                    </button>
+                    </a>
                   </li>
                   <li>
-                    <button 
-                      onClick={() => { setCurrentSection('usuarios-ver'); setIsMobileMenuOpen(false); }}
+                    <a 
+                      href="#usuarios-ver"
+                      onClick={(e) => { e.preventDefault(); setCurrentSection('usuarios-ver'); setIsMobileMenuOpen(false); }}
                       className={`sidebar-subitem ${currentSection === 'usuarios-ver' ? 'active' : ''}`}
-                      style={{ background: 'transparent', border: 'none', width: '100%', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       <ListFilter size={12} />
                       <span>Ver Usuarios</span>
-                    </button>
+                    </a>
                   </li>
                 </div>
               </ul>
@@ -167,13 +170,31 @@ const Dashboard = () => {
               <ul className={`sidebar-submenu ${openDropdowns.compras ? 'open' : ''}`}>
                 <div className="submenu-inner">
                   <li>
-                    <a href="#nueva-compra" className="sidebar-subitem">
+                    {/* 👇 MODIFICADO AQUÍ 👇 */}
+                    <a 
+                      href="#nueva-compra" 
+                      className={`sidebar-subitem ${currentSection === 'compras-nueva' ? 'active' : ''}`}
+                      onClick={(e) => { 
+                        e.preventDefault(); 
+                        setCurrentSection('compras-nueva'); 
+                        setIsMobileMenuOpen(false); 
+                      }}
+                    >
                       <PlusCircle size={12} />
                       <span>Nueva Solicitud</span>
                     </a>
                   </li>
                   <li>
-                    <a href="#historial-compras" className="sidebar-subitem">
+                    {/* 👇 MODIFICADO AQUÍ 👇 */}
+                    <a 
+                      href="#historial-compras" 
+                      className={`sidebar-subitem ${currentSection === 'compras-historial' ? 'active' : ''}`}
+                      onClick={(e) => { 
+                        e.preventDefault(); 
+                        setCurrentSection('compras-historial'); 
+                        setIsMobileMenuOpen(false); 
+                      }}
+                    >
                       <History size={12} />
                       <span>Ver Historial</span>
                     </a>
@@ -183,31 +204,40 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* ACCESO DINÁMICO: GESTIÓN DE CORRELATOS */}
-          {tieneAcceso('correlatos') && (
+          {/* ACCESO DINÁMICO: GESTIÓN DE EXPEDIENTES */}
+          {tieneAcceso('expedientes') && (
             <div>
               <button 
                 className="sidebar-dropdown-toggle"
-                onClick={() => toggleDropdown('correlatos')}
+                onClick={() => toggleDropdown('expedientes')}
               >
                 <div className="sidebar-item-content">
                   <Layers size={16} />
-                  <span>Gestión de Correlatos</span>
+                  <span>Gestión de Expedientes</span>
                 </div>
-                <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.correlatos ? 'rotated' : ''}`} />
+                <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.expedientes ? 'rotated' : ''}`} />
               </button>
-              <ul className={`sidebar-submenu ${openDropdowns.correlatos ? 'open' : ''}`}>
+
+              <ul className={`sidebar-submenu ${openDropdowns.expedientes ? 'open' : ''}`}>
                 <div className="submenu-inner">
                   <li>
-                    <a href="#vincular" className="sidebar-subitem">
+                    <a 
+                      href="#expedientes-ver"
+                      className={`sidebar-subitem ${currentSection === 'expedientes-ver' ? 'active' : ''}`}
+                      onClick={(e) => { e.preventDefault(); setCurrentSection('expedientes-ver'); setIsMobileMenuOpen(false); }}
+                    >
                       <PlusCircle size={12} />
-                      <span>Vincular Ítems</span>
+                      <span>Ver / Analizar Expedientes</span>
                     </a>
                   </li>
                   <li>
-                    <a href="#matrices" className="sidebar-subitem">
+                    <a 
+                      href="#expedientes-controles"
+                      className={`sidebar-subitem ${currentSection === 'expedientes-controles' ? 'active' : ''}`}
+                      onClick={(e) => { e.preventDefault(); setCurrentSection('expedientes-controles'); setIsMobileMenuOpen(false); }}
+                    >
                       <ListFilter size={12} />
-                      <span>Matrices de Control</span>
+                      <span>Controles</span>
                     </a>
                   </li>
                 </div>
@@ -294,11 +324,28 @@ const Dashboard = () => {
               </div>
             )}
 
+            {/* 👇 AGREGADO AQUÍ: Llama al componente del Plan de Compras 👇 */}
+            {currentSection === 'compras-nueva' && (
+              <PlanComprasABM />
+            )}
+
             {(currentSection === 'usuarios-ver' || currentSection === 'usuarios-crear') && (
               <UsuariosCRUD 
                 sectionInicial={currentSection} 
                 setSection={setCurrentSection} 
               />
+            )}
+
+            {/* SECCIÓN EXPEDIENTES (ANALIZADOR) */}
+            {currentSection === 'expedientes-ver' && (
+              <AnalizadorExpediente />
+            )}
+
+            {currentSection === 'expedientes-controles' && (
+              <div className="content-section-fade">
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Controles de Expedientes</h3>
+                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Módulo de auditoría y controles.</p>
+              </div>
             )}
           </div>
         </main>

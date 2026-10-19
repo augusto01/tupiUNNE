@@ -1,0 +1,259 @@
+/* PlanComprasABM.css - Diseño Minimalista y Profesional */
+
+:root {
+  --bg-main: #f8fafc;
+  --bg-card: #ffffff;
+  --border-color: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --primary: #0284c7; /* Azul sobrio institucional */
+  --primary-hover: #0369a1;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --table-header: #f1f5f9;
+}
+
+.abm-container {
+  padding: 24px;
+  background-color: var(--bg-main);
+  min-height: calc(100vh - 60px); /* Ajustar según tu navbar */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--text-main);
+}
+
+.abm-header {
+  margin-bottom: 24px;
+}
+
+.abm-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--text-main);
+}
+
+.abm-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Tarjetas */
+.abm-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: #fafafa;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #334155;
+}
+
+/* Formulario */
+.abm-form {
+  padding: 24px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-control {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-main);
+  background-color: #fff;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
+}
+
+.input-with-prefix {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-prefix .prefix {
+  position: absolute;
+  left: 12px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.input-with-prefix .form-control {
+  padding-left: 28px;
+}
+
+/* Grillas especiales */
+@media (min-width: 1024px) {
+  .form-grid { grid-template-columns: repeat(6, 1fr); }
+  .col-span-2 { grid-column: span 2; }
+  .form-group-sm { grid-column: span 1; }
+}
+
+/* Botones */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.btn-secondary:hover {
+  background-color: #e2e8f0;
+}
+
+/* Tabla */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.abm-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.abm-table th {
+  background-color: var(--table-header);
+  color: #475569;
+  font-weight: 600;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.abm-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: #334155;
+  vertical-align: middle;
+}
+
+.abm-table tr:last-child td {
+  border-bottom: none;
+}
+
+.abm-table tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Utilidades de texto y celdas */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.font-medium { font-weight: 500; }
+.font-bold { font-weight: 600; color: #0f172a; }
+.text-gray { color: #64748b; }
+
+.cell-truncate {
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.badge-blue {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+/* Botones de acción (Editar/Borrar) */
+.action-btn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.action-btn.edit {
+  color: var(--primary);
+}
+.action-btn.edit:hover {
+  background-color: #f0f9ff;
+}
+
+.action-btn.delete {
+  color: var(--danger);
+}
+.action-btn.delete:hover {
+  background-color: #fef2f2;
+}

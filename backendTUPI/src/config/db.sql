@@ -94,12 +94,13 @@ INSERT INTO permisos (nombre, slug, descripcion) VALUES
 ('Panel Principal', 'panel', 'Visualización de métricas generales'),
 ('Gestión de Usuarios', 'usuarios', 'Creación y modificación de personal'),
 ('Planes de Compras', 'compras', 'Gestión de solicitudes de adquisición'),
-('Gestión de Correlatos', 'correlatos', 'Vinculación de ítems y matrices');
+('Gestión de Correlatos', 'correlatos', 'Vinculación de ítems y matrices'),
+('Gestión de Expedientes', 'expedientes', 'Gestión de documentos y trámites');
 
 -- Permisos iniciales
 INSERT INTO tipo_usuario_permiso (tipo_usuario_id, permiso_id) VALUES 
-(1, 1), (1, 2), (1, 3), (1, 4), -- Super
-(2, 1), (2, 3), (2, 4),         -- Admin
+(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), -- Super
+(2, 1), (2, 3), (2, 4), (2, 5),         -- Admin
 (3, 1), (3, 4);                 -- Operador
 
 -- Crear tu usuario (Augusto Almirón) vinculado a la dependencia ID 1 (Rectorado UNNE)

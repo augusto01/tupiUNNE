@@ -98,7 +98,7 @@ exports.login = async (req, res) => {
         tipo_usuario_id: usuario.tipo_usuario_id, 
         dependencia_id: usuario.dependencia_id, 
         
-        // 🔥 CORRECCIÓN: Inyectamos los nombres de texto recuperados en el JOIN del paso 3
+        //  CORRECCIÓN: Inyectamos los nombres de texto recuperados en el JOIN del paso 3
         rol: infoRelacional.rol_nombre || 'Sin Rol Asignado',               // Ej: 'Administrador'
         dependencia: infoRelacional.facultad_nombre || 'Sin Dependencia'    // Ej: 'Rectorado UNNE'
       },

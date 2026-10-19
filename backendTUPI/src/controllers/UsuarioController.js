@@ -5,7 +5,6 @@ const bcrypt = require('bcrypt');
 class UsuarioController {
 
 // 1. LISTAR USUARIOS CON JERARQUÍA Y DEPENDENCIA
-// 1. LISTAR USUARIOS CON JERARQUÍA Y DEPENDENCIA
 async listar(req, res) {
   try {
     const [rows] = await db.query(`
@@ -67,7 +66,7 @@ async listar(req, res) {
 
     if (ID_ROL === 1) {
       // Superusuario: Acceso absoluto a todo el ecosistema TUPI
-      slugsPorDefecto = ['panel', 'usuarios', 'compras', 'correlatos'];
+      slugsPorDefecto = ['panel', 'usuarios', 'compras', 'correlatos', 'expedientes'];
     } else if (ID_ROL === 2) {
       // Administrador: Gestión operacional sin administración de personal (seguridad cruzada)
       slugsPorDefecto = ['panel', 'compras', 'correlatos'];
@@ -143,7 +142,7 @@ async listar(req, res) {
       [username, email, nombre, apellido, dni, celular || null, tipo_usuario_id, dependencia_id, id]
     );
 
-    // 3. SINCRO DE PERMISOS (Checkboxes Dorados)
+    // 3. SINCRO DE PERMISOS 
     // Limpiamos la matriz de permisos anterior para este usuario específico
     await db.query('DELETE FROM usuario_permiso WHERE usuario_id = ?', [id]);
 
