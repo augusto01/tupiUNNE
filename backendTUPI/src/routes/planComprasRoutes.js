@@ -1,19 +1,20 @@
 const { Router } = require('express');
 
-// Importar los métodos individualmente desestructurándolos del controlador
 const { 
     getEstadoPlan, 
     updateConfiguracionPlan, 
     getRubros, 
     getBienesPorRubro, 
     crearSolicitud 
-} = require('../controllers/PlanComprasController');
-const auth = require('../middlewares/authMiddleware.js');
+} = require('../controllers/planComprasController.js');
+
+// 👈 Importar usando el nombre correcto del archivo
+const authMiddleware = require('../middlewares/authMiddleware.js');
 
 const router = Router();
 
-// 🔒 Aplicar middleware de autenticación a todas las rutas
-router.use(auth);
+// 🔒 Aplicar middleware a todas las rutas
+router.use(authMiddleware);
 
 // Rutas de administración de fechas y estado
 router.get('/estado', getEstadoPlan);

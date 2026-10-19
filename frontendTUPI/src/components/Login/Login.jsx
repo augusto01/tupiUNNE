@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Lock, ExternalLink, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import './Login.css';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login, API_URL } = useAuth(); // 👈 Usamos el AuthContext
+
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,20 +44,30 @@ const Login = () => {
     }
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const respuesta = await axios.post(`${API_URL}/auth/login`, {
+      // Normalizamos la URL base
+      const baseUrl = API_URL || import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const endpoint = baseUrl.endsWith('/api') ? `${baseUrl}/auth/login` : `${baseUrl}/api/auth/login`;
+
+      const respuesta = await axios.post(endpoint, {
         identifier,
         password
       });
 
       const { token, user, permisos } = respuesta.data;
-      localStorage.setItem('tupi_token', token);
-      localStorage.setItem('tupi_user', JSON.stringify(user));
-      localStorage.setItem('tupi_permisos', JSON.stringify(permisos));
+
+      // 💡 Guardamos en AuthContext (y mantenemos backup tupi_token)
+      if (login) {
+        login(token, user);
+      } else {
+        localStorage.setItem('token', token);
+        localStorage.setItem('tupi_token', token);
+        localStorage.setItem('tupi_user', JSON.stringify(user));
+        localStorage.setItem('tupi_permisos', JSON.stringify(permisos));
+      }
 
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Error de conexión con el servidor.');
+      setError(err.response?.data?.message || err.response?.data?.error || 'Error de conexión con el servidor.');
       generateCaptcha();
     } finally {
       setIsLoading(false);
@@ -74,7 +87,7 @@ const Login = () => {
               <img src="/logo-unne.png" alt="Logo UNNE" className="login-inline-logo" />
               <div className="tupi-badge-logo">TUPI<span>.</span></div>
             </div>
-            <h1 className="login-title-modern ">Ingresar al Sistema</h1>
+            <h1 className="login-title-modern">Ingresar al Sistema</h1>
             <p className="login-subtitle-modern">Plan de Compras y Correlatos</p>
           </header>
 
@@ -201,7 +214,7 @@ const Login = () => {
         </div>
       </section>
 
-      {/* SECCIÓN DERECHA: PANEL VISUAL (SIN LOGO DUPLICADO) */}
+      {/* SECCIÓN DERECHA: PANEL VISUAL */}
       <section className="login-visual-side">
         <div className="visual-center-content">
           <h2 className="visual-hero-text">

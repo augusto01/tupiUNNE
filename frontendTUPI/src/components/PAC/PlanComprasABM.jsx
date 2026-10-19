@@ -1,309 +1,483 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import { Search, Filter, ShoppingCart, Trash2, Send, AlertCircle, CheckCircle2 } from 'lucide-react';
 import './PlanComprasABM.css';
 
-// Diccionario de opciones dependientes de la categoría
-const bienesPorRubro = {
-  'INFORMÁTICA': [
-    'Computadora Básica (Ofimática)',
-    'Computadora Intermedia',
-    'Computadora Avanzada (Diseño/Desarrollo)',
-    'Monitor LED 24"',
-    'Impresora Láser B/N',
-    'Lector de tarjetas USB',
-    'Disco Sólido SSD 1TB',
-    'Memoria RAM 16GB DDR4'
-  ],
-  'LIMPIEZA': [
-    'Escoba de cerdas duras',
-    'Lavandina concentrada x 5L',
-    'Detergente líquido x 5L',
-    'Bolsas de consorcio 90x100 (Paquete x50)',
-    'Trapos de piso (algodón)',
-    'Desodorante de piso x 5L',
-    'Papel higiénico en rollo x 300m'
-  ],
-  'MANTENIMIENTO': [
-    'Pintura Látex Interior Blanca x 20L',
-    'Focos LED 15W',
-    'Cinta aisladora PVC',
-    'Silicona selladora transparente',
-    'Rodillo antigota 22cm',
-    'Cable tipo taller 3x2.5mm x 100m'
-  ],
-  'LIBRERÍA': [
-    'Resma Papel A4 80gr x 500 hojas',
-    'Resma Papel Oficio 80gr x 500 hojas',
-    'Bolígrafos trazo fino (Azul)',
-    'Biblioratos A4 lomo ancho',
-    'Folios transparentes x 100',
-    'Marcadores para pizarra blanca (Surtidos)'
-  ]
-};
-
 const PlanComprasABM = () => {
-  // Estado para controlar qué categoría está seleccionada y mostrar los bienes correspondientes en el datalist
-  const [rubroSeleccionado, setRubroSeleccionado] = useState('INFORMÁTICA');
+  const { fetchAuth, token } = useAuth();
 
-  // Datos mockeados con mucha variedad para la presentación
-  const [items] = useState([
-    {
-      id: 1,
-      dependencia: 'OFICINA RECTORADO',
-      inciso: 4,
-      partidaPrincipal: 3,
-      partidaParcial: 6,
-      rubro: 'INFORMÁTICA',
-      descripcion: 'Lector de tarjetas TP-Link USB-A para SD y microSD 5Gbps',
-      cantidad: 1,
-      montoUnitario: 33089,
-      subtotal: 33089,
-      fechaCompra: 'a definir'
-    },
-    {
-      id: 2,
-      dependencia: 'SECRETARÍA GENERAL',
-      inciso: 2,
-      partidaPrincipal: 1,
-      partidaParcial: 1,
-      rubro: 'LIMPIEZA',
-      descripcion: 'Lavandina concentrada x 5L',
-      cantidad: 10,
-      montoUnitario: 4500,
-      subtotal: 45000,
-      fechaCompra: '2026-02-15'
-    },
-    {
-      id: 3,
-      dependencia: 'DIRECCIÓN DE SISTEMAS',
-      inciso: 4,
-      partidaPrincipal: 3,
-      partidaParcial: 6,
-      rubro: 'INFORMÁTICA',
-      descripcion: 'Computadora Avanzada (Diseño/Desarrollo) - Core i7, 32GB RAM',
-      cantidad: 2,
-      montoUnitario: 1250000,
-      subtotal: 2500000,
-      fechaCompra: '2026-03-01'
-    },
-    {
-      id: 4,
-      dependencia: 'OFICINA RECTORADO',
-      inciso: 2,
-      partidaPrincipal: 9,
-      partidaParcial: 2,
-      rubro: 'LIBRERÍA',
-      descripcion: 'Resma Papel A4 80gr x 500 hojas',
-      cantidad: 50,
-      montoUnitario: 6800,
-      subtotal: 340000,
-      fechaCompra: '2026-01-20'
-    },
-    {
-      id: 5,
-      dependencia: 'MANTENIMIENTO Y OBRAS',
-      inciso: 2,
-      partidaPrincipal: 5,
-      partidaParcial: 4,
-      rubro: 'MANTENIMIENTO',
-      descripcion: 'Pintura Látex Interior Blanca x 20L',
-      cantidad: 5,
-      montoUnitario: 58000,
-      subtotal: 290000,
-      fechaCompra: '2026-04-10'
-    },
-    {
-      id: 6,
-      dependencia: 'SECRETARÍA ACADÉMICA',
-      inciso: 2,
-      partidaPrincipal: 9,
-      partidaParcial: 2,
-      rubro: 'LIBRERÍA',
-      descripcion: 'Marcadores para pizarra blanca (Surtidos)',
-      cantidad: 20,
-      montoUnitario: 1200,
-      subtotal: 24000,
-      fechaCompra: '2026-02-05'
-    },
-    {
-      id: 7,
-      dependencia: 'DIRECCIÓN DE SISTEMAS',
-      inciso: 4,
-      partidaPrincipal: 3,
-      partidaParcial: 6,
-      rubro: 'INFORMÁTICA',
-      descripcion: 'Monitor LED 24" FHD IPS',
-      cantidad: 4,
-      montoUnitario: 185000,
-      subtotal: 740000,
-      fechaCompra: '2026-03-01'
+  // Estados de datos dinámicos desde la API
+  const [rubros, setRubros] = useState([]);
+  const [rubroSeleccionado, setRubroSeleccionado] = useState('');
+  const [bienesCatalogo, setBienesCatalogo] = useState([]);
+
+  // Filtros Avanzados
+  const [busquedaTexto, setBusquedaTexto] = useState('');
+  const [filtroInciso, setFiltroInciso] = useState('TODOS');
+
+  // Estado para los ítems seleccionados en la Solicitud (Carrito)
+  // Estructura: { [bienId]: { bien_id, descripcion, inciso, partida_principal, cantidad_solicitada, precio_unitario, observacion, subtotal } }
+  const [solicitudItems, setSolicitudItems] = useState({});
+
+  // Estados de control UI y mensajes
+  const [planEstado, setPlanEstado] = useState({ habilitado: true, mensaje: '' });
+  const [nroConvocatoria, setNroConvocatoria] = useState('CDC:2026/01');
+  const [loadingRubros, setLoadingRubros] = useState(true);
+  const [loadingBienes, setLoadingBienes] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // 1. Cargar estado del Plan Anual y Rubros al iniciar
+  useEffect(() => {
+    const currentToken = token || localStorage.getItem('token') || localStorage.getItem('tupi_token');
+    if (!currentToken) return;
+
+    fetchAuth('/plan-compras/estado')
+      .then((res) => res.json())
+      .then((data) => setPlanEstado(data))
+      .catch((err) => console.error('Error estado plan:', err.message));
+
+    setLoadingRubros(true);
+    fetchAuth('/plan-compras/rubros')
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setRubros(data);
+          setRubroSeleccionado(data[0]);
+        } else {
+          setRubros([]);
+        }
+      })
+      .catch((err) => {
+        console.error('Error al cargar rubros:', err.message);
+        setErrorMsg('No se pudieron obtener los rubros del servidor.');
+      })
+      .finally(() => setLoadingRubros(false));
+  }, [token]);
+
+  // 2. Cargar bienes del catálogo al cambiar el rubro
+  useEffect(() => {
+    const currentToken = token || localStorage.getItem('token') || localStorage.getItem('tupi_token');
+    if (!currentToken || !rubroSeleccionado) return;
+
+    setLoadingBienes(true);
+    fetchAuth(`/plan-compras/bienes-por-rubro?rubro=${encodeURIComponent(rubroSeleccionado)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setBienesCatalogo(data);
+        } else {
+          setBienesCatalogo([]);
+        }
+      })
+      .catch((err) => console.error('Error al cargar bienes:', err.message))
+      .finally(() => setLoadingBienes(false));
+  }, [rubroSeleccionado, token]);
+
+  // 3. Filtrar catálogo por texto e inciso
+  const bienesFiltrados = useMemo(() => {
+    return bienesCatalogo.filter((bien) => {
+      const coincideTexto = bien.descripcion.toLowerCase().includes(busquedaTexto.toLowerCase());
+      const coincideInciso = filtroInciso === 'TODOS' || String(bien.inciso).includes(filtroInciso);
+      return coincideTexto && coincideInciso;
+    });
+  }, [bienesCatalogo, busquedaTexto, filtroInciso]);
+
+  // Obtenemos incisos para el combo de filtro
+  const incisosDisponibles = useMemo(() => {
+    const lista = bienesCatalogo.map((b) => b.inciso).filter(Boolean);
+    return ['TODOS', ...new Set(lista)];
+  }, [bienesCatalogo]);
+
+  // 4. Agregar / Quitar producto del carrito/solicitud
+  const handleToggleProducto = (bien) => {
+    setSolicitudItems((prev) => {
+      const existe = prev[bien.id];
+      if (existe) {
+        const nuevo = { ...prev };
+        delete nuevo[bien.id];
+        return nuevo;
+      } else {
+        return {
+          ...prev,
+          [bien.id]: {
+            bien_id: bien.id,
+            descripcion: bien.descripcion,
+            inciso: bien.inciso,
+            partida_principal: bien.partida_principal,
+            cantidad_solicitada: 1,
+            precio_unitario: 0,
+            observacion: '', // 💡 Campo observación incluido
+            subtotal: 0
+          }
+        };
+      }
+    });
+  };
+
+  // 5. Quitar ítem directamente de la solicitud
+  const handleRemoveItem = (bienId) => {
+    setSolicitudItems((prev) => {
+      const nuevo = { ...prev };
+      delete nuevo[bienId];
+      return nuevo;
+    });
+  };
+
+  // 6. Actualizar valores (cantidad, precio, observacion)
+  const handleValueChange = (bienId, campo, valor) => {
+    setSolicitudItems((prev) => {
+      const item = prev[bienId];
+      if (!item) return prev;
+
+      if (campo === 'observacion') {
+        return {
+          ...prev,
+          [bienId]: {
+            ...item,
+            observacion: valor
+          }
+        };
+      }
+
+      const numValue = parseFloat(valor) || 0;
+      const cantidad = campo === 'cantidad_solicitada' ? numValue : item.cantidad_solicitada;
+      const precio = campo === 'precio_unitario' ? numValue : item.precio_unitario;
+
+      return {
+        ...prev,
+        [bienId]: {
+          ...item,
+          [campo]: numValue,
+          subtotal: cantidad * precio
+        }
+      };
+    });
+  };
+
+  // 7. Enviar la solicitud completa al backend
+  const handleSubmitSolicitud = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const itemsAEnviar = Object.values(solicitudItems);
+
+    if (itemsAEnviar.length === 0) {
+      setErrorMsg('Debe seleccionar al menos un producto en su solicitud.');
+      return;
     }
-  ]);
 
-  // Función auxiliar para darle color dinámico al badge según el rubro
-  const getBadgeColor = (rubro) => {
-    switch(rubro) {
-      case 'INFORMÁTICA': return 'badge-blue';
-      case 'LIMPIEZA': return 'badge-green'; // Asegúrate de agregar esta clase en el CSS si quieres variedad, o usa solo blue
-      case 'MANTENIMIENTO': return 'badge-orange';
-      case 'LIBRERÍA': return 'badge-purple';
-      default: return 'badge-blue';
+    const payload = {
+      nro_convocatoria: nroConvocatoria,
+      bienes_seleccionados: itemsAEnviar.map((i) => ({
+        bien_id: i.bien_id,
+        cantidad_solicitada: i.cantidad_solicitada,
+        precio_unitario: i.precio_unitario,
+        observacion: i.observacion || ''
+      }))
+    };
+
+    try {
+      const res = await fetchAuth('/plan-compras/solicitudes', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setSuccessMsg(`¡Solicitud #${data.solicitudId} registrada correctamente!`);
+        setSolicitudItems({});
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        setErrorMsg(data.error || 'Ocurrió un error al enviar la solicitud.');
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Error de conexión con el servidor.');
     }
   };
 
+  if (!planEstado.habilitado) {
+    return (
+      <div className="abm-container">
+        <div className="abm-card text-center p-5">
+          <h2 className="text-warning">Plan Anual Inactivo</h2>
+          <p>{planEstado.mensaje || 'El período de carga de solicitudes se encuentra cerrado.'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const listaSolicitud = Object.values(solicitudItems);
+  const totalGeneral = listaSolicitud.reduce((acc, curr) => acc + (curr.subtotal || 0), 0);
+
   return (
     <div className="abm-container">
+      {/* Cabecera Principal */}
       <div className="abm-header">
-        <h1 className="abm-title">Plan Anual de Compras 2026</h1>
-        <p className="abm-subtitle">Gestión y carga de requerimientos consolidados de la dependencia</p>
+        <div>
+          <h1 className="abm-title">Plan Anual de Compras 2026</h1>
+          <p className="abm-subtitle">Gestión y carga de requerimientos consolidados de la dependencia</p>
+        </div>
       </div>
 
-      {/* Tarjeta del Formulario de Carga */}
-      <div className="abm-card">
-        <div className="card-header">
-          <h2 className="card-title">Cargar Nuevo Requerimiento</h2>
+      {/* Alertas de Feedback */}
+      {errorMsg && (
+        <div className="alert alert-danger mb-4 d-flex align-items-center gap-2">
+          <AlertCircle size={18} />
+          <span>{errorMsg}</span>
         </div>
-        
-        <form className="abm-form">
-          <div className="form-grid">
-            
-            <div className="form-group">
-              <label>Dependencia / Área</label>
-              <select className="form-control">
-                <option>OFICINA RECTORADO</option>
-                <option>SECRETARÍA GENERAL</option>
-                <option>SECRETARÍA ACADÉMICA</option>
-                <option>DIRECCIÓN DE SISTEMAS</option>
-                <option>MANTENIMIENTO Y OBRAS</option>
-              </select>
-            </div>
+      )}
+      {successMsg && (
+        <div className="alert alert-success mb-4 d-flex align-items-center gap-2">
+          <CheckCircle2 size={18} />
+          <span>{successMsg}</span>
+        </div>
+      )}
 
-            <div className="form-group">
-              <label>Rubro / Categoría</label>
-              <select 
+      {/* Tarjeta de Datos de Convocatoria */}
+      <div className="abm-card mb-4">
+        <div className="card-header">
+          <h2 className="card-title">1. Identificador de la Convocatoria</h2>
+        </div>
+        <div className="abm-form">
+          <div className="form-group mb-0">
+            <label>Nro. Convocatoria / Referencia Interna</label>
+            <input
+              type="text"
+              className="form-control"
+              value={nroConvocatoria}
+              onChange={(e) => setNroConvocatoria(e.target.value)}
+              placeholder="Ej: CDC:2026/01"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* SECCIÓN 1: CATÁLOGO Y BÚSQUEDA (GRID SUPERIOR) */}
+      <div className="abm-card mb-4">
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <h2 className="card-title">2. Selección del Catálogo de Bienes</h2>
+          <span className="badge-cart-indicator">
+            <ShoppingCart size={16} /> {listaSolicitud.length} seleccionados
+          </span>
+        </div>
+
+        {/* Barra de Filtros Avanzados */}
+        <div className="filters-bar-wrapper">
+          <div className="filter-item">
+            <label>Rubro / Categoría</label>
+            {loadingRubros ? (
+              <p className="text-muted small">Cargando...</p>
+            ) : (
+              <select
                 className="form-control"
                 value={rubroSeleccionado}
                 onChange={(e) => setRubroSeleccionado(e.target.value)}
               >
-                <option value="INFORMÁTICA">INFORMÁTICA</option>
-                <option value="LIMPIEZA">LIMPIEZA</option>
-                <option value="MANTENIMIENTO">MANTENIMIENTO</option>
-                <option value="LIBRERÍA">LIBRERÍA</option>
-              </select>
-            </div>
-
-            <div className="form-group col-span-2">
-              <label>Bien / Descripción (Seleccione o escriba el detalle)</label>
-              <input 
-                type="text" 
-                list="lista-bienes" 
-                placeholder="Ej: Computadora intermedia..." 
-                className="form-control" 
-              />
-              <datalist id="lista-bienes">
-                {bienesPorRubro[rubroSeleccionado]?.map((bien, index) => (
-                  <option key={index} value={bien} />
+                {rubros.map((r, index) => (
+                  <option key={index} value={r}>{r}</option>
                 ))}
-              </datalist>
-            </div>
-
-            <div className="form-group form-group-sm">
-              <label>Inciso</label>
-              <select className="form-control">
-                {[1,2,3,4,5,6,7,8,9].map(num => <option key={num} value={num}>{num}</option>)}
               </select>
-            </div>
+            )}
+          </div>
 
-            <div className="form-group form-group-sm">
-              <label>Part. Princ.</label>
-              <select className="form-control">
-                {[1,2,3,4,5,6,7,8,9].map(num => <option key={num} value={num}>{num}</option>)}
-              </select>
-            </div>
-
-            <div className="form-group form-group-sm">
-              <label>Part. Parc.</label>
-              <select className="form-control">
-                {[1,2,3,4,5,6,7,8,9].map(num => <option key={num} value={num}>{num}</option>)}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Cantidad</label>
-              <input type="number" min="1" defaultValue="1" className="form-control text-center" />
-            </div>
-
-            <div className="form-group">
-              <label>Monto Unit. Est.</label>
-              <div className="input-with-prefix">
-                <span className="prefix">$</span>
-                <input type="number" placeholder="0.00" className="form-control" />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Fecha Est. Compra</label>
-              <input type="date" className="form-control" />
-            </div>
-
-            <div className="form-group col-span-2">
-              <label>Link de Referencia (Opcional)</label>
-              <input type="url" placeholder="https://..." className="form-control" />
+          <div className="filter-item flex-2">
+            <label>Búsqueda en el Catálogo</label>
+            <div className="search-input-wrapper">
+              <Search size={16} className="search-icon" />
+              <input
+                type="text"
+                className="form-control search-input"
+                placeholder="Buscar por nombre o descripción del bien..."
+                value={busquedaTexto}
+                onChange={(e) => setBusquedaTexto(e.target.value)}
+              />
             </div>
           </div>
 
-          <div className="form-actions">
-            <button type="button" className="btn btn-secondary">Limpiar Formulario</button>
-            <button type="button" className="btn btn-primary">Agregar al Plan</button>
+          <div className="filter-item">
+            <label>Filtrar por Inciso</label>
+            <select
+              className="form-control"
+              value={filtroInciso}
+              onChange={(e) => setFiltroInciso(e.target.value)}
+            >
+              {incisosDisponibles.map((inc, idx) => (
+                <option key={idx} value={inc}>{inc}</option>
+              ))}
+            </select>
           </div>
-        </form>
-      </div>
+        </div>
 
-      {/* Tarjeta de la Tabla de Resultados */}
-      <div className="abm-card">
-        <div className="table-wrapper">
+        {/* Tabla del Catálogo */}
+        <div className="table-wrapper catalog-table-height">
           <table className="abm-table">
             <thead>
               <tr>
-                <th>Dependencia / Área</th>
-                <th className="text-center">Inciso</th>
-                <th className="text-center">P.Princ</th>
-                <th className="text-center">P.Parc</th>
-                <th>Rubro</th>
+                <th className="text-center" style={{ width: '60px' }}>Elegir</th>
                 <th>Descripción del Bien</th>
-                <th className="text-center">Cant.</th>
-                <th className="text-right">Unitario</th>
-                <th className="text-right">Subtotal</th>
-                <th className="text-center">Acciones</th>
+                <th style={{ width: '220px' }}>Clasificación Presupuestaria</th>
+                <th className="text-center" style={{ width: '100px' }}>Estado</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.dependencia}</td>
-                  <td className="text-center text-gray">{item.inciso}</td>
-                  <td className="text-center text-gray">{item.partidaPrincipal}</td>
-                  <td className="text-center text-gray">{item.partidaParcial}</td>
-                  <td>
-                    {/* Se usa el badge azul general, pero con la función queda listo si agregas más colores al CSS */}
-                    <span className="badge badge-blue">{item.rubro}</span>
-                  </td>
-                  <td className="cell-truncate" title={item.descripcion}>{item.descripcion}</td>
-                  <td className="text-center font-medium">{item.cantidad}</td>
-                  <td className="text-right text-gray">
-                    ${item.montoUnitario.toLocaleString('es-AR')}
-                  </td>
-                  <td className="text-right font-bold">
-                    ${item.subtotal.toLocaleString('es-AR')}
-                  </td>
-                  <td className="text-center">
-                    <button className="action-btn edit" title="Editar">Editar</button>
-                    <button className="action-btn delete" title="Eliminar">Borrar</button>
+              {loadingBienes ? (
+                <tr>
+                  <td colSpan="4" className="text-center py-4">Cargando catálogo...</td>
+                </tr>
+              ) : bienesFiltrados.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="text-center py-4 text-muted">
+                    No se encontraron bienes con los criterios de búsqueda aplicados.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                bienesFiltrados.map((bien) => {
+                  const estaEnSolicitud = !!solicitudItems[bien.id];
+                  return (
+                    <tr key={bien.id} className={estaEnSolicitud ? 'table-row-selected' : ''}>
+                      <td className="text-center">
+                        <input
+                          type="checkbox"
+                          className="checkbox-custom"
+                          checked={estaEnSolicitud}
+                          onChange={() => handleToggleProducto(bien)}
+                        />
+                      </td>
+                      <td>
+                        <strong>{bien.descripcion}</strong>
+                      </td>
+                      <td>
+                        <small className="text-gray">{bien.inciso} | {bien.partida_principal}</small>
+                      </td>
+                      <td className="text-center">
+                        {estaEnSolicitud ? (
+                          <span className="badge-status added">Agregado</span>
+                        ) : (
+                          <span className="badge-status">Disponible</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* SECCIÓN 2: MI SOLICITUD A ENVIAR (GRID INFERIOR COMPLETO) */}
+      <div className="abm-card" id="seccion-solicitud">
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <h2 className="card-title d-flex align-items-center gap-2">
+            <ShoppingCart size={20} /> 3. Detalle de Requerimientos a Solicitar
+          </h2>
+          <span className="text-muted small">Ajuste cantidades, montos y agregue observaciones</span>
+        </div>
+
+        <form onSubmit={handleSubmitSolicitud}>
+          <div className="table-wrapper">
+            <table className="abm-table">
+              <thead>
+                <tr>
+                  <th>Bien Seleccionado</th>
+                  <th className="text-center" style={{ width: '100px' }}>Cantidad</th>
+                  <th className="text-right" style={{ width: '140px' }}>Precio Unit ($)</th>
+                  <th className="text-right" style={{ width: '140px' }}>Subtotal ($)</th>
+                  <th style={{ width: '280px' }}>Observaciones / Especificación Técnica</th>
+                  <th className="text-center" style={{ width: '50px' }}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {listaSolicitud.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-5 text-muted">
+                      No ha agregado ningún producto. Marque las casillas en el catálogo superior para armar su solicitud.
+                    </td>
+                  </tr>
+                ) : (
+                  listaSolicitud.map((item) => (
+                    <tr key={item.bien_id}>
+                      <td>
+                        <strong>{item.descripcion}</strong>
+                        <br />
+                        <small className="text-gray">{item.inciso} | {item.partida_principal}</small>
+                      </td>
+                      <td className="text-center">
+                        <input
+                          type="number"
+                          min="1"
+                          className="form-control form-control-sm text-center"
+                          value={item.cantidad_solicitada}
+                          onChange={(e) => handleValueChange(item.bien_id, 'cantidad_solicitada', e.target.value)}
+                        />
+                      </td>
+                      <td className="text-right">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="form-control form-control-sm text-right"
+                          value={item.precio_unitario}
+                          onChange={(e) => handleValueChange(item.bien_id, 'precio_unitario', e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </td>
+                      <td className="text-right font-bold text-primary">
+                        ${(item.subtotal || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td>
+                        {/* 💡 Campo de Observaciones ampliado para no apretar la UI */}
+                        <input
+                          type="text"
+                          className="form-control form-control-sm"
+                          placeholder="Ej: Marca sugerida, color, especificación..."
+                          value={item.observacion || ''}
+                          onChange={(e) => handleValueChange(item.bien_id, 'observacion', e.target.value)}
+                        />
+                      </td>
+                      <td className="text-center">
+                        <button
+                          type="button"
+                          className="btn-action-icon delete"
+                          title="Eliminar de la lista"
+                          onClick={() => handleRemoveItem(item.bien_id)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer de Consolidación y Envío */}
+          <div className="solicitud-summary-bar mt-4">
+            <div className="summary-info">
+              <div>
+                <span className="text-muted">Total de ítems:</span>{' '}
+                <strong>{listaSolicitud.length}</strong>
+              </div>
+              <div className="summary-total">
+                <span>Monto Total Estimado:</span>
+                <span className="total-amount">${totalGeneral.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary btn-lg d-flex align-items-center gap-2"
+              disabled={listaSolicitud.length === 0}
+            >
+              <Send size={18} />
+              <span>Enviar Solicitud Final</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
