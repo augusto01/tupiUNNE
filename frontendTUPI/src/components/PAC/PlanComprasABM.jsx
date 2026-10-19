@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Search, Filter, ShoppingCart, Trash2, Send, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Send, AlertCircle, CheckCircle2 } from 'lucide-react';
 import './PlanComprasABM.css';
 
 const PlanComprasABM = () => {
@@ -15,8 +15,7 @@ const PlanComprasABM = () => {
   const [busquedaTexto, setBusquedaTexto] = useState('');
   const [filtroInciso, setFiltroInciso] = useState('TODOS');
 
-  // Estado para los ítems seleccionados en la Solicitud (Carrito)
-  // Estructura: { [bienId]: { bien_id, descripcion, inciso, partida_principal, cantidad_solicitada, precio_unitario, observacion, subtotal } }
+  // Estado para los ítems seleccionados en la Solicitud
   const [solicitudItems, setSolicitudItems] = useState({});
 
   // Estados de control UI y mensajes
@@ -29,7 +28,7 @@ const PlanComprasABM = () => {
 
   // 1. Cargar estado del Plan Anual y Rubros al iniciar
   useEffect(() => {
-    const currentToken = token || localStorage.getItem('token') || localStorage.getItem('tupi_token');
+    const currentToken = token || localStorage.getItem('tupi_token') || localStorage.getItem('token');
     if (!currentToken) return;
 
     fetchAuth('/plan-compras/estado')
@@ -55,9 +54,9 @@ const PlanComprasABM = () => {
       .finally(() => setLoadingRubros(false));
   }, [token]);
 
-  // 2. Cargar bienes del catálogo al cambiar el rubro
+  // 2. Cargar bienes del catálogo
   useEffect(() => {
-    const currentToken = token || localStorage.getItem('token') || localStorage.getItem('tupi_token');
+    const currentToken = token || localStorage.getItem('tupi_token') || localStorage.getItem('token');
     if (!currentToken || !rubroSeleccionado) return;
 
     setLoadingBienes(true);
@@ -74,7 +73,16 @@ const PlanComprasABM = () => {
       .finally(() => setLoadingBienes(false));
   }, [rubroSeleccionado, token]);
 
-  // 3. Filtrar catálogo por texto e inciso
+  // Helper para normalizar el precio traído de la BD
+  const obtenerPrecioBD = (bien) => {
+    // Busca las distintas variantes de nombre que pueda devolver la consulta
+    const precio = bien.precio_unitario ?? bien.precio ?? bien.precio_ref;
+    const num = parseFloat(precio);
+    // Si viene en NULL, 0 o inválido, le asignamos un precio base estandarizado
+    return (!isNaN(num) && num > 0) ? num : 15000;
+  };
+
+  // 3. Filtrar catálogo en tiempo real
   const bienesFiltrados = useMemo(() => {
     return bienesCatalogo.filter((bien) => {
       const coincideTexto = bien.descripcion.toLowerCase().includes(busquedaTexto.toLowerCase());
@@ -83,13 +91,12 @@ const PlanComprasABM = () => {
     });
   }, [bienesCatalogo, busquedaTexto, filtroInciso]);
 
-  // Obtenemos incisos para el combo de filtro
   const incisosDisponibles = useMemo(() => {
     const lista = bienesCatalogo.map((b) => b.inciso).filter(Boolean);
     return ['TODOS', ...new Set(lista)];
   }, [bienesCatalogo]);
 
-  // 4. Agregar / Quitar producto del carrito/solicitud
+  // 4. Marcar / Desmarcar bien del catálogo
   const handleToggleProducto = (bien) => {
     setSolicitudItems((prev) => {
       const existe = prev[bien.id];
@@ -98,6 +105,9 @@ const PlanComprasABM = () => {
         delete nuevo[bien.id];
         return nuevo;
       } else {
+        const precioBase = obtenerPrecioBD(bien);
+        const cantidadInicial = 1;
+
         return {
           ...prev,
           [bien.id]: {
@@ -105,17 +115,17 @@ const PlanComprasABM = () => {
             descripcion: bien.descripcion,
             inciso: bien.inciso,
             partida_principal: bien.partida_principal,
-            cantidad_solicitada: 1,
-            precio_unitario: 0,
-            observacion: '', // 💡 Campo observación incluido
-            subtotal: 0
+            cantidad_solicitada: cantidadInicial,
+            precio_unitario: precioBase, // 👈 Fijado automáticamente desde la BD
+            observacion: '',
+            subtotal: cantidadInicial * precioBase
           }
         };
       }
     });
   };
 
-  // 5. Quitar ítem directamente de la solicitud
+  // 5. Eliminar ítem de la solicitud
   const handleRemoveItem = (bienId) => {
     setSolicitudItems((prev) => {
       const nuevo = { ...prev };
@@ -124,7 +134,7 @@ const PlanComprasABM = () => {
     });
   };
 
-  // 6. Actualizar valores (cantidad, precio, observacion)
+  // 6. Actualizar únicamente Cantidad u Observación
   const handleValueChange = (bienId, campo, valor) => {
     setSolicitudItems((prev) => {
       const item = prev[bienId];
@@ -140,22 +150,23 @@ const PlanComprasABM = () => {
         };
       }
 
-      const numValue = parseFloat(valor) || 0;
-      const cantidad = campo === 'cantidad_solicitada' ? numValue : item.cantidad_solicitada;
-      const precio = campo === 'precio_unitario' ? numValue : item.precio_unitario;
+      if (campo === 'cantidad_solicitada') {
+        const cantidad = Math.max(1, parseInt(valor, 10) || 1);
+        return {
+          ...prev,
+          [bienId]: {
+            ...item,
+            cantidad_solicitada: cantidad,
+            subtotal: cantidad * item.precio_unitario
+          }
+        };
+      }
 
-      return {
-        ...prev,
-        [bienId]: {
-          ...item,
-          [campo]: numValue,
-          subtotal: cantidad * precio
-        }
-      };
+      return prev;
     });
   };
 
-  // 7. Enviar la solicitud completa al backend
+  // 7. Enviar Solicitud a la API
   const handleSubmitSolicitud = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -187,11 +198,11 @@ const PlanComprasABM = () => {
       const data = await res.json();
 
       if (res.ok) {
-        setSuccessMsg(`¡Solicitud #${data.solicitudId} registrada correctamente!`);
+        setSuccessMsg(`¡Solicitud #${data.solicitudId} registrada exitosamente!`);
         setSolicitudItems({});
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        setErrorMsg(data.error || 'Ocurrió un error al enviar la solicitud.');
+        setErrorMsg(data.error || 'Ocurrió un error al procesar la solicitud.');
       }
     } catch (err) {
       setErrorMsg(err.message || 'Error de conexión con el servidor.');
@@ -214,7 +225,6 @@ const PlanComprasABM = () => {
 
   return (
     <div className="abm-container">
-      {/* Cabecera Principal */}
       <div className="abm-header">
         <div>
           <h1 className="abm-title">Plan Anual de Compras 2026</h1>
@@ -222,7 +232,6 @@ const PlanComprasABM = () => {
         </div>
       </div>
 
-      {/* Alertas de Feedback */}
       {errorMsg && (
         <div className="alert alert-danger mb-4 d-flex align-items-center gap-2">
           <AlertCircle size={18} />
@@ -236,7 +245,7 @@ const PlanComprasABM = () => {
         </div>
       )}
 
-      {/* Tarjeta de Datos de Convocatoria */}
+      {/* Datos de Convocatoria */}
       <div className="abm-card mb-4">
         <div className="card-header">
           <h2 className="card-title">1. Identificador de la Convocatoria</h2>
@@ -255,7 +264,7 @@ const PlanComprasABM = () => {
         </div>
       </div>
 
-      {/* SECCIÓN 1: CATÁLOGO Y BÚSQUEDA (GRID SUPERIOR) */}
+      {/* SECCIÓN 1: CATÁLOGO DE BIENES */}
       <div className="abm-card mb-4">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h2 className="card-title">2. Selección del Catálogo de Bienes</h2>
@@ -264,7 +273,6 @@ const PlanComprasABM = () => {
           </span>
         </div>
 
-        {/* Barra de Filtros Avanzados */}
         <div className="filters-bar-wrapper">
           <div className="filter-item">
             <label>Rubro / Categoría</label>
@@ -311,7 +319,6 @@ const PlanComprasABM = () => {
           </div>
         </div>
 
-        {/* Tabla del Catálogo */}
         <div className="table-wrapper catalog-table-height">
           <table className="abm-table">
             <thead>
@@ -319,23 +326,26 @@ const PlanComprasABM = () => {
                 <th className="text-center" style={{ width: '60px' }}>Elegir</th>
                 <th>Descripción del Bien</th>
                 <th style={{ width: '220px' }}>Clasificación Presupuestaria</th>
+                <th className="text-right" style={{ width: '160px' }}>Precio Base BD ($)</th>
                 <th className="text-center" style={{ width: '100px' }}>Estado</th>
               </tr>
             </thead>
             <tbody>
               {loadingBienes ? (
                 <tr>
-                  <td colSpan="4" className="text-center py-4">Cargando catálogo...</td>
+                  <td colSpan="5" className="text-center py-4">Cargando catálogo...</td>
                 </tr>
               ) : bienesFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="text-center py-4 text-muted">
+                  <td colSpan="5" className="text-center py-4 text-muted">
                     No se encontraron bienes con los criterios de búsqueda aplicados.
                   </td>
                 </tr>
               ) : (
                 bienesFiltrados.map((bien) => {
                   const estaEnSolicitud = !!solicitudItems[bien.id];
+                  const precioMuestra = obtenerPrecioBD(bien);
+
                   return (
                     <tr key={bien.id} className={estaEnSolicitud ? 'table-row-selected' : ''}>
                       <td className="text-center">
@@ -351,6 +361,9 @@ const PlanComprasABM = () => {
                       </td>
                       <td>
                         <small className="text-gray">{bien.inciso} | {bien.partida_principal}</small>
+                      </td>
+                      <td className="text-right font-bold">
+                        ${precioMuestra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="text-center">
                         {estaEnSolicitud ? (
@@ -368,13 +381,13 @@ const PlanComprasABM = () => {
         </div>
       </div>
 
-      {/* SECCIÓN 2: MI SOLICITUD A ENVIAR (GRID INFERIOR COMPLETO) */}
+      {/* SECCIÓN 2: DETALLE DE SOLICITUD (SOLO CANTIDAD Y OBSERVACIÓN EDITABLES) */}
       <div className="abm-card" id="seccion-solicitud">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h2 className="card-title d-flex align-items-center gap-2">
             <ShoppingCart size={20} /> 3. Detalle de Requerimientos a Solicitar
           </h2>
-          <span className="text-muted small">Ajuste cantidades, montos y agregue observaciones</span>
+          <span className="text-muted small">Ajuste únicamente la cantidad y especifique observaciones</span>
         </div>
 
         <form onSubmit={handleSubmitSolicitud}>
@@ -384,9 +397,9 @@ const PlanComprasABM = () => {
                 <tr>
                   <th>Bien Seleccionado</th>
                   <th className="text-center" style={{ width: '100px' }}>Cantidad</th>
-                  <th className="text-right" style={{ width: '140px' }}>Precio Unit ($)</th>
-                  <th className="text-right" style={{ width: '140px' }}>Subtotal ($)</th>
-                  <th style={{ width: '280px' }}>Observaciones / Especificación Técnica</th>
+                  <th className="text-right" style={{ width: '150px' }}>Precio Unit ($)</th>
+                  <th className="text-right" style={{ width: '150px' }}>Subtotal ($)</th>
+                  <th style={{ width: '320px' }}>Observaciones / Especificación Técnica</th>
                   <th className="text-center" style={{ width: '50px' }}></th>
                 </tr>
               </thead>
@@ -405,6 +418,7 @@ const PlanComprasABM = () => {
                         <br />
                         <small className="text-gray">{item.inciso} | {item.partida_principal}</small>
                       </td>
+                      {/* EDITABLE: Cantidad */}
                       <td className="text-center">
                         <input
                           type="number"
@@ -414,26 +428,26 @@ const PlanComprasABM = () => {
                           onChange={(e) => handleValueChange(item.bien_id, 'cantidad_solicitada', e.target.value)}
                         />
                       </td>
+                      {/* NO EDITABLE: Precio traído de la BD */}
                       <td className="text-right">
                         <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="form-control form-control-sm text-right"
-                          value={item.precio_unitario}
-                          onChange={(e) => handleValueChange(item.bien_id, 'precio_unitario', e.target.value)}
-                          placeholder="0.00"
+                          type="text"
+                          readOnly
+                          disabled
+                          className="form-control form-control-sm text-right bg-readonly"
+                          value={`$${item.precio_unitario.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`}
                         />
                       </td>
+                      {/* CÁLCULO: Subtotal */}
                       <td className="text-right font-bold text-primary">
                         ${(item.subtotal || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </td>
+                      {/* EDITABLE: Observación */}
                       <td>
-                        {/* 💡 Campo de Observaciones ampliado para no apretar la UI */}
                         <input
                           type="text"
                           className="form-control form-control-sm"
-                          placeholder="Ej: Marca sugerida, color, especificación..."
+                          placeholder="Ej: Marca sugerida, especificación técnica..."
                           value={item.observacion || ''}
                           onChange={(e) => handleValueChange(item.bien_id, 'observacion', e.target.value)}
                         />
@@ -455,7 +469,6 @@ const PlanComprasABM = () => {
             </table>
           </div>
 
-          {/* Footer de Consolidación y Envío */}
           <div className="solicitud-summary-bar mt-4">
             <div className="summary-info">
               <div>

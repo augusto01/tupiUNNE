@@ -361,6 +361,14 @@ select option {
   color: #64748b !important;
 }
 
+.bg-readonly {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  font-weight: 600;
+  cursor: not-allowed;
+  border-color: #cbd5e1 !important;
+}
+
 /* ==========================================
    RESPONSIVIDAD Y MEDIA QUERIES
    ========================================== */
