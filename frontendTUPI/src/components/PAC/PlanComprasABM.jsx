@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Search, ShoppingCart, Trash2, Send, Save, AlertCircle, CheckCircle2, Loader2, X } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Send, Save, Loader2 } from 'lucide-react';
+import Swal from 'sweetalert2';
 import './PlanComprasABM.css';
 
 const PlanComprasABM = () => {
@@ -22,17 +23,6 @@ const PlanComprasABM = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittingAction, setSubmittingAction] = useState(null);
 
-  // Estado para controlar el Pop-up flotante
-  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-
-  const mostrarPopUp = (message, type = 'success') => {
-    setToast({ show: true, message, type });
-    // Ocultar automáticamente a los 4 segundos
-    setTimeout(() => {
-      setToast({ show: false, message: '', type: 'success' });
-    }, 4000);
-  };
-
   useEffect(() => {
     const currentToken = token || localStorage.getItem('tupi_token') || localStorage.getItem('token');
     if (!currentToken) return;
@@ -53,7 +43,13 @@ const PlanComprasABM = () => {
           setRubros([]);
         }
       })
-      .catch(() => mostrarPopUp('No se pudieron obtener los rubros del servidor.', 'error'))
+      .catch(() => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de Carga',
+          text: 'No se pudieron obtener los rubros del servidor.'
+        });
+      })
       .finally(() => setLoadingRubros(false));
   }, [token]);
 
@@ -152,16 +148,44 @@ const PlanComprasABM = () => {
     });
   };
 
-  const handleProcesarSolicitud = async (nuevoEstado) => {
-    if (isSubmitting) return;
-
+  // Modal de confirmación principal
+  const solicitarConfirmacion = (nuevoEstado) => {
     const itemsAEnviar = Object.values(solicitudItems);
 
     if (itemsAEnviar.length === 0) {
-      mostrarPopUp('Debe seleccionar al menos un producto antes de continuar.', 'error');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Solicitud Vacía',
+        text: 'Debe seleccionar al menos un producto del catálogo antes de continuar.'
+      });
       return;
     }
 
+    const esBorrador = nuevoEstado === 'BORRADOR';
+
+    Swal.fire({
+      title: esBorrador ? '¿Guardar como borrador?' : '¿Seguro que querés agregar esta solicitud?',
+      text: esBorrador
+        ? 'La solicitud se guardará en estado borrador y podrás editarla más adelante.'
+        : 'Una vez enviada, la solicitud pasará a revisión y no podrá modificarse.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#0284c7',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: esBorrador ? 'Sí, guardar borrador' : 'Sí, enviar solicitud',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        ejecutarProcesarSolicitud(nuevoEstado);
+      }
+    });
+  };
+
+  // Procesa la llamada al Backend tras confirmar
+  const ejecutarProcesarSolicitud = async (nuevoEstado) => {
+    if (isSubmitting) return;
+
+    const itemsAEnviar = Object.values(solicitudItems);
     setIsSubmitting(true);
     setSubmittingAction(nuevoEstado);
 
@@ -185,19 +209,30 @@ const PlanComprasABM = () => {
       const data = await res.json();
 
       if (res.ok) {
-        mostrarPopUp(
-          nuevoEstado === 'BORRADOR'
-            ? `¡Borrador #${data.solicitudId} guardado con éxito!`
-            : `¡Solicitud #${data.solicitudId} enviada para su revisión!`,
-          'success'
-        );
+        Swal.fire({
+          icon: 'success',
+          title: nuevoEstado === 'BORRADOR' ? '¡Borrador Guardado!' : '¡Solicitud Enviada!',
+          text: nuevoEstado === 'BORRADOR'
+            ? `Se registró el borrador #${data.solicitudId} correctamente.`
+            : `La solicitud #${data.solicitudId} se envió a revisión con éxito.`,
+          confirmButtonColor: '#0284c7'
+        });
+
         setSolicitudItems({});
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
-        mostrarPopUp(data.error || 'Ocurrió un error al procesar la solicitud.', 'error');
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al Procesar',
+          text: data.error || 'Ocurrió un error al registrar la solicitud.'
+        });
       }
     } catch (err) {
-      mostrarPopUp(err.message || 'Error de conexión con el servidor.', 'error');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de Conexión',
+        text: err.message || 'No se pudo conectar con el servidor.'
+      });
     } finally {
       setIsSubmitting(false);
       setSubmittingAction(null);
@@ -220,20 +255,6 @@ const PlanComprasABM = () => {
 
   return (
     <div className="abm-container">
-
-      {/* POP-UP FLOTANTE (TOAST) */}
-      {toast.show && (
-        <div className={`tupi-toast-popup ${toast.type}`}>
-          <div className="toast-popup-content">
-            {toast.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-            <span>{toast.message}</span>
-          </div>
-          <button className="toast-close-btn" onClick={() => setToast({ ...toast, show: false })}>
-            <X size={16} />
-          </button>
-        </div>
-      )}
-
       <div className="abm-header">
         <div>
           <h1 className="abm-title">Plan Anual de Compras 2026</h1>
@@ -471,7 +492,7 @@ const PlanComprasABM = () => {
               type="button"
               className="btn btn-outline-primary btn-lg d-flex align-items-center gap-2"
               disabled={listaSolicitud.length === 0 || isSubmitting}
-              onClick={() => handleProcesarSolicitud('BORRADOR')}
+              onClick={() => solicitarConfirmacion('BORRADOR')}
             >
               {isSubmitting && submittingAction === 'BORRADOR' ? (
                 <>
@@ -490,7 +511,7 @@ const PlanComprasABM = () => {
               type="button"
               className="btn btn-primary btn-lg d-flex align-items-center gap-2"
               disabled={listaSolicitud.length === 0 || isSubmitting}
-              onClick={() => handleProcesarSolicitud('PENDIENTE')}
+              onClick={() => solicitarConfirmacion('PENDIENTE')}
             >
               {isSubmitting && submittingAction === 'PENDIENTE' ? (
                 <>
