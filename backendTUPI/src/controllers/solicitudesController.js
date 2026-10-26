@@ -22,6 +22,8 @@ const obtenerRutaLogo = () => {
 };
 
 // 1. Obtener todas las solicitudes pendientes para el administrador
+// src/controllers/solicitudesController.js
+
 export const getSolicitudesPendientes = async (req, res) => {
   try {
     const querySolicitudes = `
@@ -30,18 +32,23 @@ export const getSolicitudesPendientes = async (req, res) => {
         s.nro_convocatoria, 
         s.fecha_creacion, 
         s.estado, 
-        NULL AS motivo_rechazo,
-        u.usuario_id,
+        s.usuario_id,
+        s.usuario_autorizante,
+        s.motivo_rechazo,
         u.nombre AS usuario_nombre, 
         u.apellido AS usuario_apellido, 
         u.email AS usuario_email,
-        d.nombre AS dependencia_nombre
+        admin.nombre AS admin_nombre,       -- 👈 Nombre del Administrador Autorizante
+        admin.apellido AS admin_apellido,   -- 👈 Apellido del Administrador Autorizante
+        admin.email AS admin_email,
+        d.nombre AS dependencia_nombre     -- 👈 Nombre de la Dependencia/Facultad
       FROM solicitudes s
       JOIN usuario u ON s.usuario_id = u.usuario_id
-      JOIN dependencias d ON u.dependencia_id = d.dependencia_id
-      WHERE s.estado IN ('PENDIENTE', 'RECHAZADA', 'APROBADA')
+      LEFT JOIN usuario admin ON s.usuario_autorizante = admin.usuario_id
+      LEFT JOIN dependencias d ON u.dependencia_id = d.dependencia_id
       ORDER BY s.id DESC
     `;
+
     const [solicitudes] = await db.query(querySolicitudes);
 
     if (solicitudes.length === 0) {
@@ -66,6 +73,7 @@ export const getSolicitudesPendientes = async (req, res) => {
     `;
     const [registros] = await db.query(queryRegistros, [ids]);
 
+    // Combinar solicitudes con sus respectivos renglones
     const respuesta = solicitudes.map((sol) => ({
       ...sol,
       renglones: registros.filter((r) => r.solicitud_id === sol.id)
@@ -73,10 +81,11 @@ export const getSolicitudesPendientes = async (req, res) => {
 
     return res.json(respuesta);
   } catch (error) {
-    console.error('Error al obtener solicitudes pendientes:', error);
+    console.error('Error al obtener solicitudes:', error);
     return res.status(500).json({ error: 'Error al consultar las solicitudes en la base de datos.' });
   }
 };
+
 
 // 2. Procesar decisión (Aprobar o Rechazar)
 export const evaluarSolicitud = async (req, res) => {
