@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
-  History, 
   FileEdit, 
   Send, 
   Trash2, 
@@ -70,12 +69,15 @@ const Historial = () => {
     }
   }, [token]);
 
-  const toggleExpand = (id) => {
+  // Manejo de despliegue corrigiendo la propagación
+  const toggleExpand = (id, e) => {
+    if (e) e.stopPropagation();
     if (editingId === id || isProcessing) return;
-    setExpandedId(expandedId === id ? null : id);
+    setExpandedId((prev) => (prev === id ? null : id));
   };
 
-  const handleStartEdit = (solicitud) => {
+  const handleStartEdit = (solicitud, e) => {
+    if (e) e.stopPropagation();
     if (isProcessing) return;
     setEditingId(solicitud.id);
     setExpandedId(solicitud.id);
@@ -88,14 +90,15 @@ const Historial = () => {
     setDraftItems([]);
   };
 
-  const handleDraftChange = (renglonId, campo, valor) => {
+  const handleDraftChange = (itemKey, campo, valor) => {
     if (isProcessing) return;
     setDraftItems((prev) =>
       prev.map((item) => {
-        if (item.id === renglonId || item.bien_id === renglonId) {
+        const currentKey = item.id || item.bien_id;
+        if (currentKey === itemKey) {
           if (campo === 'cantidad') {
             const cant = Math.max(1, parseInt(valor, 10) || 1);
-            return { ...item, cantidad: cant, subtotal: cant * item.precio_unitario };
+            return { ...item, cantidad: cant, subtotal: cant * (parseFloat(item.precio_unitario) || 0) };
           }
           if (campo === 'observacion') {
             return { ...item, observacion: valor };
@@ -155,7 +158,8 @@ const Historial = () => {
     }
   };
 
-  const handleDeleteBorrador = async (solicitudId) => {
+  const handleDeleteBorrador = async (solicitudId, e) => {
+    if (e) e.stopPropagation();
     if (isProcessing) return;
     if (!window.confirm('¿Está seguro de que desea eliminar este borrador?')) return;
 
@@ -225,7 +229,6 @@ const Historial = () => {
 
   return (
     <div className="historial-container">
-
       {/* POP-UP FLOTANTE (TOAST) */}
       {toast.show && (
         <div className={`tupi-toast-popup ${toast.type}`}>
@@ -317,7 +320,7 @@ const Historial = () => {
                     isEditing ? 'editing' : ''
                   }`}
                 >
-                  <div className="solicitud-main-row" onClick={() => toggleExpand(sol.id)}>
+                  <div className="solicitud-main-row" onClick={(e) => toggleExpand(sol.id, e)}>
                     <div className="solicitud-info">
                       <div className="d-flex align-items-center gap-3">
                         <span className="solicitud-id">Solicitud #{sol.id}</span>
@@ -341,14 +344,14 @@ const Historial = () => {
                         <strong>${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
                       </div>
 
-                      <div className="btn-group-actions" onClick={(e) => e.stopPropagation()}>
+                      <div className="btn-group-actions">
                         {esBorrador && !isEditing && (
                           <>
                             <button
                               type="button"
                               className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
                               disabled={isProcessing}
-                              onClick={() => handleStartEdit(sol)}
+                              onClick={(e) => handleStartEdit(sol, e)}
                               title="Editar Borrador"
                             >
                               <FileEdit size={14} /> Editar
@@ -358,7 +361,7 @@ const Historial = () => {
                               type="button"
                               className="btn btn-outline-danger btn-sm d-flex align-items-center gap-1"
                               disabled={isProcessing}
-                              onClick={() => handleDeleteBorrador(sol.id)}
+                              onClick={(e) => handleDeleteBorrador(sol.id, e)}
                               title="Eliminar Borrador"
                             >
                               {estaProcesandoEsta && processingAction === 'DELETE' ? (
@@ -369,7 +372,12 @@ const Historial = () => {
                             </button>
                           </>
                         )}
-                        <button type="button" className="btn-toggle-expand" disabled={isProcessing}>
+                        <button 
+                          type="button" 
+                          className="btn-toggle-expand" 
+                          disabled={isProcessing}
+                          onClick={(e) => toggleExpand(sol.id, e)}
+                        >
                           {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                         </button>
                       </div>
@@ -398,12 +406,13 @@ const Historial = () => {
                               </tr>
                             ) : (
                               listaRenglones.map((item) => {
+                                const itemKey = item.id || item.bien_id;
                                 const subtotalItem =
                                   (parseFloat(item.precio_unitario) || 0) *
                                   (parseInt(item.cantidad, 10) || 0);
 
                                 return (
-                                  <tr key={item.id || item.bien_id}>
+                                  <tr key={itemKey}>
                                     <td>
                                       <strong>{item.descripcion || item.bien_descripcion}</strong>
                                     </td>
@@ -416,7 +425,7 @@ const Historial = () => {
                                           className="form-control form-control-sm text-center"
                                           value={item.cantidad}
                                           onChange={(e) =>
-                                            handleDraftChange(item.id || item.bien_id, 'cantidad', e.target.value)
+                                            handleDraftChange(itemKey, 'cantidad', e.target.value)
                                           }
                                         />
                                       ) : (
@@ -439,11 +448,7 @@ const Historial = () => {
                                           className="form-control form-control-sm"
                                           value={item.observacion || ''}
                                           onChange={(e) =>
-                                            handleDraftChange(
-                                              item.id || item.bien_id,
-                                              'observacion',
-                                              e.target.value
-                                            )
+                                            handleDraftChange(itemKey, 'observacion', e.target.value)
                                           }
                                           placeholder="Añadir nota técnica..."
                                         />

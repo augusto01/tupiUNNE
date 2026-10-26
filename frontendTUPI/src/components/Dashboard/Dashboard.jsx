@@ -11,13 +11,16 @@ import {
   ChevronDown,
   PlusCircle,
   History,
+  Clock,
   ListFilter,
-  Users 
+  Users,
+  ShieldAlert
 } from 'lucide-react';
 import UsuariosCRUD from '../Usuarios/UsuariosCRUD'; 
 import { AnalizadorExpediente } from '../Expedientes/AnalizadorExp';
 import PlanComprasABM from '../PAC/PlanComprasABM';
-import Historial from '../PAC/Historial'; // 👈 Importación agregada del componente Historial
+import Historial from '../PAC/Historial';
+import Pendientes from '../PAC/Pendientes'; // 👈 Importación del componente de autorizaciones
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -28,9 +31,11 @@ const Dashboard = () => {
   const [usuario, setUsuario] = useState(() => {
     const userLocal = JSON.parse(localStorage.getItem('tupi_user')) || JSON.parse(localStorage.getItem('usuario'));
     return {
+      usuario_id: userLocal?.usuario_id || userLocal?.id || null,
       nombre: userLocal?.nombre || 'Usuario',
       apellido: userLocal?.apellido || '',
       rol: userLocal?.rol || 'Operador',
+      tipo_usuario_id: userLocal?.tipo_usuario_id || null,
       dependencia: userLocal?.dependencia || 'UNNE'
     };
   });
@@ -63,13 +68,20 @@ const Dashboard = () => {
       console.error("Error al leer permisos en Dashboard:", err);
     }
 
-    // Respaldo de desarrollo por defecto (Asegura la visibilidad de todos los módulos)
+    // Respaldo de desarrollo por defecto
     return { 
       facultad: 'Rectorado UNNE', 
-      rol: 'Administrador', 
-      permisos: ['compras', 'usuarios', 'expedientes', 'auditoria', 'configuracion'] 
+      rol: usuario.rol || 'Administrador', 
+      permisos: ['compras', 'usuarios', 'expedientes', 'auditoria', 'configuracion', 'aprobar-solicitudes'] 
     };
   });
+
+  // Validación de Administrador
+  const esAdministrador = 
+    usuario.rol?.toLowerCase().includes('admin') || 
+    entorno.rol?.toLowerCase().includes('admin') || 
+    usuario.tipo_usuario_id === 1 ||
+    (Array.isArray(entorno.permisos) && (entorno.permisos.includes('aprobar-solicitudes') || entorno.permisos.includes('admin')));
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -84,7 +96,7 @@ const Dashboard = () => {
   // Estado de control de navegación interna
   const [currentSection, setCurrentSection] = useState('panel');
 
-  // Helper para comprobar si el rol tiene asignado el permiso
+  // Helper para comprobar si el rol tiene asignado un permiso
   const tieneAcceso = (slugPermiso) => {
     return entorno.permisos.includes(slugPermiso);
   };
@@ -181,7 +193,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* ACCESO DINÁMICO: PLANES DE COMPRAS */}
+          {/* ACCESO DINÁMICO: PLANES DE COMPRAS (PAC) */}
           {tieneAcceso('compras') && (
             <div>
               <button 
@@ -224,6 +236,24 @@ const Dashboard = () => {
                       <span>Ver Historial</span>
                     </a>
                   </li>
+
+                  {/* 🔒 PENDIENTES: SOLO VISIBLE SI ES ADMINISTRADOR */}
+                  {esAdministrador && (
+                    <li>
+                      <a 
+                        href="#pendientes-compras" 
+                        className={`sidebar-subitem ${currentSection === 'compras-pendientes' ? 'active' : ''}`}
+                        onClick={(e) => { 
+                          e.preventDefault(); 
+                          setCurrentSection('compras-pendientes'); 
+                          setIsMobileMenuOpen(false); 
+                        }}
+                      >
+                        <Clock size={12} />
+                        <span>Pendientes</span>
+                      </a>
+                    </li>
+                  )}
                 </div>
               </ul>
             </div>
@@ -353,9 +383,23 @@ const Dashboard = () => {
               <PlanComprasABM />
             )}
 
-            {/* 👇 RENDERIZADO DEL COMPONENTE HISTORIAL 👇 */}
             {currentSection === 'compras-historial' && (
               <Historial />
+            )}
+
+            {/* RENDERIZADO DEL COMPONENTE PENDIENTES (SÓLO ADMINISTRADORES) */}
+            {currentSection === 'compras-pendientes' && (
+              esAdministrador ? (
+                <Pendientes />
+              ) : (
+                <div className="content-section-fade text-center py-5">
+                  <ShieldAlert size={48} className="text-danger mb-3" style={{ margin: '0 auto' }} />
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Acceso Restringido</h3>
+                  <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                    No posee los permisos suficientes para acceder al módulo de aprobación de solicitudes.
+                  </p>
+                </div>
+              )
             )}
 
             {(currentSection === 'usuarios-ver' || currentSection === 'usuarios-crear') && (

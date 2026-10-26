@@ -6,12 +6,14 @@ const authRoutes = require('./src/routes/authRoutes');
 const usuarioRoutes = require('./src/routes/usuarioRoutes');
 const apiRoutes = require('./src/routes/apiRoutes');
 const expedienteRoutes = require('./src/routes/expedienteRoutes');
-const planComprasRoutes  = require ('./src/routes/planComprasRoutes.js');
+
+// 👈 Agregar .default si el archivo de rutas utiliza "export default router"
+const planComprasRoutes = require('./src/routes/planComprasRoutes.js').default || require('./src/routes/planComprasRoutes.js');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Permitir peticiones desde el frontend (Vite)
+// Configuración de CORS
 app.use(cors({
   origin: [
     'http://localhost:5173',
@@ -25,7 +27,6 @@ app.use(cors({
 }));
 
 // Middlewares globales
-app.use(cors());
 app.use(express.json());
 
 // Declaración de Rutas
@@ -33,8 +34,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', apiRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/expedientes', expedienteRoutes);
-app.use('/api/plan-compras', planComprasRoutes); // <-- Rutas del Plan Anual de Compras
-
+app.use('/api/plan-compras', planComprasRoutes);
 
 // Ruta base de chequeo rápido
 app.get('/', (req, res) => {

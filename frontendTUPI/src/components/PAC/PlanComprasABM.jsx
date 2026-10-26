@@ -4,6 +4,13 @@ import { Search, ShoppingCart, Trash2, Send, Save, Loader2 } from 'lucide-react'
 import Swal from 'sweetalert2';
 import './PlanComprasABM.css';
 
+const TRIMESTRES_OPCIONES = [
+  '1ER TRIMESTRE',
+  '2DO TRIMESTRE',
+  '3ER TRIMESTRE',
+  '4TO TRIMESTRE'
+];
+
 const PlanComprasABM = () => {
   const { fetchAuth, token } = useAuth();
 
@@ -38,7 +45,8 @@ const PlanComprasABM = () => {
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setRubros(data);
-          setRubroSeleccionado(data[0]);
+          const primerRubro = data[0].rubro_id ?? data[0];
+          setRubroSeleccionado(primerRubro);
         } else {
           setRubros([]);
         }
@@ -58,7 +66,7 @@ const PlanComprasABM = () => {
     if (!currentToken || !rubroSeleccionado) return;
 
     setLoadingBienes(true);
-    fetchAuth(`/plan-compras/bienes-por-rubro?rubro=${encodeURIComponent(rubroSeleccionado)}`)
+    fetchAuth(`/plan-compras/bienes-por-rubro?rubro_id=${encodeURIComponent(rubroSeleccionado)}`)
       .then((res) => res.json())
       .then((data) => {
         setBienesCatalogo(Array.isArray(data) ? data : []);
@@ -88,23 +96,28 @@ const PlanComprasABM = () => {
 
   const handleToggleProducto = (bien) => {
     if (isSubmitting) return;
+    const idBien = bien.bien_id ?? bien.id;
+
     setSolicitudItems((prev) => {
-      const existe = prev[bien.id];
+      const existe = prev[idBien];
       if (existe) {
         const nuevo = { ...prev };
-        delete nuevo[bien.id];
+        delete nuevo[idBien];
         return nuevo;
       } else {
         const precioBase = obtenerPrecioBD(bien);
+        const trimestreBase = bien.trimestre || '1ER TRIMESTRE';
+
         return {
           ...prev,
-          [bien.id]: {
-            bien_id: bien.id,
+          [idBien]: {
+            bien_id: idBien,
             descripcion: bien.descripcion,
             inciso: bien.inciso,
             partida_principal: bien.partida_principal,
             cantidad_solicitada: 1,
             precio_unitario: precioBase,
+            trimestre: trimestreBase,
             observacion: '',
             subtotal: precioBase
           }
@@ -128,8 +141,8 @@ const PlanComprasABM = () => {
       const item = prev[bienId];
       if (!item) return prev;
 
-      if (campo === 'observacion') {
-        return { ...prev, [bienId]: { ...item, observacion: valor } };
+      if (campo === 'observacion' || campo === 'trimestre') {
+        return { ...prev, [bienId]: { ...item, [campo]: valor } };
       }
 
       if (campo === 'cantidad_solicitada') {
@@ -148,7 +161,6 @@ const PlanComprasABM = () => {
     });
   };
 
-  // Modal de confirmación principal
   const solicitarConfirmacion = (nuevoEstado) => {
     const itemsAEnviar = Object.values(solicitudItems);
 
@@ -181,7 +193,6 @@ const PlanComprasABM = () => {
     });
   };
 
-  // Procesa la llamada al Backend tras confirmar
   const ejecutarProcesarSolicitud = async (nuevoEstado) => {
     if (isSubmitting) return;
 
@@ -196,6 +207,7 @@ const PlanComprasABM = () => {
         bien_id: i.bien_id,
         cantidad_solicitada: i.cantidad_solicitada,
         precio_unitario: i.precio_unitario,
+        trimestre: i.trimestre || '1ER TRIMESTRE',
         observacion: i.observacion || ''
       }))
     };
@@ -262,25 +274,7 @@ const PlanComprasABM = () => {
         </div>
       </div>
 
-      {/* IDENTIFICADOR CONVOCATORIA */}
-      <div className="abm-card mb-4">
-        <div className="card-header">
-          <h2 className="card-title">1. Identificador de la Convocatoria</h2>
-        </div>
-        <div className="abm-form">
-          <div className="form-group mb-0">
-            <label>Nro. Convocatoria / Referencia Interna</label>
-            <input
-              type="text"
-              className="form-control"
-              disabled={isSubmitting}
-              value={nroConvocatoria}
-              onChange={(e) => setNroConvocatoria(e.target.value)}
-              placeholder="Ej: CDC:2026/01"
-            />
-          </div>
-        </div>
-      </div>
+      
 
       {/* CATÁLOGO DE BIENES */}
       <div className="abm-card mb-4">
@@ -303,9 +297,15 @@ const PlanComprasABM = () => {
                 value={rubroSeleccionado}
                 onChange={(e) => setRubroSeleccionado(e.target.value)}
               >
-                {rubros.map((r, index) => (
-                  <option key={index} value={r}>{r}</option>
-                ))}
+                {rubros.map((r) => {
+                  const idR = r.rubro_id ?? r;
+                  const nombreR = r.rubro_nombre ?? r.desc ?? r;
+                  return (
+                    <option key={idR} value={idR}>
+                      {nombreR}
+                    </option>
+                  );
+                })}
               </select>
             )}
           </div>
@@ -346,23 +346,25 @@ const PlanComprasABM = () => {
               <tr>
                 <th className="text-center" style={{ width: '60px' }}>Elegir</th>
                 <th>Descripción del Bien</th>
-                <th style={{ width: '220px' }}>Clasificación Presupuestaria</th>
-                <th className="text-right" style={{ width: '160px' }}>Precio Base BD ($)</th>
+                <th style={{ width: '180px' }}>Clasificación Presupuestaria</th>
+                <th className="text-center" style={{ width: '140px' }}>Trimestre Base</th>
+                <th className="text-right" style={{ width: '150px' }}>Precio Base BD ($)</th>
                 <th className="text-center" style={{ width: '100px' }}>Estado</th>
               </tr>
             </thead>
             <tbody>
               {loadingBienes ? (
-                <tr><td colSpan="5" className="text-center py-4">Cargando catálogo...</td></tr>
+                <tr><td colSpan="6" className="text-center py-4">Cargando catálogo...</td></tr>
               ) : bienesFiltrados.length === 0 ? (
-                <tr><td colSpan="5" className="text-center py-4 text-muted">No se encontraron bienes.</td></tr>
+                <tr><td colSpan="6" className="text-center py-4 text-muted">No se encontraron bienes.</td></tr>
               ) : (
                 bienesFiltrados.map((bien) => {
-                  const estaEnSolicitud = !!solicitudItems[bien.id];
+                  const idBien = bien.bien_id ?? bien.id;
+                  const estaEnSolicitud = !!solicitudItems[idBien];
                   const precioMuestra = obtenerPrecioBD(bien);
 
                   return (
-                    <tr key={bien.id} className={estaEnSolicitud ? 'table-row-selected' : ''}>
+                    <tr key={idBien} className={estaEnSolicitud ? 'table-row-selected' : ''}>
                       <td className="text-center">
                         <input
                           type="checkbox"
@@ -374,6 +376,11 @@ const PlanComprasABM = () => {
                       </td>
                       <td><strong>{bien.descripcion}</strong></td>
                       <td><small className="text-gray">{bien.inciso} | {bien.partida_principal}</small></td>
+                      <td className="text-center">
+                        <span className="badge badge-secondary">
+                          {bien.trimestre || '1ER TRIMESTRE'}
+                        </span>
+                      </td>
                       <td className="text-right font-bold">
                         ${precioMuestra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </td>
@@ -406,17 +413,18 @@ const PlanComprasABM = () => {
             <thead>
               <tr>
                 <th>Bien Seleccionado</th>
-                <th className="text-center" style={{ width: '100px' }}>Cantidad</th>
-                <th className="text-right" style={{ width: '150px' }}>Precio Unit ($)</th>
-                <th className="text-right" style={{ width: '150px' }}>Subtotal ($)</th>
-                <th style={{ width: '320px' }}>Observación</th>
+                <th className="text-center" style={{ width: '90px' }}>Cantidad</th>
+                <th style={{ width: '170px' }}>Trimestre Estimado</th>
+                <th className="text-right" style={{ width: '140px' }}>Precio Unit ($)</th>
+                <th className="text-right" style={{ width: '140px' }}>Subtotal ($)</th>
+                <th style={{ width: '280px' }}>Observación</th>
                 <th className="text-center" style={{ width: '50px' }}></th>
               </tr>
             </thead>
             <tbody>
               {listaSolicitud.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-5 text-muted">
+                  <td colSpan="7" className="text-center py-5 text-muted">
                     No ha seleccionado productos aún. Marque las casillas en el catálogo para comenzar.
                   </td>
                 </tr>
@@ -437,6 +445,20 @@ const PlanComprasABM = () => {
                         value={item.cantidad_solicitada}
                         onChange={(e) => handleValueChange(item.bien_id, 'cantidad_solicitada', e.target.value)}
                       />
+                    </td>
+                    <td>
+                      <select
+                        className="form-control form-control-sm"
+                        disabled={isSubmitting}
+                        value={item.trimestre}
+                        onChange={(e) => handleValueChange(item.bien_id, 'trimestre', e.target.value)}
+                      >
+                        {TRIMESTRES_OPCIONES.map((tri, index) => (
+                          <option key={index} value={tri}>
+                            {tri}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="text-right">
                       <input
@@ -477,7 +499,7 @@ const PlanComprasABM = () => {
           </table>
         </div>
 
-        {/* BOTONES */}
+        {/* BOTONES DE RESUMEN Y ENVÍO */}
         <div className="solicitud-summary-bar mt-4">
           <div className="summary-info">
             <div><span className="text-muted">Total de ítems:</span> <strong>{listaSolicitud.length}</strong></div>

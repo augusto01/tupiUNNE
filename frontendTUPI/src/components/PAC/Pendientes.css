@@ -1,0 +1,73 @@
+.pendientes-container {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.pendientes-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pendientes-subtitle {
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.pendientes-card {
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  padding: 1rem;
+}
+
+.pendientes-item-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+  background: #fff;
+}
+
+.solicitud-main-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  cursor: pointer;
+  background: #f8fafc;
+}
+
+.solicitud-main-row:hover {
+  background: #f1f5f9;
+}
+
+.badge-estado {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-estado.pendiente {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.badge-estado.aprobada {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pendientes-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.pendientes-table th, .pendientes-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
