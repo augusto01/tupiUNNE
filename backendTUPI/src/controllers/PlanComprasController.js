@@ -193,40 +193,80 @@ export const getHistorialSolicitudes = async (req, res) => {
 // 7. Actualizar Solicitud / Borrador
 export const updateSolicitud = async (req, res) => {
   const { id } = req.params;
-  const { estado, renglones } = req.body;
+  const { nro_convocatoria, estado, renglones, bienes_seleccionados } = req.body;
+  const usuario_id = req.usuario?.usuario_id ?? req.usuario?.id;
 
-  let connection;
+  // Garantizamos compatibilidad con cualquier nombre que envíe el frontend
+  const listaRenglones = renglones || bienes_seleccionados || [];
+
+  if (!Array.isArray(listaRenglones) || listaRenglones.length === 0) {
+    return res.status(400).json({ 
+      error: 'La solicitud debe incluir al menos un bien para ser procesada.' 
+    });
+  }
+
+  // Obtenemos conexión para manejar la transacción de forma atómica
+  const connection = await db.getConnection();
 
   try {
-    connection = await db.getConnection();
     await connection.beginTransaction();
 
-    if (estado) {
-      await connection.query(
-        `UPDATE solicitudes SET estado = ? WHERE id = ?`,
-        [estado, id]
-      );
-    }
+    const nuevoEstado = estado || 'PENDIENTE';
+    const nroConvocatoriaFinal = nro_convocatoria || 'CDC:2026/01';
 
-    if (Array.isArray(renglones) && renglones.length > 0) {
-      for (const r of renglones) {
-        await connection.query(
-          `UPDATE solicitud_registros 
-           SET cantidad = ?, observacion = ? 
-           WHERE id = ? AND id_solicitud = ?`,
-          [r.cantidad ?? 1, r.observacion ?? '', r.id, id]
-        );
-      }
-    }
+    // 1. Actualizar Cabecera de la Solicitud (Limpia el motivo de rechazo previo)
+    await connection.query(
+      `UPDATE solicitudes 
+       SET nro_convocatoria = ?, 
+           estado = ?, 
+           motivo_rechazo = NULL, 
+           fecha_creacion = NOW() 
+       WHERE id = ?`,
+      [nroConvocatoriaFinal, nuevoEstado, id]
+    );
 
+    // 2. ELIMINAR RENGLONES ANTERIORES
+    // Esto garantiza que si el usuario quitó o cambió ítems/cantidades, los viejos no queden colgados.
+    await connection.query(
+      `DELETE FROM solicitud_registros WHERE id_solicitud = ?`,
+      [id]
+    );
+
+    // 3. INSERTAR LA NUEVA LISTA DE BIENES Y CANTIDADES
+    const queryRenglones = `
+      INSERT INTO solicitud_registros (id_solicitud, bien_id, cantidad, precio_unitario, observacion) 
+      VALUES ?
+    `;
+
+    const valuesRenglones = listaRenglones.map((r) => [
+      id,
+      parseInt(r.bien_id || r.id, 10),
+      parseInt(r.cantidad || r.cantidad_solicitada, 10) || 1,
+      parseFloat(r.precio_unitario) || 0,
+      r.observacion ? r.observacion.trim() : ''
+    ]);
+
+    await connection.query(queryRenglones, [valuesRenglones]);
+
+    // Confirmamos la transacción
     await connection.commit();
-    return res.json({ message: 'Solicitud actualizada correctamente.' });
+
+    return res.json({ 
+      mensaje: nuevoEstado === 'BORRADOR' 
+        ? 'Borrador actualizado correctamente.' 
+        : 'Solicitud actualizada y reenviada exitosamente a revisión.',
+      id 
+    });
+
   } catch (error) {
-    if (connection) await connection.rollback();
-    console.error('Error al actualizar la solicitud:', error);
-    return res.status(500).json({ error: 'Error al actualizar la solicitud.' });
+    // Si algo falla, hacemos rollback para no corruptos los datos
+    await connection.rollback();
+    console.error('Error al actualizar solicitud en updateSolicitud:', error);
+    return res.status(500).json({ 
+      error: 'Error interno del servidor al actualizar los bienes de la solicitud.' 
+    });
   } finally {
-    if (connection) connection.release();
+    connection.release();
   }
 };
 

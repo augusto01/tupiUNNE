@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 exports.login = async (req, res) => {
-  // Capturamos cualquier variante que envíe el Front para el login (incluye username, dni, email, etc.)
+  // Capturamos cualquier variante que envíe el Front para el login
   const { identifier, email, correo, dni, username, usuario, password } = req.body;
 
   // Consolidamos el identificador de inicio de sesión
@@ -15,11 +15,10 @@ exports.login = async (req, res) => {
     return res.status(400).json({ message: 'El identificador y la contraseña son requeridos.' });
   }
 
-  // Sanitizamos el parámetro para evitar el error 'Bind parameters must not contain undefined'
   const loginParam = loginInput ?? null;
 
   try {
-    // 1. Buscar los datos básicos del usuario por DNI, EMAIL o USERNAME (tabla: usuario)
+    // 1. Buscar los datos básicos del usuario por DNI, EMAIL o USERNAME
     const [userRows] = await pool.execute(
       'SELECT * FROM usuario WHERE email = ? OR dni = ? OR username = ?',
       [loginParam, loginParam, loginParam]
@@ -42,20 +41,21 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Contraseña incorrecta.' });
     }
 
-    // 3. Buscar Dependencia, Rol y PERMISOS mapeados con el esquema real de la DB
+    // 3. Buscar Dependencia, Rol y PERMISOS (Unificando rol + excepciones de usuario_permiso)
     const userIdParam = usuarioData.usuario_id ?? usuarioData.id ?? null;
 
     const [permisosRows] = await pool.execute(
       `SELECT 
         d.dependencia_id AS facultad_codigo, 
-        d.nombre AS facultad_nombre, 
+        COALESCE(d.nombre, 'Rectorado UNNE') AS facultad_nombre, 
         t.nombre AS rol_nombre,
-        GROUP_CONCAT(p.slug) AS secciones_permitidas
+        GROUP_CONCAT(DISTINCT p.slug) AS secciones_permitidas
        FROM usuario u
-       JOIN dependencias d ON u.dependencia_id = d.dependencia_id
+       LEFT JOIN dependencias d ON u.dependencia_id = d.dependencia_id
        JOIN tipos_usuario t ON u.tipo_usuario_id = t.tipos_usuarios_id
        LEFT JOIN tipo_usuario_permiso tup ON t.tipos_usuarios_id = tup.tipo_usuario_id
-       LEFT JOIN permisos p ON tup.permiso_id = p.permiso_id
+       LEFT JOIN usuario_permiso up ON u.usuario_id = up.usuario_id
+       LEFT JOIN permisos p ON (tup.permiso_id = p.permiso_id OR up.permiso_id = p.permiso_id)
        WHERE u.usuario_id = ?
        GROUP BY u.usuario_id, d.dependencia_id, t.tipos_usuarios_id`,
       [userIdParam]
@@ -63,7 +63,7 @@ exports.login = async (req, res) => {
 
     // Mapeamos los resultados por entorno / dependencia
     const entornosProcesados = permisosRows.map(entorno => ({
-      facultad_codigo: String(entorno.facultad_codigo), 
+      facultad_codigo: entorno.facultad_codigo ? String(entorno.facultad_codigo) : '1', 
       facultad_nombre: entorno.facultad_nombre,
       rol_nombre: entorno.rol_nombre,
       permisos: entorno.secciones_permitidas ? entorno.secciones_permitidas.split(',') : []
@@ -71,21 +71,11 @@ exports.login = async (req, res) => {
 
     // Extraemos un array plano de slugs de permisos sin duplicados
     let listaPermisosPlana = [];
-    permisosRows.forEach(row => {
-      if (row.secciones_permitidas) {
-        const slugs = row.secciones_permitidas.split(',');
-        slugs.forEach(s => {
-          const trimmedSlug = s.trim();
-          if (!listaPermisosPlana.includes(trimmedSlug)) {
-            listaPermisosPlana.push(trimmedSlug);
-          }
-        });
-      }
-    });
-
-    // Respaldo temporal si la base de datos no tiene permisos asignados al rol
-    if (listaPermisosPlana.length === 0) {
-      listaPermisosPlana = ['dashboard', 'plan-compras', 'compras', 'usuarios'];
+    if (permisosRows.length > 0 && permisosRows[0].secciones_permitidas) {
+      listaPermisosPlana = permisosRows[0].secciones_permitidas
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
     }
 
     const infoRelacional = permisosRows[0] || {};
@@ -94,12 +84,14 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       { 
         id: userIdParam, 
+        usuario_id: userIdParam,
         username: usuarioData.username, 
+        tipo_usuario_id: usuarioData.tipo_usuario_id,
         entornos: entornosProcesados,
         permisos: listaPermisosPlana
       },
       process.env.JWT_SECRET || 'tupi_secret_key_rectorado',
-      { expiresIn: '4h' }
+      { expiresIn: '8h' }
     );
 
     // 5. Devolver al Front los datos de autenticación, usuario, entornos y permisos
@@ -108,6 +100,7 @@ exports.login = async (req, res) => {
       token,
       user: {
         id: userIdParam,
+        usuario_id: userIdParam,
         username: usuarioData.username,
         email: usuarioData.email,
         nombre: usuarioData.nombre,
@@ -118,7 +111,7 @@ exports.login = async (req, res) => {
         tipo_usuario_id: usuarioData.tipo_usuario_id, 
         dependencia_id: usuarioData.dependencia_id, 
         rol: infoRelacional.rol_nombre || 'Sin Rol Asignado', 
-        dependencia: infoRelacional.facultad_nombre || 'Sin Dependencia'
+        dependencia: infoRelacional.facultad_nombre || 'Rectorado UNNE'
       },
       entornos: entornosProcesados,
       permisos: listaPermisosPlana

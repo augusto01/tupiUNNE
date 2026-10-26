@@ -4,7 +4,7 @@ import ExcelJS from 'exceljs';
 import path from 'path';
 import fs from 'fs';
 
-// Helper para encontrar el logo en public (tanto en frontend como backend)
+// Helper para encontrar el logo en public
 const obtenerRutaLogo = () => {
   const rutasPosibles = [
     path.resolve('../frontend/public/logo-unne.png'),
@@ -21,9 +21,7 @@ const obtenerRutaLogo = () => {
   return null;
 };
 
-// 1. Obtener todas las solicitudes pendientes para el administrador
-// src/controllers/solicitudesController.js
-
+// 1. Obtener todas las solicitudes pendientes
 export const getSolicitudesPendientes = async (req, res) => {
   try {
     const querySolicitudes = `
@@ -38,10 +36,10 @@ export const getSolicitudesPendientes = async (req, res) => {
         u.nombre AS usuario_nombre, 
         u.apellido AS usuario_apellido, 
         u.email AS usuario_email,
-        admin.nombre AS admin_nombre,       -- 👈 Nombre del Administrador Autorizante
-        admin.apellido AS admin_apellido,   -- 👈 Apellido del Administrador Autorizante
+        admin.nombre AS admin_nombre,
+        admin.apellido AS admin_apellido,
         admin.email AS admin_email,
-        d.nombre AS dependencia_nombre     -- 👈 Nombre de la Dependencia/Facultad
+        d.nombre AS dependencia_nombre
       FROM solicitudes s
       JOIN usuario u ON s.usuario_id = u.usuario_id
       LEFT JOIN usuario admin ON s.usuario_autorizante = admin.usuario_id
@@ -73,7 +71,6 @@ export const getSolicitudesPendientes = async (req, res) => {
     `;
     const [registros] = await db.query(queryRegistros, [ids]);
 
-    // Combinar solicitudes con sus respectivos renglones
     const respuesta = solicitudes.map((sol) => ({
       ...sol,
       renglones: registros.filter((r) => r.solicitud_id === sol.id)
@@ -86,7 +83,6 @@ export const getSolicitudesPendientes = async (req, res) => {
   }
 };
 
-
 // 2. Procesar decisión (Aprobar o Rechazar)
 export const evaluarSolicitud = async (req, res) => {
   const { id } = req.params;
@@ -97,8 +93,8 @@ export const evaluarSolicitud = async (req, res) => {
     return res.status(400).json({ error: 'Estado no válido.' });
   }
 
-  if (estado === 'RECHAZADA' && !motivo_rechazo) {
-    return res.status(400).json({ error: 'Debe ingresar una justificación o retroalimentación para rechazar.' });
+  if (estado === 'RECHAZADA' && (!motivo_rechazo || !motivo_rechazo.trim())) {
+    return res.status(400).json({ error: 'Debe ingresar un motivo o retroalimentación para rechazar la solicitud.' });
   }
 
   try {
@@ -106,26 +102,27 @@ export const evaluarSolicitud = async (req, res) => {
       UPDATE solicitudes 
       SET 
         estado = ?, 
-        usuario_autorizante = ? 
+        usuario_autorizante = ?,
+        motivo_rechazo = ?
       WHERE id = ?
     `;
-    
-    const nuevoEstado = estado === 'RECHAZADA' ? 'BORRADOR' : 'APROBADA';
 
-    await db.query(query, [nuevoEstado, adminId, id]);
+    const motivoFinal = estado === 'RECHAZADA' ? motivo_rechazo.trim() : null;
+
+    await db.query(query, [estado, adminId, motivoFinal, id]);
 
     return res.json({ 
       message: estado === 'APROBADA' 
         ? 'Solicitud aprobada exitosamente.' 
-        : 'Solicitud devuelta al usuario para correcciones.' 
+        : 'Solicitud rechazada con retroalimentación registrada.' 
     });
   } catch (error) {
     console.error('Error al procesar evaluación de solicitud:', error);
-    return res.status(500).json({ error: 'Error al actualizar el estado de la solicitud.' });
+    return res.status(500).json({ error: 'Error al actualizar el estado de la solicitud en la base de datos.' });
   }
 };
 
-// 3. Generar e imprimir PDF de Solicitud Autorizada
+// 3. Generar e imprimir PDF de Solicitud (SÓLO SI ESTÁ APROBADA)
 export const descargarPDFSolicitud = async (req, res) => {
   const { id } = req.params;
 
@@ -149,6 +146,13 @@ export const descargarPDFSolicitud = async (req, res) => {
     }
 
     const sol = solRows[0];
+
+    // ⛔ VALIDACIÓN DE SEGURIDAD: Solo se pueden exportar solicitudes en estado APROBADA
+    if (sol.estado !== 'APROBADA') {
+      return res.status(403).json({ 
+        error: 'Únicamente está permitido emitir documentos oficiales de solicitudes que hayan sido APROBADAS.' 
+      });
+    }
 
     const [renglones] = await db.query(
       `SELECT sr.cantidad, sr.precio_unitario, sr.observacion, b.descripcion, b.inciso, b.partida_principal, b.trimestre
@@ -253,7 +257,7 @@ export const descargarPDFSolicitud = async (req, res) => {
   }
 };
 
-// 4. Exportar Solicitud a Excel (.xlsx)
+// 4. Exportar Solicitud a Excel (.xlsx) (SÓLO SI ESTÁ APROBADA)
 export const descargarExcelSolicitud = async (req, res) => {
   const { id } = req.params;
 
@@ -278,6 +282,13 @@ export const descargarExcelSolicitud = async (req, res) => {
 
     const sol = solRows[0];
 
+    // ⛔ VALIDACIÓN DE SEGURIDAD: Solo se pueden exportar solicitudes en estado APROBADA
+    if (sol.estado !== 'APROBADA') {
+      return res.status(403).json({ 
+        error: 'Únicamente está permitido emitir documentos oficiales de solicitudes que hayan sido APROBADAS.' 
+      });
+    }
+
     const [renglones] = await db.query(
       `SELECT sr.cantidad, sr.precio_unitario, sr.observacion, b.descripcion, b.inciso, b.partida_principal, b.trimestre
        FROM solicitud_registros sr
@@ -289,7 +300,6 @@ export const descargarExcelSolicitud = async (req, res) => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet(`Solicitud_${sol.id}`);
 
-    // Configuración de anchos de columna
     sheet.columns = [
       { key: 'item', width: 8 },
       { key: 'descripcion', width: 40 },
@@ -317,7 +327,6 @@ export const descargarExcelSolicitud = async (req, res) => {
     sheet.addRow(['Estado:', sol.estado, '', 'Autorizado por:', `${sol.admin_nombre || 'Administración'} (${sol.admin_email || 'rectorado@unne.edu.ar'})`]);
     sheet.addRow([]);
 
-    // Estilar Metadatos
     for (let r = 3; r <= 6; r++) {
       sheet.getCell(`A${r}`).font = { bold: true };
       sheet.getCell(`D${r}`).font = { bold: true };
@@ -335,7 +344,6 @@ export const descargarExcelSolicitud = async (req, res) => {
 
     let totalGeneral = 0;
 
-    // Filas de Datos
     renglones.forEach((r, idx) => {
       const cantidad = parseInt(r.cantidad, 10) || 1;
       const precio = parseFloat(r.precio_unitario) || 0;

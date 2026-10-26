@@ -1,248 +1,257 @@
 import React, { useState } from 'react';
 import { 
   ArrowLeft, 
-  Check, 
-  X, 
+  CheckCircle2, 
+  XCircle, 
   FileText, 
-  FileSpreadsheet, 
-  AlertTriangle, 
-  Building2, 
-  User, 
-  UserCheck,
-  Calendar, 
-  Tag 
+  Download, 
+  AlertCircle, 
+  Loader2,
+  ChevronDown,
+  FileEdit
 } from 'lucide-react';
+import '../PAC/PlanComprasABM.css';
 
-const DetalleSolicitud = ({
-  solicitud,
-  esModoEvaluacion = true,
-  onVolver,
-  onAprobar,
-  onRechazar,
-  onDescargarPDF,
+const DetalleSolicitud = ({ 
+  solicitud, 
+  esModoEvaluacion = false, 
+  onVolver, 
+  onEditar, 
+  onAprobar, 
+  onRechazar, 
+  onDescargarPDF, 
   onDescargarExcel,
-  estaProcesando = false
+  estaProcesando = false 
 }) => {
-  const [motivoRechazo, setMotivoRechazo] = useState('');
   const [mostrarCampoRechazo, setMostrarCampoRechazo] = useState(false);
-  const [errorMotivo, setErrorMotivo] = useState('');
+  const [motivoRechazoText, setMotivoRechazoText] = useState('');
+  const [mostrarMenuDescarga, setMostrarMenuDescarga] = useState(false);
 
   if (!solicitud) return null;
 
-  const renglones = solicitud.renglones || [];
+  const renglones = solicitud.renglones || solicitud.registros || [];
   const totalMonto = renglones.reduce(
     (acc, r) => acc + (parseFloat(r.precio_unitario) * parseInt(r.cantidad, 10) || 0),
     0
   );
 
-  const esAprobada = solicitud.estado === 'APROBADA';
-  const esRechazada = solicitud.estado === 'RECHAZADA';
+  // 🔒 EDICIÓN HABILITADA SOLO EN BORRADOR O RECHAZADA
+  const esEditable = solicitud.estado === 'BORRADOR' || solicitud.estado === 'RECHAZADA';
+  
+  // ⛔ CONDICIÓN ESTRICTA: SOLO SE RENDERIZA EL BOTÓN SI ESTÁ APROBADA
+  const estaAprobada = solicitud.estado === 'APROBADA';
 
-  // 🔍 OBTENCIÓN ROBUSTA Y MULTI-CAMPO DEL SOLICITANTE (SIN TOCAR BACKEND)
-  const solicitanteNombre = (() => {
-    if (solicitud.usuario_nombre || solicitud.usuario_apellido) {
-      return `${solicitud.usuario_nombre || ''} ${solicitud.usuario_apellido || ''}`.trim();
-    }
-    if (solicitud.nombre || solicitud.apellido) {
-      return `${solicitud.nombre || ''} ${solicitud.apellido || ''}`.trim();
-    }
-    if (solicitud.solicitante) {
-      return solicitud.solicitante;
-    }
-    return solicitud.usuario_email || solicitud.email || 'Solicitante N/A';
-  })();
-
-  // OBTENCIÓN ROBUSTA DEL AUTORIZANTE
-  const autorizanteNombre = (() => {
-    if (solicitud.admin_nombre || solicitud.admin_apellido) {
-      return `${solicitud.admin_nombre || ''} ${solicitud.admin_apellido || ''}`.trim();
-    }
-    if (solicitud.usuario_autorizante) {
-      return `Usuario #${solicitud.usuario_autorizante}`;
-    }
-    return 'Pendiente de Aprobación';
-  })();
-
-  const handleConfirmarRechazo = () => {
-    if (!motivoRechazo.trim()) {
-      setErrorMotivo('Debe especificar la razón o nota explicativa del rechazo.');
+  const handleEjecutarRechazar = () => {
+    if (!motivoRechazoText.trim()) {
+      alert('Por favor, ingrese un motivo para rechazar/devolver la solicitud.');
       return;
     }
-    setErrorMotivo('');
-    onRechazar(solicitud.id, motivoRechazo);
+    onRechazar(solicitud.id, motivoRechazoText.trim());
+  };
+
+  const renderBadgeEstado = (estado) => {
+    switch (estado) {
+      case 'PENDIENTE':
+        return <span className="badge-estado pendiente">Pendiente de Aprobación</span>;
+      case 'APROBADA':
+        return <span className="badge-estado aprobada">Aprobada</span>;
+      case 'RECHAZADA':
+        return <span className="badge-estado rechazada">Rechazada</span>;
+      case 'BORRADOR':
+        return <span className="badge-estado borrador">Borrador</span>;
+      default:
+        return <span className="badge-estado">{estado}</span>;
+    }
   };
 
   return (
-    <div className="detalle-pantalla-container">
-      {/* BARRA SUPERIOR */}
-      <div className="d-flex align-items-center justify-content-between mb-4">
-        <button type="button" className="btn-tupi btn-tupi-descarga" onClick={onVolver}>
-          <ArrowLeft size={16} />
-          <span>Volver al Listado</span>
-        </button>
-
-        {esAprobada && (
-          <div className="d-flex align-items-center gap-2">
-            <span className="text-muted small">Descargar Comprobantes:</span>
-            <button
-              type="button"
-              className="btn-tupi btn-tupi-descarga"
-              onClick={() => onDescargarPDF(solicitud.id)}
-            >
-              <FileText size={15} className="text-pdf" />
-              <span>PDF (.pdf)</span>
-            </button>
-
-            <button
-              type="button"
-              className="btn-tupi btn-tupi-descarga"
-              onClick={() => onDescargarExcel(solicitud.id)}
-            >
-              <FileSpreadsheet size={15} className="text-excel" />
-              <span>Excel (.xlsx)</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* BANNER SI POSEE MOTIVO DE RECHAZO */}
-      {(solicitud.motivo_rechazo || esRechazada) && (
-        <div className="motivo-rechazo-banner mb-4">
-          <AlertTriangle size={18} className="banner-icon" />
+    <div className="detalle-solicitud-wrapper content-section-fade">
+      {/* BARRA SUPERIOR DE NAVEGACIÓN Y ACCIONES */}
+      <div className="abm-header d-flex justify-content-between align-items-center mb-4">
+        <div className="d-flex align-items-center gap-3">
+          <button 
+            type="button" 
+            className="btn-tupi btn-tupi-descarga"
+            onClick={onVolver}
+            disabled={estaProcesando}
+          >
+            <ArrowLeft size={16} />
+            <span>Volver</span>
+          </button>
           <div>
-            <strong>Observaciones de la devolución:</strong>
-            <p className="mb-0 small">{solicitud.motivo_rechazo || 'La solicitud requiere correcciones antes de su aprobación.'}</p>
-          </div>
-        </div>
-      )}
-
-      {/* CABECERA Y METADATOS */}
-      <div className="abm-card mb-4">
-        <div className="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
-          <div className="d-flex align-items-center gap-2">
-            <h2 className="abm-title">Solicitud #{solicitud.id}</h2>
-            <span className={`badge-estado ${solicitud.estado.toLowerCase()}`}>{solicitud.estado}</span>
+            <h1 className="abm-title mb-0">Solicitud #{solicitud.id}</h1>
+            <p className="abm-subtitle mb-0">
+              Convocatoria: <strong>{solicitud.nro_convocatoria || 'CDC:2026/01'}</strong>
+            </p>
           </div>
         </div>
 
-        <div className="modal-metadata-grid">
-          <div className="meta-item">
-            <User size={16} className="meta-icon" />
-            <div>
-              <span className="meta-label">Solicitante</span>
-              <strong className="meta-value">{solicitanteNombre}</strong>
-            </div>
-          </div>
+        <div className="d-flex align-items-center gap-2">
+          {/* BOTÓN EDITAR DIRECTO SI LA SOLICITUD ESTÁ RECHAZADA O EN BORRADOR */}
+          {esEditable && onEditar && (
+            <button
+              type="button"
+              className="btn-tupi btn-tupi-secundario"
+              onClick={() => onEditar(solicitud)}
+              disabled={estaProcesando}
+            >
+              <FileEdit size={15} />
+              <span>Editar Solicitud</span>
+            </button>
+          )}
 
-          <div className="meta-item">
-            <Building2 size={16} className="meta-icon" />
-            <div>
-              <span className="meta-label">Dependencia</span>
-              <strong className="meta-value">{solicitud.dependencia_nombre || 'Rectorado UNNE'}</strong>
-            </div>
-          </div>
+          {/* MENÚ DE DESCARGAS: APARECE ÚNICAMENTE CUANDO ESTÁ APROBADA */}
+          {estaAprobada && (
+            <div className="download-dropdown-wrapper">
+              <button
+                type="button"
+                className="btn-tupi btn-tupi-descarga"
+                onClick={() => setMostrarMenuDescarga(!mostrarMenuDescarga)}
+                disabled={estaProcesando}
+              >
+                <Download size={15} />
+                <span>Exportar Documento</span>
+                <ChevronDown size={14} />
+              </button>
 
-          <div className="meta-item">
-            <Tag size={16} className="meta-icon" />
-            <div>
-              <span className="meta-label">Convocatoria</span>
-              <strong className="meta-value">{solicitud.nro_convocatoria || 'CDC:2026/01'}</strong>
-            </div>
-          </div>
-
-          <div className="meta-item">
-            <Calendar size={16} className="meta-icon" />
-            <div>
-              <span className="meta-label">Fecha Emisión</span>
-              <strong className="meta-value">
-                {solicitud.fecha_creacion ? new Date(solicitud.fecha_creacion).toLocaleDateString('es-AR') : 'N/A'}
-              </strong>
-            </div>
-          </div>
-
-          {esAprobada && (
-            <div className="meta-item">
-              <UserCheck size={16} className="meta-icon text-success" />
-              <div>
-                <span className="meta-label">Usuario Autorizante</span>
-                <strong className="meta-value">{autorizanteNombre}</strong>
-              </div>
+              {mostrarMenuDescarga && (
+                <div className="download-menu-dropdown">
+                  <button
+                    type="button"
+                    className="download-menu-item"
+                    onClick={() => {
+                      setMostrarMenuDescarga(false);
+                      onDescargarPDF(solicitud.id);
+                    }}
+                  >
+                    <FileText size={16} className="text-pdf" />
+                    <span>Comprobante PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="download-menu-item"
+                    onClick={() => {
+                      setMostrarMenuDescarga(false);
+                      onDescargarExcel(solicitud.id);
+                    }}
+                  >
+                    <FileText size={16} className="text-excel" />
+                    <span>Planilla Excel (.xlsx)</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* ESTRUCTURA PRINCIPAL DE BIENES */}
+      {/* BANNER DE MOTIVO DE RECHAZO */}
+      {(solicitud.motivo_rechazo || solicitud.estado === 'RECHAZADA') && (
+        <div className="motivo-rechazo-banner mb-4">
+          <AlertCircle size={20} className="banner-icon" />
+          <div>
+            <strong>Observación / Motivo de Devolución:</strong>
+            <p className="mb-0 mt-1">{solicitud.motivo_rechazo || 'La solicitud requiere correcciones antes de ser aprobada.'}</p>
+          </div>
+        </div>
+      )}
+
+      {/* METADATOS PRINCIPALES DE LA SOLICITUD */}
+      <div className="abm-card mb-4">
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <h2 className="card-title">Información General</h2>
+          {renderBadgeEstado(solicitud.estado)}
+        </div>
+        <div className="row p-2">
+          <div className="col-md-4 mb-2">
+            <span className="text-muted small d-block">Solicitante</span>
+            <strong>
+              {solicitud.usuario_nombre ? `${solicitud.usuario_nombre} ${solicitud.usuario_apellido}` : 'Usuario Sistema'}
+            </strong>
+          </div>
+          <div className="col-md-4 mb-2">
+            <span className="text-muted small d-block">Dependencia / Unidad Académica</span>
+            <strong>{solicitud.dependencia_nombre || 'Rectorado UNNE'}</strong>
+          </div>
+          <div className="col-md-4 mb-2">
+            <span className="text-muted small d-block">Fecha de Emisión</span>
+            <strong>
+              {solicitud.fecha_creacion 
+                ? new Date(solicitud.fecha_creacion).toLocaleDateString('es-AR') 
+                : 'N/A'}
+            </strong>
+          </div>
+        </div>
+      </div>
+
+      {/* TABLA DE RENGLONES Y PANEL DE EVALUACIÓN */}
       <div className="detalle-grid-layout">
-        <div className="detalle-tabla-container abm-card">
-          <div className="card-header">
-            <h3 className="card-title">Detalle de Bienes Solicitados</h3>
-          </div>
-
-          <div className="table-wrapper">
-            <table className="abm-table">
-              <thead>
-                <tr>
-                  <th>Bien / Descripción</th>
-                  <th className="text-center" style={{ width: '130px' }}>Trimestre Base</th>
-                  <th className="text-center" style={{ width: '80px' }}>Cant.</th>
-                  <th className="text-right" style={{ width: '130px' }}>Precio Unit ($)</th>
-                  <th className="text-right" style={{ width: '140px' }}>Subtotal ($)</th>
-                  <th style={{ width: '220px' }}>Observación Técnica</th>
-                </tr>
-              </thead>
-              <tbody>
-                {renglones.length === 0 ? (
+        <div className="detalle-tabla-container">
+          <div className="abm-card mb-0">
+            <div className="card-header">
+              <h2 className="card-title">Bienes y Requerimientos Solicitados</h2>
+            </div>
+            <div className="table-wrapper">
+              <table className="abm-table">
+                <thead>
                   <tr>
-                    <td colSpan="6" className="text-center py-4 text-muted small">
-                      Sin bienes registrados en esta solicitud.
-                    </td>
+                    <th>#</th>
+                    <th>Bien / Descripción</th>
+                    <th className="text-center">Trimestre</th>
+                    <th className="text-center">Cantidad</th>
+                    <th className="text-right">Precio Unit ($)</th>
+                    <th className="text-right">Subtotal ($)</th>
+                    <th>Observación Técnica</th>
                   </tr>
-                ) : (
-                  renglones.map((item) => {
-                    const cant = parseInt(item.cantidad, 10) || 1;
-                    const precio = parseFloat(item.precio_unitario) || 0;
-                    const subtotal = cant * precio;
+                </thead>
+                <tbody>
+                  {renglones.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="text-center py-4 text-muted">
+                        No hay bienes registrados en esta solicitud.
+                      </td>
+                    </tr>
+                  ) : (
+                    renglones.map((r, index) => {
+                      const cant = parseInt(r.cantidad, 10) || 1;
+                      const pu = parseFloat(r.precio_unitario) || 0;
+                      const sub = cant * pu;
 
-                    return (
-                      <tr key={item.id || item.bien_id}>
-                        <td>
-                          <strong>{item.bien_descripcion || item.descripcion}</strong>
-                        </td>
-                        <td className="text-center">
-                          <span className="badge-trimestre">
-                            {item.trimestre || '1ER TRIMESTRE'}
-                          </span>
-                        </td>
-                        <td className="text-center font-bold">{cant}</td>
-                        <td className="text-right">
-                          ${precio.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="text-right font-bold text-primary">
-                          ${subtotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td>
-                          <span className="text-muted small">{item.observacion || '-'}</span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                      return (
+                        <tr key={r.id || index}>
+                          <td className="text-center text-muted">{index + 1}</td>
+                          <td>
+                            <strong>{r.bien_descripcion || r.descripcion || 'Bien Registrado'}</strong>
+                          </td>
+                          <td className="text-center">
+                            <span className="badge-trimestre">{r.trimestre || '1ER TRIMESTRE'}</span>
+                          </td>
+                          <td className="text-center">{cant}</td>
+                          <td className="text-right">${pu.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+                          <td className="text-right font-bold text-primary">
+                            ${sub.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="small text-muted">{r.observacion || '-'}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-          <div className="detalle-monto-resumen mt-3">
-            <span>Monto Total Estimado:</span>
-            <strong className="monto-destacado">${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+            <div className="detalle-monto-resumen p-3">
+              <span>Monto Total Estimado:</span>
+              <strong>${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+            </div>
           </div>
         </div>
 
-        {/* PANEL ADMINISTRATIVO DE REVISIÓN */}
-        {esModoEvaluacion && !esAprobada && !esRechazada && (
-          <div className="detalle-panel-evaluacion abm-card">
-            <h3 className="card-title mb-2">Dictamen Administrativo</h3>
-            <p className="text-muted small mb-3">Emita la resolución presupuestaria para esta solicitud.</p>
+        {/* PANEL LATERAL DE DECISIÓN ADMINISTRATIVA */}
+        {esModoEvaluacion && solicitud.estado === 'PENDIENTE' && (
+          <div className="detalle-panel-evaluacion">
+            <h3 className="panel-title">Decisión Administrativa</h3>
+            <p className="panel-subtitle">Autorice o devuelva la orden para revisión.</p>
 
             {!mostrarCampoRechazo ? (
               <div className="panel-buttons-stack">
@@ -252,8 +261,14 @@ const DetalleSolicitud = ({
                   disabled={estaProcesando}
                   onClick={() => onAprobar(solicitud.id)}
                 >
-                  <Check size={16} />
-                  <span>Aprobar Solicitud</span>
+                  {estaProcesando ? (
+                    <Loader2 size={16} className="spinner-rotation" />
+                  ) : (
+                    <>
+                      <CheckCircle2 size={16} />
+                      <span>Aprobar Solicitud</span>
+                    </>
+                  )}
                 </button>
 
                 <button
@@ -262,43 +277,43 @@ const DetalleSolicitud = ({
                   disabled={estaProcesando}
                   onClick={() => setMostrarCampoRechazo(true)}
                 >
-                  <X size={16} />
-                  <span>Rechazar y Devolver</span>
+                  <XCircle size={16} />
+                  <span>Rechazar / Devolver</span>
                 </button>
               </div>
             ) : (
               <div className="panel-rechazo-box">
-                <label className="form-label font-semibold text-danger small mb-1">
-                  Motivo de la devolución / correcciones requeridas:
-                </label>
+                <label className="form-label small font-bold text-danger">Motivo de Rechazo *</label>
                 <textarea
                   className="form-control mb-2"
                   rows="3"
-                  placeholder="Escriba las observaciones para el usuario..."
-                  value={motivoRechazo}
-                  onChange={(e) => {
-                    setMotivoRechazo(e.target.value);
-                    if (e.target.value.trim()) setErrorMotivo('');
-                  }}
                   disabled={estaProcesando}
+                  placeholder="Ingrese las observaciones técnicas para el solicitante..."
+                  value={motivoRechazoText}
+                  onChange={(e) => setMotivoRechazoText(e.target.value)}
                 ></textarea>
-
-                {errorMotivo && <small className="text-danger d-block mb-2">{errorMotivo}</small>}
 
                 <div className="d-flex gap-2">
                   <button
                     type="button"
                     className="btn-tupi btn-tupi-peligro flex-1"
                     disabled={estaProcesando}
-                    onClick={handleConfirmarRechazo}
+                    onClick={handleEjecutarRechazar}
                   >
-                    <span>Confirmar Rechazo</span>
+                    {estaProcesando ? (
+                      <Loader2 size={14} className="spinner-rotation" />
+                    ) : (
+                      <span>Confirmar Rechazo</span>
+                    )}
                   </button>
                   <button
                     type="button"
                     className="btn-tupi btn-tupi-descarga"
                     disabled={estaProcesando}
-                    onClick={() => setMostrarCampoRechazo(false)}
+                    onClick={() => {
+                      setMostrarCampoRechazo(false);
+                      setMotivoRechazoText('');
+                    }}
                   >
                     <span>Cancelar</span>
                   </button>
