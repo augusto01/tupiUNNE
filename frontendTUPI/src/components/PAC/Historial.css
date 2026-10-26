@@ -1,74 +1,155 @@
-/* ==========================================
-   ESTILOS ESPECÍFICOS MÓDULO HISTORIAL
-   ========================================== */
+/* ==========================================================================
+   ECOSISTEMA TUPI UNNE - HISTORIAL DE SOLICITUDES
+   Hoja de Estilos (Historial.css)
+   ========================================================================== */
 
 .historial-container {
   padding: 1.5rem;
-  max-width: 1350px;
+  max-width: 1400px;
   margin: 0 auto;
-  box-sizing: border-box;
 }
 
+.historial-header {
+  margin-bottom: 1.5rem;
+}
+
+.historial-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+
+.historial-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 0;
+}
+
+.historial-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 1.25rem;
+  overflow: hidden;
+}
+
+/* Filas de Filtros */
 .filters-row {
   display: flex;
   gap: 1rem;
-  align-items: flex-end;
+  flex-wrap: wrap;
 }
 
 .filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
   flex: 1;
+  min-width: 200px;
 }
 
-.filter-group.flex-2 { flex: 2; }
+.filter-group.flex-2 {
+  flex: 2;
+  min-width: 280px;
+}
 
-/* LISTA Y TARJETAS EN HISTORIAL */
+.filter-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.35rem;
+  display: block;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.search-box .search-input {
+  padding-left: 2.25rem;
+}
+
+/* Lista y Tarjetas de Solicitud */
+.solicitudes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .solicitud-item-card {
+  background-color: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  background-color: #ffffff;
-  margin-bottom: 0.75rem;
   transition: all 0.2s ease;
 }
 
-.solicitud-actions-summary {
-  display: flex !important;
-  align-items: center !important;
-  gap: 1.5rem !important;
+.solicitud-item-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.solicitud-monto {
+/* Pop-up Toast de Notificación */
+.tupi-toast-popup {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
   display: flex;
-  flex-direction: column;
-  text-align: right;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  animation: slideUp 0.3s ease;
 }
 
-.solicitud-monto small {
-  font-size: 0.725rem;
-  color: #64748b;
+.tupi-toast-popup.success {
+  background-color: #059669;
 }
 
-.solicitud-monto strong {
-  font-size: 1.05rem;
-  color: #0284c7;
+.tupi-toast-popup.error {
+  background-color: #dc2626;
 }
 
-/* FIX DE ESPACIO ENTRE EDITAR Y ELIMINAR */
-.btn-group-actions {
-  display: flex !important;
-  align-items: center !important;
-  gap: 0.6rem !important;
-  margin: 0 !important;
-  padding: 0 !important;
+.toast-popup-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-.edit-actions-bar {
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  margin-top: 1rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #e2e8f0;
+.toast-close-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  opacity: 0.8;
+  padding: 0;
+  display: flex;
+}
+
+.toast-close-btn:hover {
+  opacity: 1;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }

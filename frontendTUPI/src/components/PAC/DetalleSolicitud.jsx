@@ -8,7 +8,12 @@ import {
   AlertCircle, 
   Loader2,
   ChevronDown,
-  FileEdit
+  FileEdit,
+  User,
+  Building2,
+  Calendar,
+  FileSpreadsheet,
+  ShieldCheck
 } from 'lucide-react';
 import '../PAC/PlanComprasABM.css';
 
@@ -38,7 +43,7 @@ const DetalleSolicitud = ({
   // 🔒 EDICIÓN HABILITADA SOLO EN BORRADOR O RECHAZADA
   const esEditable = solicitud.estado === 'BORRADOR' || solicitud.estado === 'RECHAZADA';
   
-  // ⛔ CONDICIÓN ESTRICTA: SOLO SE RENDERIZA EL BOTÓN SI ESTÁ APROBADA
+  // ⛔ EXPORTACIÓN RESTRINGIDA: ÚNICAMENTE CUANDO ESTÁ APROBADA
   const estaAprobada = solicitud.estado === 'APROBADA';
 
   const handleEjecutarRechazar = () => {
@@ -121,7 +126,7 @@ const DetalleSolicitud = ({
                     className="download-menu-item"
                     onClick={() => {
                       setMostrarMenuDescarga(false);
-                      onDescargarPDF(solicitud.id);
+                      if (onDescargarPDF) onDescargarPDF(solicitud.id);
                     }}
                   >
                     <FileText size={16} className="text-pdf" />
@@ -132,7 +137,7 @@ const DetalleSolicitud = ({
                     className="download-menu-item"
                     onClick={() => {
                       setMostrarMenuDescarga(false);
-                      onDescargarExcel(solicitud.id);
+                      if (onDescargarExcel) onDescargarExcel(solicitud.id);
                     }}
                   >
                     <FileText size={16} className="text-excel" />
@@ -145,7 +150,7 @@ const DetalleSolicitud = ({
         </div>
       </div>
 
-      {/* BANNER DE MOTIVO DE RECHAZO */}
+      {/* BANNER DE RETROALIMENTACIÓN DE RECHAZO */}
       {(solicitud.motivo_rechazo || solicitud.estado === 'RECHAZADA') && (
         <div className="motivo-rechazo-banner mb-4">
           <AlertCircle size={20} className="banner-icon" />
@@ -156,31 +161,73 @@ const DetalleSolicitud = ({
         </div>
       )}
 
-      {/* METADATOS PRINCIPALES DE LA SOLICITUD */}
-      <div className="abm-card mb-4">
-        <div className="card-header d-flex justify-content-between align-items-center">
-          <h2 className="card-title">Información General</h2>
+      {/* TARJETA DE METADATOS Y ENCABEZADO */}
+      <div className="solicitud-header-info mb-4">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h2 className="card-title m-0">Información General</h2>
           {renderBadgeEstado(solicitud.estado)}
         </div>
-        <div className="row p-2">
-          <div className="col-md-4 mb-2">
-            <span className="text-muted small d-block">Solicitante</span>
-            <strong>
-              {solicitud.usuario_nombre ? `${solicitud.usuario_nombre} ${solicitud.usuario_apellido}` : 'Usuario Sistema'}
-            </strong>
+
+        <div className="solicitud-meta-grid">
+          {/* Solicitante */}
+          <div className="solicitud-meta-item">
+            <span className="solicitud-meta-label">
+              <User size={12} className="inline-icon" /> Solicitante
+            </span>
+            <span className="solicitud-meta-value">
+              {solicitud.usuario_nombre 
+                ? `${solicitud.usuario_nombre} ${solicitud.usuario_apellido}` 
+                : 'Usuario Sistema'}
+            </span>
           </div>
-          <div className="col-md-4 mb-2">
-            <span className="text-muted small d-block">Dependencia / Unidad Académica</span>
-            <strong>{solicitud.dependencia_nombre || 'Rectorado UNNE'}</strong>
+
+          {/* Dependencia */}
+          <div className="solicitud-meta-item">
+            <span className="solicitud-meta-label">
+              <Building2 size={12} className="inline-icon" /> Dependencia / Dpto
+            </span>
+            <span className="solicitud-meta-value">
+              {solicitud.dependencia_nombre || 'Rectorado UNNE'}
+            </span>
           </div>
-          <div className="col-md-4 mb-2">
-            <span className="text-muted small d-block">Fecha de Emisión</span>
-            <strong>
+
+          {/* Convocatoria */}
+          <div className="solicitud-meta-item">
+            <span className="solicitud-meta-label">
+              <FileSpreadsheet size={12} className="inline-icon" /> Convocatoria
+            </span>
+            <span className="solicitud-meta-value">
+              {solicitud.nro_convocatoria || 'CDC:2026/01'}
+            </span>
+          </div>
+
+          {/* Fecha */}
+          <div className="solicitud-meta-item">
+            <span className="solicitud-meta-label">
+              <Calendar size={12} className="inline-icon" /> Fecha Emisión
+            </span>
+            <span className="solicitud-meta-value">
               {solicitud.fecha_creacion 
                 ? new Date(solicitud.fecha_creacion).toLocaleDateString('es-AR') 
                 : 'N/A'}
-            </strong>
+            </span>
           </div>
+
+          {/* Evaluado por */}
+          {(solicitud.admin_nombre || solicitud.usuario_autorizante) && (
+            <div className="solicitud-meta-item">
+              <span className="solicitud-meta-label">
+                <ShieldCheck size={12} className="inline-icon" /> Evaluado por
+              </span>
+              <span className="solicitud-meta-value">
+                <span className="autorizante-tag">
+                  {solicitud.admin_nombre 
+                    ? `${solicitud.admin_nombre} ${solicitud.admin_apellido}` 
+                    : `Admin ID: ${solicitud.usuario_autorizante}`}
+                </span>
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

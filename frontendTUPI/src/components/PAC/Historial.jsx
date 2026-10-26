@@ -11,7 +11,12 @@ import {
   FileText,
   Search,
   Loader2,
-  X
+  X,
+  User,
+  Building2,
+  Calendar,
+  FileSpreadsheet,
+  ShieldCheck
 } from 'lucide-react';
 import DetalleSolicitud from './DetalleSolicitud';
 import PlanComprasABM from './PlanComprasABM';
@@ -25,7 +30,6 @@ const Historial = () => {
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [busqueda, setBusqueda] = useState('');
 
-  // Control de vistas de Inspección o Edición Completa en ABM
   const [solicitudAInspeccionar, setSolicitudAInspeccionar] = useState(null);
   const [solicitudAEditar, setSolicitudAEditar] = useState(null);
 
@@ -136,7 +140,6 @@ const Historial = () => {
     }
   };
 
-  // VISTA MODO EDICIÓN COMPLETA (LLAMA A PLANCOMPRASABM)
   if (solicitudAEditar) {
     return (
       <PlanComprasABM
@@ -150,7 +153,6 @@ const Historial = () => {
     );
   }
 
-  // VISTA PESTAÑA INSPECCIÓN
   if (solicitudAInspeccionar) {
     return (
       <div className="historial-container">
@@ -158,6 +160,10 @@ const Historial = () => {
           solicitud={solicitudAInspeccionar}
           esModoEvaluacion={false}
           onVolver={() => setSolicitudAInspeccionar(null)}
+          onEditar={(sol) => {
+            setSolicitudAInspeccionar(null);
+            setSolicitudAEditar(sol);
+          }}
           onDescargarPDF={handleDescargarPDF}
           onDescargarExcel={handleDescargarExcel}
         />
@@ -178,29 +184,13 @@ const Historial = () => {
   const renderEstadoBadge = (estado) => {
     switch (estado) {
       case 'BORRADOR':
-        return (
-          <span className="badge-estado borrador">
-            <Clock size={12} /> Borrador
-          </span>
-        );
+        return <span className="badge-estado borrador">Borrador</span>;
       case 'PENDIENTE':
-        return (
-          <span className="badge-estado pendiente">
-            <AlertCircle size={12} /> Pendiente
-          </span>
-        );
+        return <span className="badge-estado pendiente">Pendiente</span>;
       case 'APROBADA':
-        return (
-          <span className="badge-estado aprobada">
-            <CheckCircle2 size={12} /> Aprobada
-          </span>
-        );
+        return <span className="badge-estado aprobada">Aprobada</span>;
       case 'RECHAZADA':
-        return (
-          <span className="badge-estado rechazada">
-            <XCircle size={12} /> Rechazada
-          </span>
-        );
+        return <span className="badge-estado rechazada">Rechazada</span>;
       default:
         return <span className="badge-estado">{estado}</span>;
     }
@@ -281,87 +271,126 @@ const Historial = () => {
               const esEditable = sol.estado === 'BORRADOR' || sol.estado === 'RECHAZADA';
               const estaProcesandoEsta = isProcessing && processingId === sol.id;
 
-              const totalMonto = (sol.renglones || []).reduce(
+              const totalMonto = (sol.renglones || sol.registros || []).reduce(
                 (acc, r) => acc + (parseFloat(r.precio_unitario) * parseInt(r.cantidad, 10) || 0),
                 0
               );
 
               return (
                 <div key={sol.id} className="solicitud-item-card">
-                  <div className="solicitud-main-row">
-                    <div className="solicitud-info">
-                      <div className="solicitud-id-row">
-                        <span className="solicitud-id">Solicitud #{sol.id}</span>
-                        {renderEstadoBadge(sol.estado)}
-                      </div>
-                      <div className="solicitud-meta">
-                        {sol.usuario_nombre && (
-                          <>
-                            <span><strong>Solicitante:</strong> {sol.usuario_nombre} {sol.usuario_apellido} ({sol.dependencia_nombre || 'Rectorado UNNE'})</span>
-                            <span className="mx-1">•</span>
-                          </>
-                        )}
-                        <span><strong>Convocatoria:</strong> {sol.nro_convocatoria || 'CDC:2026/01'}</span>
-                        <span className="mx-1">•</span>
-                        <span>
-                          <strong>Fecha:</strong>{' '}
-                          {sol.fecha_creacion
-                            ? new Date(sol.fecha_creacion).toLocaleDateString('es-AR')
-                            : 'N/A'}
-                        </span>
-                      </div>
+                  {/* METADATOS Y ENCABEZADO */}
+                  <div className="solicitud-header-info">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>
+                        Solicitud #{sol.id}
+                      </strong>
+                      {renderEstadoBadge(sol.estado)}
                     </div>
 
-                    <div className="solicitud-actions-summary">
-                      <div className="solicitud-monto text-right">
-                        <small className="monto-label">Monto Estimado</small>
-                        <strong className="monto-valor">${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+                    <div className="solicitud-meta-grid">
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <User size={12} className="inline-icon" /> Solicitante
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.usuario_nombre ? `${sol.usuario_nombre} ${sol.usuario_apellido}` : 'Usuario Sistema'}
+                        </span>
                       </div>
 
-                      <div className="btn-group-actions" onClick={(e) => e.stopPropagation()}>
-                        {esEditable && (
-                          <div className="buttons-row">
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <Building2 size={12} className="inline-icon" /> Dependencia
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.dependencia_nombre || 'Rectorado UNNE'}
+                        </span>
+                      </div>
+
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <FileSpreadsheet size={12} className="inline-icon" /> Convocatoria
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.nro_convocatoria || 'CDC:2026/01'}
+                        </span>
+                      </div>
+
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <Calendar size={12} className="inline-icon" /> Fecha
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.fecha_creacion ? new Date(sol.fecha_creacion).toLocaleDateString('es-AR') : 'N/A'}
+                        </span>
+                      </div>
+
+                      {(sol.admin_nombre || sol.usuario_autorizante) && (
+                        <div className="solicitud-meta-item">
+                          <span className="solicitud-meta-label">
+                            <ShieldCheck size={12} className="inline-icon" /> Evaluado por
+                          </span>
+                          <span className="solicitud-meta-value">
+                            <span className="autorizante-tag">
+                              {sol.admin_nombre 
+                                ? `${sol.admin_nombre} ${sol.admin_apellido}` 
+                                : `Admin ID: ${sol.usuario_autorizante}`}
+                            </span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* PIE DE TARJETA CON MONTO ESTIMADO Y BOTONES DE ACCIÓN */}
+                  <div className="solicitud-footer-bar">
+                    <div className="solicitud-monto-group">
+                      <span className="solicitud-monto-label">Monto Estimado:</span>
+                      <span className="solicitud-monto-valor">
+                        ${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div className="solicitud-actions-group">
+                      {esEditable && (
+                        <>
+                          <button
+                            type="button"
+                            className="btn-tupi btn-tupi-secundario"
+                            disabled={isProcessing}
+                            onClick={() => setSolicitudAEditar(sol)}
+                          >
+                            <FileEdit size={14} />
+                            <span>Editar</span>
+                          </button>
+
+                          {sol.estado === 'BORRADOR' && (
                             <button
                               type="button"
-                              className="btn-tupi btn-tupi-secundario"
+                              className="btn-tupi btn-tupi-peligro"
                               disabled={isProcessing}
-                              onClick={() => setSolicitudAEditar(sol)}
-                              title="Editar bienes y cantidades"
+                              onClick={(e) => handleDeleteBorrador(sol.id, e)}
                             >
-                              <FileEdit size={14} />
-                              <span>Editar</span>
+                              {estaProcesandoEsta ? (
+                                <Loader2 size={14} className="spinner-rotation" />
+                              ) : (
+                                <>
+                                  <Trash2 size={14} />
+                                  <span>Eliminar</span>
+                                </>
+                              )}
                             </button>
+                          )}
+                        </>
+                      )}
 
-                            {sol.estado === 'BORRADOR' && (
-                              <button
-                                type="button"
-                                className="btn-tupi btn-tupi-peligro"
-                                disabled={isProcessing}
-                                onClick={(e) => handleDeleteBorrador(sol.id, e)}
-                                title="Eliminar Borrador"
-                              >
-                                {estaProcesandoEsta ? (
-                                  <Loader2 size={14} className="spinner-rotation" />
-                                ) : (
-                                  <>
-                                    <Trash2 size={14} />
-                                    <span>Eliminar</span>
-                                  </>
-                                )}
-                              </button>
-                            )}
-                          </div>
-                        )}
-
-                        <button
-                          type="button"
-                          className="btn-tupi btn-tupi-descarga"
-                          onClick={() => setSolicitudAInspeccionar(sol)}
-                        >
-                          <Eye size={14} />
-                          <span>Inspeccionar</span>
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        className="btn-tupi btn-tupi-descarga"
+                        onClick={() => setSolicitudAInspeccionar(sol)}
+                      >
+                        <Eye size={14} />
+                        <span>Inspeccionar</span>
+                      </button>
                     </div>
                   </div>
                 </div>

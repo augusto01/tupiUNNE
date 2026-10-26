@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Eye, Search, UserCheck, Loader2 } from 'lucide-react';
+import { Eye, Search, UserCheck, Loader2, User, Building2, Calendar, FileSpreadsheet, ShieldCheck } from 'lucide-react';
 import Swal from 'sweetalert2';
 import DetalleSolicitud from './DetalleSolicitud';
 import './Pendientes.css';
@@ -11,7 +11,7 @@ const Pendientes = () => {
   const [solicitudes, setSolicitudes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('TODOS'); // 'TODOS', 'PENDIENTE', 'APROBADA'
+  const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null);
   const [procesandoId, setProcesandoId] = useState(null);
 
@@ -21,7 +21,6 @@ const Pendientes = () => {
       const res = await fetchAuth('/plan-compras/solicitudes-pendientes');
       if (res.ok) {
         const data = await res.json();
-        // Filtrar estrictamente solo PENDIENTES y APROBADAS
         const soloValidas = (Array.isArray(data) ? data : []).filter(
           (s) => s.estado === 'PENDIENTE' || s.estado === 'APROBADA'
         );
@@ -134,7 +133,6 @@ const Pendientes = () => {
     }
   };
 
-  // NAVEGACIÓN A PANTALLA COMPLETA DE INSPECCIÓN/EVALUACIÓN
   if (solicitudSeleccionada) {
     return (
       <div className="pendientes-container">
@@ -152,7 +150,6 @@ const Pendientes = () => {
     );
   }
 
-  // Filtrado y Ordenamiento: PENDIENTES ARRIBA DE TODO
   const pendientesFiltradas = solicitudes
     .filter((s) => {
       const coincideEstado = filtroEstado === 'TODOS' || s.estado === filtroEstado;
@@ -164,10 +161,8 @@ const Pendientes = () => {
       return coincideEstado && coincideBusqueda;
     })
     .sort((a, b) => {
-      // Prioridad 1: PENDIENTE siempre antes que APROBADA
       if (a.estado === 'PENDIENTE' && b.estado !== 'PENDIENTE') return -1;
       if (a.estado !== 'PENDIENTE' && b.estado === 'PENDIENTE') return 1;
-      // Prioridad 2: Ordenar por ID descendente
       return b.id - a.id;
     });
 
@@ -225,42 +220,94 @@ const Pendientes = () => {
         ) : (
           <div className="solicitudes-list">
             {pendientesFiltradas.map((sol) => {
-              const totalMonto = (sol.renglones || []).reduce(
+              const totalMonto = (sol.renglones || sol.registros || []).reduce(
                 (acc, r) => acc + (parseFloat(r.precio_unitario) * parseInt(r.cantidad, 10) || 0),
                 0
               );
 
               return (
                 <div key={sol.id} className="pendientes-item-card">
-                  <div className="solicitud-main-row">
-                    <div className="solicitud-info">
-                      <div className="solicitud-id-row">
-                        <span className="solicitud-id">Solicitud #{sol.id}</span>
-                        <span className={`badge-estado ${sol.estado.toLowerCase()}`}>{sol.estado}</span>
-                      </div>
-                      <div className="solicitud-meta">
-                        <span><strong>Solicitante:</strong> {sol.usuario_nombre} {sol.usuario_apellido} ({sol.dependencia_nombre || 'Rectorado UNNE'})</span>
-                        <span className="meta-separator">•</span>
-                        <span><strong>Convocatoria:</strong> {sol.nro_convocatoria || 'CDC:2026/01'}</span>
-                      </div>
+                  {/* METADATOS Y ENCABEZADO */}
+                  <div className="solicitud-header-info">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>
+                        Solicitud #{sol.id}
+                      </strong>
+                      <span className={`badge-estado ${sol.estado.toLowerCase()}`}>{sol.estado}</span>
                     </div>
 
-                    <div className="solicitud-right-zone">
-                      <div className="solicitud-monto-box">
-                        <span className="monto-label">Monto Estimado</span>
-                        <strong className="monto-valor">${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+                    <div className="solicitud-meta-grid">
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <User size={12} className="inline-icon" /> Solicitante
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.usuario_nombre} {sol.usuario_apellido}
+                        </span>
                       </div>
 
-                      <div className="btn-group-actions">
-                        <button
-                          type="button"
-                          className="btn-tupi btn-tupi-secundario"
-                          onClick={() => setSolicitudSeleccionada(sol)}
-                        >
-                          <Eye size={15} />
-                          <span>Inspeccionar</span>
-                        </button>
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <Building2 size={12} className="inline-icon" /> Dependencia
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.dependencia_nombre || 'Rectorado UNNE'}
+                        </span>
                       </div>
+
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <FileSpreadsheet size={12} className="inline-icon" /> Convocatoria
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.nro_convocatoria || 'CDC:2026/01'}
+                        </span>
+                      </div>
+
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <Calendar size={12} className="inline-icon" /> Fecha
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.fecha_creacion ? new Date(sol.fecha_creacion).toLocaleDateString('es-AR') : 'N/A'}
+                        </span>
+                      </div>
+
+                      {(sol.admin_nombre || sol.usuario_autorizante) && (
+                        <div className="solicitud-meta-item">
+                          <span className="solicitud-meta-label">
+                            <ShieldCheck size={12} className="inline-icon" /> Evaluado por
+                          </span>
+                          <span className="solicitud-meta-value">
+                            <span className="autorizante-tag">
+                              {sol.admin_nombre 
+                                ? `${sol.admin_nombre} ${sol.admin_apellido}` 
+                                : `Admin ID: ${sol.usuario_autorizante}`}
+                            </span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* PIE DE TARJETA CON MONTO ESTIMADO Y BOTÓN DE ACCIÓN */}
+                  <div className="solicitud-footer-bar">
+                    <div className="solicitud-monto-group">
+                      <span className="solicitud-monto-label">Monto Estimado:</span>
+                      <span className="solicitud-monto-valor">
+                        ${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div className="solicitud-actions-group">
+                      <button
+                        type="button"
+                        className="btn-tupi btn-tupi-primario"
+                        onClick={() => setSolicitudSeleccionada(sol)}
+                      >
+                        <Eye size={15} />
+                        <span>Evaluar Solicitud</span>
+                      </button>
                     </div>
                   </div>
                 </div>
