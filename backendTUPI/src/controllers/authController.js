@@ -4,10 +4,10 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 exports.login = async (req, res) => {
-  // Capturamos cualquier variante que envíe el Front para el login
+  // Capturamos cualquier variante que envíe el Front para el login (incluye username, dni, email, etc.)
   const { identifier, email, correo, dni, username, usuario, password } = req.body;
 
-  // Consolidamos el valor soportando todas las variantes posibles
+  // Consolidamos el identificador de inicio de sesión
   const loginInput = identifier || email || correo || dni || username || usuario;
 
   // Validación rápida de entrada
@@ -15,11 +15,11 @@ exports.login = async (req, res) => {
     return res.status(400).json({ message: 'El identificador y la contraseña son requeridos.' });
   }
 
-  // Aseguramos que nunca se envíe 'undefined' a la consulta SQL
+  // Sanitizamos el parámetro para evitar el error 'Bind parameters must not contain undefined'
   const loginParam = loginInput ?? null;
 
   try {
-    // 1. Buscar los datos básicos del usuario (tabla: usuario)
+    // 1. Buscar los datos básicos del usuario por DNI, EMAIL o USERNAME (tabla: usuario)
     const [userRows] = await pool.execute(
       'SELECT * FROM usuario WHERE email = ? OR dni = ? OR username = ?',
       [loginParam, loginParam, loginParam]
@@ -42,8 +42,7 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Contraseña incorrecta.' });
     }
 
-    // 3. Buscar Dependencia, Rol y PERMISOS mapeados
-    // Se utiliza usuario_id como clave primaria de la tabla usuario
+    // 3. Buscar Dependencia, Rol y PERMISOS mapeados con el esquema real de la DB
     const userIdParam = usuarioData.usuario_id ?? usuarioData.id ?? null;
 
     const [permisosRows] = await pool.execute(
@@ -70,7 +69,7 @@ exports.login = async (req, res) => {
       permisos: entorno.secciones_permitidas ? entorno.secciones_permitidas.split(',') : []
     }));
 
-    // EXTRAEMOS UN ARRAY PLANO DE SLUGS DE PERMISOS
+    // Extraemos un array plano de slugs de permisos sin duplicados
     let listaPermisosPlana = [];
     permisosRows.forEach(row => {
       if (row.secciones_permitidas) {
@@ -84,14 +83,14 @@ exports.login = async (req, res) => {
       }
     });
 
-    // RESPALDO TEMPORAL PARA DESARROLLO: Si la base de datos no tiene permisos cargados para el rol
+    // Respaldo temporal si la base de datos no tiene permisos asignados al rol
     if (listaPermisosPlana.length === 0) {
       listaPermisosPlana = ['dashboard', 'plan-compras', 'compras', 'usuarios'];
     }
 
     const infoRelacional = permisosRows[0] || {};
 
-    // 4. Firmar el Token
+    // 4. Firmar el Token JWT
     const token = jwt.sign(
       { 
         id: userIdParam, 
@@ -103,7 +102,7 @@ exports.login = async (req, res) => {
       { expiresIn: '4h' }
     );
 
-    // 5. Devolver la respuesta al cliente
+    // 5. Devolver al Front los datos de autenticación, usuario, entornos y permisos
     return res.json({
       message: 'Autenticación exitosa',
       token,
