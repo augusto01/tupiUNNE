@@ -1,505 +1,379 @@
 /* ==========================================
-   ESTILOS GENERALES DEL CONTENEDOR DE COMPRAS
+   1. ISLAMIENTO Y RESET DE BOTONES PAC
    ========================================== */
 
-.abm-container {
+.abm-container button,
+.historial-container button,
+.pendientes-container button {
+  position: relative !important;
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+
+/* ==========================================
+   2. CONTENEDORES Y MÁRGENES GENERALES
+   ========================================== */
+
+.abm-container,
+.historial-container,
+.pendientes-container {
   padding: 1.5rem;
-  max-width: 1400px;
+  max-width: 1350px;
   margin: 0 auto;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  color: #0f172a; /* Texto oscuro visible por defecto */
-}
-
-.abm-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.abm-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #0f172a !important;
-  margin: 0;
-}
-
-.abm-subtitle {
-  font-size: 0.95rem;
-  color: #475569 !important;
-  margin-top: 0.25rem;
-}
-
-/* Tarjeta contenedora de secciones */
-.abm-card {
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #cbd5e1;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: #0f172a;
+}
+
+/* ==========================================
+   3. ESTILOS DE TÍTULOS Y SUBTÍTULOS
+   ========================================== */
+
+.abm-header,
+.historial-header,
+.pendientes-header {
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.85rem;
+}
+
+.abm-title,
+.historial-title,
+.pendientes-title {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.025em;
+  margin: 0 0 0.25rem 0 !important;
+  line-height: 1.25;
+}
+
+.abm-subtitle,
+.historial-subtitle,
+.pendientes-subtitle {
+  font-size: 0.875rem !important;
+  color: #64748b !important;
+  margin: 0 !important;
+  font-weight: 400;
+}
+
+/* TARJETAS CONTENEDORAS */
+.abm-card,
+.historial-card,
+.pendientes-card {
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .card-header {
   border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 1rem;
-  margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1rem;
 }
 
 .card-title {
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-size: 1.05rem !important;
+  font-weight: 600 !important;
   color: #0f172a !important;
-  margin: 0;
+  margin: 0 !important;
 }
 
 /* ==========================================
-   FORMULARIOS, INPUTS Y SELECTS (CORREGIDO)
+   4. BARRA DE FILTROS Y BÚSQUEDA
    ========================================== */
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.form-group label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #334155 !important;
-}
-
-/* Fuerza el color visible del texto en TODOS los inputs */
-.form-control, 
-input[type="text"], 
-input[type="number"], 
-select, 
-textarea {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
-  border: 1px solid #94a3b8;
-  border-radius: 6px;
-  background-color: #ffffff !important;
-  color: #0f172a !important; /* Texto negro/gris muy oscuro siempre visible */
-  font-weight: 500;
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-
-.form-control::placeholder,
-input::placeholder {
-  color: #94a3b8 !important; /* Placeholder visible pero suave */
-  opacity: 1;
-}
-
-.form-control:focus, 
-input:focus, 
-select:focus {
-  outline: none;
-  border-color: #0284c7 !important;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2) !important;
-  color: #0f172a !important;
-}
-
-.form-control-sm {
-  padding: 0.3rem 0.5rem;
-  font-size: 0.85rem;
-}
-
-/* Options dentro de los Selects */
-select option {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-}
-
-/* ==========================================
-   BARRA DE FILTROS AVANZADOS
-   ========================================== */
-
-.filters-bar-wrapper {
-  display: flex;
-  gap: 1rem;
+.filters-bar-wrapper,
+.filters-row {
+  display: flex !important;
+  gap: 1rem !important;
   background-color: #f8fafc;
   padding: 1rem;
   border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  margin-bottom: 1.25rem;
-  align-items: flex-end;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1rem;
+  align-items: flex-end !important;
+  flex-wrap: wrap;
 }
 
-.filter-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+.filter-item,
+.filter-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.4rem !important;
   flex: 1;
+  min-width: 200px;
 }
 
-.filter-item.flex-2 {
+.filter-item.flex-2,
+.filter-group.flex-2 {
   flex: 2;
+  min-width: 280px;
 }
 
-.filter-item label {
-  font-size: 0.85rem;
-  font-weight: 600;
+.filter-item label,
+.filter-group label {
+  font-size: 0.825rem !important;
+  font-weight: 600 !important;
   color: #334155 !important;
+  margin: 0 !important;
 }
 
-/* Buscador con ícono */
-.search-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
+/* INPUT BÚSQUEDA CON ÍCONO ALINEADO */
+.search-input-wrapper,
+.search-box {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100%;
 }
 
 .search-icon {
-  position: absolute;
-  left: 10px;
-  color: #64748b;
-  pointer-events: none;
+  position: absolute !important;
+  left: 12px !important;
+  color: #64748b !important;
+  pointer-events: none !important;
+  z-index: 2;
 }
 
-.search-input {
-  padding-left: 35px !important;
+.search-input,
+.search-box input {
+  padding-left: 38px !important;
 }
 
-/* ==========================================
-   TABLAS DE DATOS Y VISIBILIDAD DE CELDAS
-   ========================================== */
-
-.table-wrapper {
+/* CONTROLES DE FORMULARIO */
+.form-control, 
+select, 
+input[type="text"], 
+input[type="number"] {
   width: 100%;
-  overflow-x: auto;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background-color: #ffffff;
-}
-
-.catalog-table-height {
-  max-height: 380px;
-  overflow-y: auto;
-}
-
-.abm-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-  text-align: left;
-  color: #0f172a !important;
-}
-
-.abm-table th {
-  background-color: #f1f5f9;
-  color: #1e293b !important;
-  font-weight: 700;
-  padding: 0.75rem 1rem;
-  border-bottom: 2px solid #cbd5e1;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.abm-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
-  vertical-align: middle;
-  color: #0f172a !important;
-}
-
-.abm-table td strong {
-  color: #0f172a !important;
-}
-
-.abm-table tbody tr:hover {
-  background-color: #f8fafc;
-}
-
-/* Fila de ítem seleccionado */
-.table-row-selected {
-  background-color: #f0fdf4 !important;
-}
-
-/* Checkbox personalizado */
-.checkbox-custom {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: #0284c7;
-}
-
-/* ==========================================
-   BADGES DE ESTADO E INDICADORES
-   ========================================== */
-
-.badge-cart-indicator {
-  background-color: #e0f2fe;
-  color: #0369a1 !important;
-  padding: 0.4rem 0.85rem;
-  border-radius: 20px;
-  font-weight: 600;
+  padding: 0.5rem 0.75rem;
   font-size: 0.85rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.badge-status {
-  padding: 0.2rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  background-color: #f1f5f9;
-  color: #475569 !important;
-  display: inline-block;
-}
-
-.badge-status.added {
-  background-color: #dcfce7;
-  color: #15803d !important;
-  font-weight: 600;
-}
-
-/* Botón de acción eliminar */
-.btn-action-icon {
-  background: none;
-  border: none;
-  padding: 0.4rem;
+  border: 1px solid #cbd5e1;
   border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  box-sizing: border-box;
+  height: 38px;
 }
 
-.btn-action-icon.delete {
-  color: #ef4444 !important;
-}
-
-.btn-action-icon.delete:hover {
-  background-color: #fee2e2;
-  color: #dc2626 !important;
+.form-control:focus, 
+select:focus, 
+input:focus {
+  outline: none;
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
 }
 
 /* ==========================================
-   RESUMEN Y BARRA INFERIOR DE ENVÍO
+   5. BOTONES MINIMALISTAS UNIFICADOS
+   ========================================== */
+
+.btn-tupi {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  padding: 0.5rem 0.95rem !important;
+  border-radius: 6px !important;
+  font-size: 0.825rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease-in-out !important;
+  border: 1px solid transparent !important;
+  white-space: nowrap !important;
+  height: 36px !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+}
+
+/* Guardar Borrador / Editar */
+.btn-tupi-secundario {
+  background-color: #f0f9ff !important;
+  color: #0284c7 !important;
+  border-color: #bae6fd !important;
+}
+
+.btn-tupi-secundario:hover {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  border-color: #0284c7 !important;
+}
+
+/* Aprobar / Enviar Solicitud */
+.btn-tupi-primario {
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
+  border-color: #a7f3d0 !important;
+}
+
+.btn-tupi-primario:hover {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  border-color: #059669 !important;
+}
+
+/* Rechazar / Eliminar Borrador */
+.btn-tupi-peligro {
+  background-color: #fff1f2 !important;
+  color: #be123c !important;
+  border-color: #fecdd3 !important;
+}
+
+.btn-tupi-peligro:hover {
+  background-color: #e11d48 !important;
+  color: #ffffff !important;
+  border-color: #e11d48 !important;
+}
+
+/* Descargar Comprobantes */
+.btn-tupi-descarga {
+  background-color: #f0f9ff !important;
+  color: #0284c7 !important;
+  border-color: #bae6fd !important;
+}
+
+.btn-tupi-descarga:hover {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  border-color: #0284c7 !important;
+}
+
+.btn-tupi:disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
+/* ==========================================
+   6. MENÚ DESPLEGABLE (DROPDOWN EXCEL / PDF)
+   ========================================== */
+
+.download-dropdown-wrapper {
+  position: relative !important;
+  display: inline-block !important;
+}
+
+.download-menu-dropdown {
+  position: absolute !important;
+  right: 0 !important;
+  top: calc(100% + 6px) !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  min-width: 210px !important;
+  z-index: 100 !important;
+  padding: 6px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.download-menu-item {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0.65rem !important;
+  padding: 0.6rem 0.85rem !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  color: #334155 !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  height: 38px !important;
+  transition: background 0.15s ease !important;
+}
+
+.download-menu-item:hover {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.text-pdf { 
+  color: #e11d48 !important; 
+  flex-shrink: 0 !important;
+}
+
+.text-excel { 
+  color: #16a34a !important; 
+  flex-shrink: 0 !important;
+}
+
+/* ==========================================
+   7. RESUMEN Y BARRA INFERIOR (NUEVA SOLICITUD)
    ========================================== */
 
 .solicitud-summary-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
   background-color: #f8fafc;
-  padding: 1.25rem;
+  padding: 1rem 1.25rem;
   border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #e2e8f0;
+  margin-top: 1.25rem;
+  gap: 1.5rem;
+}
+
+.summary-actions-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
 }
 
 .summary-info {
   display: flex;
   align-items: center;
-  gap: 2.5rem;
-  font-size: 0.95rem;
-  color: #0f172a !important;
-}
-
-.summary-total {
-  display: flex;
-  flex-direction: column;
+  gap: 2rem;
+  font-size: 0.9rem;
+  color: #1e293b;
 }
 
 .total-amount {
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 800;
-  color: #0284c7 !important;
+  color: #0284c7;
+  margin-left: 0.5rem;
 }
 
 /* ==========================================
-   BOTONES
+   8. TABLAS DE DATOS
    ========================================== */
 
-.btn {
-  padding: 0.6rem 1.2rem;
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.abm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.abm-table th {
+  background-color: #f8fafc;
+  color: #475569;
   font-weight: 600;
-  border-radius: 6px;
-  cursor: pointer;
-  border: none;
-  transition: background-color 0.2s;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 2px solid #e2e8f0;
 }
 
-.btn-primary {
-  background-color: #0284c7;
-  color: #ffffff !important;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #0369a1;
-}
-
-.btn-primary:disabled {
-  background-color: #94a3b8;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-/* ==========================================
-   TEXTOS Y UTILIDADES
-   ========================================== */
-
-.text-gray {
-  color: #64748b !important;
-}
-
-.font-bold {
-  font-weight: 700 !important;
-}
-
-.text-primary {
-  color: #0284c7 !important;
-}
-
-.text-muted {
-  color: #64748b !important;
-}
-
-.bg-readonly {
-  background-color: #f1f5f9 !important;
-  color: #334155 !important;
-  font-weight: 600;
-  cursor: not-allowed;
-  border-color: #cbd5e1 !important;
-}
-
-/* ==========================================
-   POP-UP FLOTANTE (TOAST NOTIFICATIONS)
-   ========================================== */
-
-.tupi-toast-popup {
-  position: fixed;
-  top: 25px;
-  right: 25px;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.9rem 1.2rem;
-  border-radius: 10px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-  font-size: 0.9rem;
-  font-weight: 600;
-  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  min-width: 300px;
-  max-width: 450px;
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.tupi-toast-popup.success {
-  background-color: #065f46;
-  color: #ffffff;
-  border-left: 5px solid #10b981;
-}
-
-.tupi-toast-popup.error {
-  background-color: #991b1b;
-  color: #ffffff;
-  border-left: 5px solid #ef4444;
-}
-
-.toast-popup-content {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-.toast-close-btn {
-  background: none;
-  border: none;
-  color: #ffffff;
-  opacity: 0.7;
-  cursor: pointer;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  border-radius: 4px;
-}
-
-.toast-close-btn:hover {
-  opacity: 1;
-  background-color: rgba(255, 255, 255, 0.15);
-}
-
-/* Animación de rotación del Spinner */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.spinner-rotation {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.spinner-rotation {
-  animation: spin 1s linear infinite;
-}
-
-/* ==========================================
-   RESPONSIVIDAD Y MEDIA QUERIES
-   ========================================== */
-
-@media (max-width: 992px) {
-  .filters-bar-wrapper {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filter-item.flex-2 {
-    flex: 1;
-  }
-}
-
-@media (max-width: 768px) {
-  .abm-container {
-    padding: 1rem;
-  }
-
-  .abm-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .solicitud-summary-bar {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
-  }
-
-  .summary-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
+.abm-table td {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
 }

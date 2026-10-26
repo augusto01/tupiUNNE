@@ -1,73 +1,210 @@
+/* ==========================================
+   ESTILOS ESPECÍFICOS MÓDULO PENDIENTES
+   ========================================== */
+
 .pendientes-container {
   padding: 1.5rem;
-  max-width: 1200px;
+  max-width: 1350px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
-.pendientes-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.pendientes-subtitle {
-  color: #64748b;
-  font-size: 0.875rem;
-}
-
-.pendientes-card {
-  background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  padding: 1rem;
+.solicitudes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
 }
 
 .pendientes-item-card {
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  margin-bottom: 0.75rem;
-  overflow: hidden;
-  background: #fff;
+  border-radius: 8px;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  overflow: visible !important;
 }
 
+.pendientes-item-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+/* FILA PRINCIPAL TARJETA */
 .solicitud-main-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 1rem 1.25rem !important;
   cursor: pointer;
-  background: #f8fafc;
+  background: #ffffff;
+  gap: 1.5rem;
+  border-radius: 8px;
 }
 
-.solicitud-main-row:hover {
-  background: #f1f5f9;
+.solicitud-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
 }
 
+.solicitud-id {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.solicitud-meta {
+  font-size: 0.8rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* GRUPO DERECHA Y CONTENEDOR DE BOTONES FIX */
+.solicitud-right-zone {
+  display: flex !important;
+  align-items: center !important;
+  gap: 1.5rem !important;
+  white-space: nowrap !important;
+}
+
+.solicitud-monto-box {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+}
+
+.monto-label {
+  font-size: 0.725rem;
+  color: #64748b;
+}
+
+.monto-valor {
+  font-size: 1.05rem;
+  color: #0284c7;
+  font-weight: 700;
+}
+
+/* CONTENEDOR DE ACCIONES DE BOTONES */
+.btn-group-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.buttons-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* BOTÓN DESPLEGAR (CHEVRON) */
+.btn-toggle-expand {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: #64748b !important;
+  padding: 0.4rem !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 36px !important;
+  width: 36px !important;
+}
+
+.btn-toggle-expand:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* DROPDOWN DESCARGAR */
+.download-dropdown-wrapper {
+  position: relative !important;
+  display: inline-block !important;
+}
+
+.download-menu-dropdown {
+  position: absolute !important;
+  right: 0 !important;
+  top: calc(100% + 6px) !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1) !important;
+  min-width: 190px !important;
+  z-index: 100 !important;
+  padding: 6px !important;
+}
+
+.download-menu-item {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.65rem !important;
+  padding: 0.55rem 0.75rem !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  color: #334155 !important;
+  cursor: pointer !important;
+  text-align: left !important;
+}
+
+.download-menu-item:hover {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.text-pdf { color: #e11d48; }
+.text-excel { color: #16a34a; }
+
+/* BADGES DE ESTADO */
 .badge-estado {
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
-.badge-estado.pendiente {
-  background: #fef3c7;
-  color: #d97706;
-}
+.badge-estado.pendiente { background: #fef3c7; color: #b45309; }
+.badge-estado.aprobada { background: #dcfce7; color: #15803d; }
+.badge-estado.borrador { background: #fef3c7; color: #b45309; }
+.badge-estado.rechazada { background: #fee2e2; color: #be123c; }
 
-.badge-estado.aprobada {
-  background: #dcfce7;
-  color: #15803d;
+/* TABLA DE DETALLES */
+.solicitud-detail-body {
+  padding: 1rem 1.25rem;
+  background-color: #ffffff;
+  border-top: 1px solid #e2e8f0;
 }
 
 .pendientes-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
+  font-size: 0.825rem;
 }
 
-.pendientes-table th, .pendientes-table td {
+.pendientes-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
   padding: 8px 12px;
   border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.pendientes-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
 }

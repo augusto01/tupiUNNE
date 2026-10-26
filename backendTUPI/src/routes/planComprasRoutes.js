@@ -7,13 +7,13 @@ import {
   getHistorialSolicitudes, 
   updateSolicitud, 
   deleteSolicitud,
-  descargarExcelSolicitud
 } from '../controllers/PlanComprasController.js';
 
 import { 
   getSolicitudesPendientes, 
   evaluarSolicitud, 
-  descargarPDFSolicitud 
+  descargarPDFSolicitud,
+  descargarExcelSolicitud
 } from '../controllers/solicitudesController.js';
 
 const router = express.Router();

@@ -274,14 +274,30 @@ const PlanComprasABM = () => {
         </div>
       </div>
 
-      
+      <div className="abm-card mb-4">
+        <div className="card-header">
+          <h2 className="card-title">1. Identificador de la Convocatoria</h2>
+        </div>
+        <div className="abm-form">
+          <div className="form-group mb-0">
+            <label>Nro. Convocatoria / Referencia Interna</label>
+            <input
+              type="text"
+              className="form-control"
+              disabled={isSubmitting}
+              value={nroConvocatoria}
+              onChange={(e) => setNroConvocatoria(e.target.value)}
+              placeholder="Ej: CDC:2026/01"
+            />
+          </div>
+        </div>
+      </div>
 
-      {/* CATÁLOGO DE BIENES */}
       <div className="abm-card mb-4">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h2 className="card-title">2. Selección del Catálogo de Bienes</h2>
           <span className="badge-cart-indicator">
-            <ShoppingCart size={16} /> {listaSolicitud.length} seleccionados
+            <ShoppingCart size={15} /> {listaSolicitud.length} seleccionados
           </span>
         </div>
 
@@ -313,7 +329,7 @@ const PlanComprasABM = () => {
           <div className="filter-item flex-2">
             <label>Búsqueda en el Catálogo</label>
             <div className="search-input-wrapper">
-              <Search size={16} className="search-icon" />
+              <Search size={15} className="search-icon" />
               <input
                 type="text"
                 className="form-control search-input"
@@ -377,7 +393,7 @@ const PlanComprasABM = () => {
                       <td><strong>{bien.descripcion}</strong></td>
                       <td><small className="text-gray">{bien.inciso} | {bien.partida_principal}</small></td>
                       <td className="text-center">
-                        <span className="badge badge-secondary">
+                        <span className="badge-trimestre">
                           {bien.trimestre || '1ER TRIMESTRE'}
                         </span>
                       </td>
@@ -400,11 +416,10 @@ const PlanComprasABM = () => {
         </div>
       </div>
 
-      {/* DETALLE DE REQUERIMIENTOS */}
       <div className="abm-card">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h2 className="card-title d-flex align-items-center gap-2">
-            <ShoppingCart size={20} /> 3. Detalle de Requerimientos
+            <ShoppingCart size={18} /> 3. Detalle de Requerimientos
           </h2>
         </div>
 
@@ -499,31 +514,30 @@ const PlanComprasABM = () => {
           </table>
         </div>
 
-        {/* BOTONES DE RESUMEN Y ENVÍO */}
-        <div className="solicitud-summary-bar mt-4">
+        <div className="solicitud-summary-bar">
           <div className="summary-info">
             <div><span className="text-muted">Total de ítems:</span> <strong>{listaSolicitud.length}</strong></div>
-            <div className="summary-total">
+            <div>
               <span>Monto Total Estimado:</span>
               <span className="total-amount">${totalGeneral.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
 
-          <div className="d-flex gap-2">
+          <div className="summary-actions-group">
             <button
               type="button"
-              className="btn btn-outline-primary btn-lg d-flex align-items-center gap-2"
+              className="btn-tupi btn-tupi-secundario"
               disabled={listaSolicitud.length === 0 || isSubmitting}
               onClick={() => solicitarConfirmacion('BORRADOR')}
             >
               {isSubmitting && submittingAction === 'BORRADOR' ? (
                 <>
-                  <Loader2 size={18} className="spinner-rotation" />
+                  <Loader2 size={15} className="spinner-rotation" />
                   <span>Guardando...</span>
                 </>
               ) : (
                 <>
-                  <Save size={18} />
+                  <Save size={15} />
                   <span>Guardar Borrador</span>
                 </>
               )}
@@ -531,19 +545,19 @@ const PlanComprasABM = () => {
 
             <button
               type="button"
-              className="btn btn-primary btn-lg d-flex align-items-center gap-2"
+              className="btn-tupi btn-tupi-primario"
               disabled={listaSolicitud.length === 0 || isSubmitting}
               onClick={() => solicitarConfirmacion('PENDIENTE')}
             >
               {isSubmitting && submittingAction === 'PENDIENTE' ? (
                 <>
-                  <Loader2 size={18} className="spinner-rotation" />
+                  <Loader2 size={15} className="spinner-rotation" />
                   <span>Enviando...</span>
                 </>
               ) : (
                 <>
-                  <Send size={18} />
-                  <span>Enviar Solicitud Final</span>
+                  <Send size={15} />
+                  <span>Enviar Solicitud</span>
                 </>
               )}
             </button>

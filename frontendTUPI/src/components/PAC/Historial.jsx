@@ -34,7 +34,6 @@ const Historial = () => {
   const [processingId, setProcessingId] = useState(null);
   const [processingAction, setProcessingAction] = useState(null);
 
-  // Estado para Pop-up Flotante
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const mostrarPopUp = (message, type = 'success') => {
@@ -69,7 +68,6 @@ const Historial = () => {
     }
   }, [token]);
 
-  // Manejo de despliegue corrigiendo la propagación
   const toggleExpand = (id, e) => {
     if (e) e.stopPropagation();
     if (editingId === id || isProcessing) return;
@@ -200,64 +198,62 @@ const Historial = () => {
     switch (estado) {
       case 'BORRADOR':
         return (
-          <span className="badge-status-historial borrador">
-            <Clock size={13} /> Borrador
+          <span className="badge-estado borrador">
+            <Clock size={12} /> Borrador
           </span>
         );
       case 'PENDIENTE':
         return (
-          <span className="badge-status-historial pendiente">
-            <AlertCircle size={13} /> Pendiente de Aprobación
+          <span className="badge-estado pendiente">
+            <AlertCircle size={12} /> Pendiente
           </span>
         );
       case 'APROBADA':
         return (
-          <span className="badge-status-historial aprobada">
-            <CheckCircle2 size={13} /> Aceptada
+          <span className="badge-estado aprobada">
+            <CheckCircle2 size={12} /> Aprobada
           </span>
         );
       case 'RECHAZADA':
         return (
-          <span className="badge-status-historial rechazada">
-            <XCircle size={13} /> Rechazada
+          <span className="badge-estado rechazada">
+            <XCircle size={12} /> Rechazada
           </span>
         );
       default:
-        return <span className="badge-status-historial">{estado}</span>;
+        return <span className="badge-estado">{estado}</span>;
     }
   };
 
   return (
     <div className="historial-container">
-      {/* POP-UP FLOTANTE (TOAST) */}
       {toast.show && (
         <div className={`tupi-toast-popup ${toast.type}`}>
           <div className="toast-popup-content">
-            {toast.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+            {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
             <span>{toast.message}</span>
           </div>
           <button className="toast-close-btn" onClick={() => setToast({ ...toast, show: false })}>
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
       )}
 
       <div className="historial-header">
         <div>
-          <h1 className="historial-title">Historial de Solicitudes de Compras</h1>
+          <h1 className="historial-title">Historial de Solicitudes</h1>
           <p className="historial-subtitle">
-            Consulte el estado, modifique sus borradores o envíe requerimientos pendientes.
+            Consulte el estado, modifique borradores o envíe requerimientos pendientes.
           </p>
         </div>
       </div>
 
-      {/* BARRA FILTROS */}
       <div className="historial-card mb-4">
         <div className="filters-row">
           <div className="filter-group flex-2">
             <label>Buscar Solicitud</label>
             <div className="search-box">
-              <Search size={16} className="search-icon" />
+              <Search size={15} className="search-icon" />
               <input
                 type="text"
                 disabled={isProcessing}
@@ -280,24 +276,23 @@ const Historial = () => {
               <option value="TODOS">Todos los estados</option>
               <option value="BORRADOR">Borradores</option>
               <option value="PENDIENTE">Pendientes de Aprobación</option>
-              <option value="APROBADA">Aceptadas</option>
+              <option value="APROBADA">Aprobadas</option>
               <option value="RECHAZADA">Rechazadas</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* LISTADO */}
       <div className="historial-card">
         {loading ? (
           <div className="text-center py-5">
-            <div className="spinner-border text-primary" role="status"></div>
-            <p className="mt-2 text-muted">Cargando solicitudes...</p>
+            <Loader2 size={26} className="spinner-rotation text-primary mx-auto" />
+            <p className="mt-2 text-muted small">Cargando solicitudes...</p>
           </div>
         ) : solicitudesFiltradas.length === 0 ? (
           <div className="text-center py-5 text-muted">
-            <FileText size={40} className="mb-2 text-gray" />
-            <p>No se encontraron solicitudes registradas con los filtros seleccionados.</p>
+            <FileText size={36} className="mb-2 mx-auto text-gray" />
+            <p className="small">No se encontraron solicitudes con los filtros aplicados.</p>
           </div>
         ) : (
           <div className="solicitudes-list">
@@ -322,13 +317,13 @@ const Historial = () => {
                 >
                   <div className="solicitud-main-row" onClick={(e) => toggleExpand(sol.id, e)}>
                     <div className="solicitud-info">
-                      <div className="d-flex align-items-center gap-3">
+                      <div className="solicitud-id-row">
                         <span className="solicitud-id">Solicitud #{sol.id}</span>
                         {renderEstadoBadge(sol.estado)}
                       </div>
                       <div className="solicitud-meta">
-                        <span><strong>Convocatoria:</strong> {sol.nro_convocatoria || 'S/N'}</span>
-                        <span>•</span>
+                        <span><strong>Convocatoria:</strong> {sol.nro_convocatoria || 'CDC:2026/01'}</span>
+                        <span className="mx-1">•</span>
                         <span>
                           <strong>Fecha:</strong>{' '}
                           {sol.fecha_creacion
@@ -339,27 +334,28 @@ const Historial = () => {
                     </div>
 
                     <div className="solicitud-actions-summary">
-                      <div className="solicitud-monto">
-                        <small>Total Estimado</small>
-                        <strong>${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+                      <div className="solicitud-monto text-right">
+                        <small className="monto-label">Monto Estimado</small>
+                        <strong className="monto-valor">${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
                       </div>
 
-                      <div className="btn-group-actions">
+                      <div className="btn-group-actions" onClick={(e) => e.stopPropagation()}>
                         {esBorrador && !isEditing && (
-                          <>
+                          <div className="buttons-row">
                             <button
                               type="button"
-                              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+                              className="btn-tupi btn-tupi-secundario"
                               disabled={isProcessing}
                               onClick={(e) => handleStartEdit(sol, e)}
                               title="Editar Borrador"
                             >
-                              <FileEdit size={14} /> Editar
+                              <FileEdit size={14} />
+                              <span>Editar</span>
                             </button>
 
                             <button
                               type="button"
-                              className="btn btn-outline-danger btn-sm d-flex align-items-center gap-1"
+                              className="btn-tupi btn-tupi-peligro"
                               disabled={isProcessing}
                               onClick={(e) => handleDeleteBorrador(sol.id, e)}
                               title="Eliminar Borrador"
@@ -367,18 +363,22 @@ const Historial = () => {
                               {estaProcesandoEsta && processingAction === 'DELETE' ? (
                                 <Loader2 size={14} className="spinner-rotation" />
                               ) : (
-                                <Trash2 size={14} />
+                                <>
+                                  <Trash2 size={14} />
+                                  <span>Eliminar</span>
+                                </>
                               )}
                             </button>
-                          </>
+                          </div>
                         )}
+
                         <button 
                           type="button" 
                           className="btn-toggle-expand" 
                           disabled={isProcessing}
                           onClick={(e) => toggleExpand(sol.id, e)}
                         >
-                          {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </button>
                       </div>
                     </div>
@@ -391,16 +391,16 @@ const Historial = () => {
                           <thead>
                             <tr>
                               <th>Bien / Descripción</th>
-                              <th className="text-center" style={{ width: '100px' }}>Cantidad</th>
-                              <th className="text-right" style={{ width: '140px' }}>Precio Unit ($)</th>
-                              <th className="text-right" style={{ width: '140px' }}>Subtotal ($)</th>
-                              <th style={{ width: '300px' }}>Observación / Especificación</th>
+                              <th className="text-center" style={{ width: '90px' }}>Cantidad</th>
+                              <th className="text-right" style={{ width: '130px' }}>Precio Unit ($)</th>
+                              <th className="text-right" style={{ width: '130px' }}>Subtotal ($)</th>
+                              <th style={{ width: '280px' }}>Observación</th>
                             </tr>
                           </thead>
                           <tbody>
                             {listaRenglones.length === 0 ? (
                               <tr>
-                                <td colSpan="5" className="text-center py-3 text-muted">
+                                <td colSpan="5" className="text-center py-3 text-muted small">
                                   Sin renglones asociados.
                                 </td>
                               </tr>
@@ -450,7 +450,7 @@ const Historial = () => {
                                           onChange={(e) =>
                                             handleDraftChange(itemKey, 'observacion', e.target.value)
                                           }
-                                          placeholder="Añadir nota técnica..."
+                                          placeholder="Añadir nota..."
                                         />
                                       ) : (
                                         <span className="text-muted small">
@@ -470,17 +470,17 @@ const Historial = () => {
                         <div className="edit-actions-bar">
                           <button
                             type="button"
-                            className="btn btn-secondary btn-sm"
+                            className="btn-tupi btn-tupi-descarga"
                             disabled={isProcessing}
                             onClick={handleCancelEdit}
                           >
                             Cancelar
                           </button>
 
-                          <div className="d-flex gap-2">
+                          <div className="buttons-row">
                             <button
                               type="button"
-                              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+                              className="btn-tupi btn-tupi-secundario"
                               disabled={isProcessing}
                               onClick={() => handleSaveOrSubmit(sol.id, 'BORRADOR')}
                             >
@@ -499,7 +499,7 @@ const Historial = () => {
 
                             <button
                               type="button"
-                              className="btn btn-primary btn-sm d-flex align-items-center gap-1"
+                              className="btn-tupi btn-tupi-primario"
                               disabled={isProcessing}
                               onClick={() => handleSaveOrSubmit(sol.id, 'PENDIENTE')}
                             >
@@ -511,7 +511,7 @@ const Historial = () => {
                               ) : (
                                 <>
                                   <Send size={14} />
-                                  <span>Subir y Enviar Solicitud</span>
+                                  <span>Enviar Solicitud</span>
                                 </>
                               )}
                             </button>
