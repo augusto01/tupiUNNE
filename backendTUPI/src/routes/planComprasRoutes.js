@@ -1,33 +1,36 @@
-// src/routes/PlanComprasRoutes.js
-const { Router } = require('express');
-const { 
+import express from 'express';
+import { 
   getEstadoPlan, 
   getRubros, 
   getBienesPorRubro, 
-  updateConfiguracionPlan, 
-  crearSolicitud,
-  getHistorialSolicitudes,
-  updateSolicitud,
-  deleteSolicitud
-} = require('../controllers/planComprasController');
-const authMiddleware = require('../middlewares/authMiddleware');
+  crearSolicitud, 
+  getHistorialSolicitudes, 
+  updateSolicitud, 
+  deleteSolicitud,
+} from '../controllers/PlanComprasController.js';
 
-const router = Router();
+import { 
+  getSolicitudesPendientes, 
+  evaluarSolicitud, 
+  descargarPDFSolicitud,
+  descargarExcelSolicitud
+} from '../controllers/solicitudesController.js';
 
-// Aplicar middleware de autenticación
-router.use(authMiddleware);
+const router = express.Router();
 
-// Rutas del Plan Anual de Compras
+// Rutas de Plan de Compras existentes
 router.get('/estado', getEstadoPlan);
 router.get('/rubros', getRubros);
 router.get('/bienes-por-rubro', getBienesPorRubro);
-router.put('/configuracion', updateConfiguracionPlan);
-
-// Rutas de Solicitudes, Borradores e Historial
 router.post('/solicitudes', crearSolicitud);
 router.get('/solicitudes-historial', getHistorialSolicitudes);
 router.put('/solicitudes/:id', updateSolicitud);
 router.delete('/solicitudes/:id', deleteSolicitud);
 
-// Exportación mediante CommonJS
-module.exports = router;
+// 🚨 NUEVAS RUTAS PARA ADMINISTRACIÓN Y AUTORIZACIONES (Faltaban en el backend)
+router.get('/solicitudes-pendientes', getSolicitudesPendientes);
+router.post('/solicitudes/:id/evaluar', evaluarSolicitud);
+router.get('/solicitudes/:id/pdf', descargarPDFSolicitud);
+router.get('/solicitudes/:id/excel', descargarExcelSolicitud); // 👈
+
+export default router;

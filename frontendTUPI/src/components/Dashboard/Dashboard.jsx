@@ -11,50 +11,54 @@ import {
   ChevronDown,
   PlusCircle,
   History,
+  Clock,
   ListFilter,
-  Users 
+  Users,
+  ShieldAlert
 } from 'lucide-react';
 import UsuariosCRUD from '../Usuarios/UsuariosCRUD'; 
 import { AnalizadorExpediente } from '../Expedientes/AnalizadorExp';
 import PlanComprasABM from '../PAC/PlanComprasABM';
-import Historial from '../PAC/Historial'; // 👈 Importación agregada del componente Historial
+import Historial from '../PAC/Historial';
+import Pendientes from '../PAC/Pendientes';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  // Declaración de la variable isLoading
   const [isLoading, setIsLoading] = useState(false);
 
-  // Inicialización segura del usuario desde localStorage
+  // 1. Cargar datos del Usuario
   const [usuario, setUsuario] = useState(() => {
     const userLocal = JSON.parse(localStorage.getItem('tupi_user')) || JSON.parse(localStorage.getItem('usuario'));
     return {
+      usuario_id: userLocal?.usuario_id || userLocal?.id || null,
       nombre: userLocal?.nombre || 'Usuario',
       apellido: userLocal?.apellido || '',
       rol: userLocal?.rol || 'Operador',
-      dependencia: userLocal?.dependencia || 'UNNE'
+      tipo_usuario_id: parseInt(userLocal?.tipo_usuario_id, 10) || null,
+      dependencia: userLocal?.dependencia || 'Rectorado UNNE'
     };
   });
 
-  // Inicialización flexible de permisos/entornos para evitar pantallas vacías
+  // 2. Cargar Entorno y Permisos del LocalStorage de forma unificada
   const [entorno, setEntorno] = useState(() => {
     try {
       const permisosLocal = JSON.parse(localStorage.getItem('tupi_permisos')) || JSON.parse(localStorage.getItem('permisos'));
 
       if (Array.isArray(permisosLocal) && permisosLocal.length > 0) {
-        // Caso 1: Estructura de entornos relacionales (Backend UNNE)
+        // Caso 1: Estructura de entornos relacionales devuelta por authController
         if (permisosLocal[0] && typeof permisosLocal[0] === 'object' && permisosLocal[0].permisos) {
           return {
-            facultad: permisosLocal[0].facultad_nombre || 'Rectorado UNNE',
-            rol: permisosLocal[0].rol_nombre || 'Operador',
+            facultad: permisosLocal[0].facultad_nombre || usuario.dependencia,
+            rol: permisosLocal[0].rol_nombre || usuario.rol,
             permisos: permisosLocal[0].permisos || []
           };
         }
         
-        // Caso 2: Array plano de strings ['compras', 'usuarios', ...]
+        // Caso 2: Array plano de slugs de permisos ['compras', 'usuarios', ...]
         if (typeof permisosLocal[0] === 'string') {
           return {
-            facultad: 'Rectorado UNNE',
-            rol: 'Administrador',
+            facultad: usuario.dependencia,
+            rol: usuario.rol,
             permisos: permisosLocal
           };
         }
@@ -63,31 +67,50 @@ const Dashboard = () => {
       console.error("Error al leer permisos en Dashboard:", err);
     }
 
-    // Respaldo de desarrollo por defecto (Asegura la visibilidad de todos los módulos)
+    // Respaldo de desarrollo
     return { 
-      facultad: 'Rectorado UNNE', 
-      rol: 'Administrador', 
-      permisos: ['compras', 'usuarios', 'expedientes', 'auditoria', 'configuracion'] 
+      facultad: usuario.dependencia, 
+      rol: usuario.rol, 
+      permisos: [] 
     };
   });
 
+  // 3. Helper flexible para verificar acceso a Slugs o Módulos
+  const tieneAcceso = (slugPermiso) => {
+    if (!Array.isArray(entorno.permisos)) return false;
+    // Si es SuperAdmin (tipo_usuario_id = 1), tiene acceso total
+    if (usuario.tipo_usuario_id === 1) return true;
+    return entorno.permisos.includes(slugPermiso);
+  };
+
+  // 4. Validación robusta para Administradores / Evaluadores (SuperAdmin: 1, Administrador: 3)
+  const esAdministrador = 
+    usuario.tipo_usuario_id === 1 || 
+    usuario.tipo_usuario_id === 3 || 
+    tieneAcceso('evaluar-solicitudes') ||
+    tieneAcceso('pendientes') ||
+    tieneAcceso('aprobar-solicitudes') ||
+    usuario.rol?.toLowerCase().includes('admin') || 
+    entorno.rol?.toLowerCase().includes('admin');
+
+  // Permitir módulo de Compras si el usuario tiene algún permiso relevante o rol 1, 2 o 3
+  const puedeVerCompras = 
+    [1, 2, 3].includes(usuario.tipo_usuario_id) || 
+    tieneAcceso('compras') || 
+    tieneAcceso('plan-compras') || 
+    tieneAcceso('crear-solicitud') ||
+    tieneAcceso('historial');
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Control individual de los submenús dinámicos
   const [openDropdowns, setOpenDropdowns] = useState({
-    compras: false,
+    compras: true, // Abierto por defecto para facil navegación
     correlatos: false,
     usuarios: false,
     expedientes: false
   });
 
-  // Estado de control de navegación interna
   const [currentSection, setCurrentSection] = useState('panel');
-
-  // Helper para comprobar si el rol tiene asignado el permiso
-  const tieneAcceso = (slugPermiso) => {
-    return entorno.permisos.includes(slugPermiso);
-  };
 
   const toggleDropdown = (key) => {
     setOpenDropdowns(prev => ({
@@ -118,7 +141,7 @@ const Dashboard = () => {
   return (
     <div className="dashboard-layout content-section-fade">
       
-      {/* CAPA DE CAPTURA PARA MÓVIL (BACKDROP BLUR) */}
+      {/* CAPA DE CAPTURA PARA MÓVIL */}
       <div 
         className={`sidebar-overlay ${isMobileMenuOpen ? 'visible' : ''}`}
         onClick={() => setIsMobileMenuOpen(false)}
@@ -141,8 +164,77 @@ const Dashboard = () => {
         <div className="sidebar-menu-wrapper">
           <span className="menu-category">Módulos Core</span>
 
-          {/* ACCESO DINÁMICO: GESTIÓN DE USUARIOS */}
-          {tieneAcceso('usuarios') && (
+          {/* MÓDULO: PLANES DE COMPRAS (PAC) */}
+          {puedeVerCompras && (
+            <div>
+              <button 
+                className="sidebar-dropdown-toggle"
+                onClick={() => toggleDropdown('compras')}
+              >
+                <div className="sidebar-item-content">
+                  <FileSpreadsheet size={16} />
+                  <span>Planes de Compras</span>
+                </div>
+                <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.compras ? 'rotated' : ''}`} />
+              </button>
+              <ul className={`sidebar-submenu ${openDropdowns.compras ? 'open' : ''}`}>
+                <div className="submenu-inner">
+                  {/* Nueva Solicitud (Permitido para tipos 1, 2 y 3) */}
+                  <li>
+                    <a 
+                      href="#nueva-compra" 
+                      className={`sidebar-subitem ${currentSection === 'compras-nueva' ? 'active' : ''}`}
+                      onClick={(e) => { 
+                        e.preventDefault(); 
+                        setCurrentSection('compras-nueva'); 
+                        setIsMobileMenuOpen(false); 
+                      }}
+                    >
+                      <PlusCircle size={12} />
+                      <span>Nueva Solicitud</span>
+                    </a>
+                  </li>
+
+                  {/* Ver Historial (Permitido para tipos 1, 2 y 3) */}
+                  <li>
+                    <a 
+                      href="#historial-compras" 
+                      className={`sidebar-subitem ${currentSection === 'compras-historial' ? 'active' : ''}`}
+                      onClick={(e) => { 
+                        e.preventDefault(); 
+                        setCurrentSection('compras-historial'); 
+                        setIsMobileMenuOpen(false); 
+                      }}
+                    >
+                      <History size={12} />
+                      <span>Ver Historial</span>
+                    </a>
+                  </li>
+
+                  {/* PENDIENTES: SÓLO ADMINISTRADORES Y SUPERADMINS (Tipos 1 y 3) */}
+                  {esAdministrador && usuario.tipo_usuario_id !== 2 && (
+                    <li>
+                      <a 
+                        href="#pendientes-compras" 
+                        className={`sidebar-subitem ${currentSection === 'compras-pendientes' ? 'active' : ''}`}
+                        onClick={(e) => { 
+                          e.preventDefault(); 
+                          setCurrentSection('compras-pendientes'); 
+                          setIsMobileMenuOpen(false); 
+                        }}
+                      >
+                        <Clock size={12} />
+                        <span>Pendientes</span>
+                      </a>
+                    </li>
+                  )}
+                </div>
+              </ul>
+            </div>
+          )}
+
+          {/* MÓDULO: GESTIÓN DE USUARIOS (Solo SuperAdmin o con permiso usuarios) */}
+          {(tieneAcceso('usuarios') || usuario.tipo_usuario_id === 1) && (
             <div>
               <button 
                 className="sidebar-dropdown-toggle"
@@ -181,56 +273,8 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* ACCESO DINÁMICO: PLANES DE COMPRAS */}
-          {tieneAcceso('compras') && (
-            <div>
-              <button 
-                className="sidebar-dropdown-toggle"
-                onClick={() => toggleDropdown('compras')}
-              >
-                <div className="sidebar-item-content">
-                  <FileSpreadsheet size={16} />
-                  <span>Planes de Compras</span>
-                </div>
-                <ChevronDown size={14} className={`dropdown-chevron ${openDropdowns.compras ? 'rotated' : ''}`} />
-              </button>
-              <ul className={`sidebar-submenu ${openDropdowns.compras ? 'open' : ''}`}>
-                <div className="submenu-inner">
-                  <li>
-                    <a 
-                      href="#nueva-compra" 
-                      className={`sidebar-subitem ${currentSection === 'compras-nueva' ? 'active' : ''}`}
-                      onClick={(e) => { 
-                        e.preventDefault(); 
-                        setCurrentSection('compras-nueva'); 
-                        setIsMobileMenuOpen(false); 
-                      }}
-                    >
-                      <PlusCircle size={12} />
-                      <span>Nueva Solicitud</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a 
-                      href="#historial-compras" 
-                      className={`sidebar-subitem ${currentSection === 'compras-historial' ? 'active' : ''}`}
-                      onClick={(e) => { 
-                        e.preventDefault(); 
-                        setCurrentSection('compras-historial'); 
-                        setIsMobileMenuOpen(false); 
-                      }}
-                    >
-                      <History size={12} />
-                      <span>Ver Historial</span>
-                    </a>
-                  </li>
-                </div>
-              </ul>
-            </div>
-          )}
-
-          {/* ACCESO DINÁMICO: GESTIÓN DE EXPEDIENTES */}
-          {tieneAcceso('expedientes') && (
+          {/* MÓDULO: GESTIÓN DE EXPEDIENTES */}
+          {(tieneAcceso('expedientes') || usuario.tipo_usuario_id === 1) && (
             <div>
               <button 
                 className="sidebar-dropdown-toggle"
@@ -255,23 +299,13 @@ const Dashboard = () => {
                       <span>Ver / Analizar Expedientes</span>
                     </a>
                   </li>
-                  <li>
-                    <a 
-                      href="#expedientes-controles"
-                      className={`sidebar-subitem ${currentSection === 'expedientes-controles' ? 'active' : ''}`}
-                      onClick={(e) => { e.preventDefault(); setCurrentSection('expedientes-controles'); setIsMobileMenuOpen(false); }}
-                    >
-                      <ListFilter size={12} />
-                      <span>Controles</span>
-                    </a>
-                  </li>
                 </div>
               </ul>
             </div>
           )}
 
-          {/* ACCESO DINÁMICO: AUDITORÍA */}
-          {tieneAcceso('auditoria') && (
+          {/* AUDITORÍA */}
+          {(tieneAcceso('auditoria') || usuario.tipo_usuario_id === 1) && (
             <>
               <span className="menu-category">Auditoría</span>
               <button className="sidebar-item">
@@ -283,8 +317,8 @@ const Dashboard = () => {
             </>
           )}
 
-          {/* ACCESO DINÁMICO: CONFIGURACIÓN */}
-          {tieneAcceso('configuracion') && (
+          {/* CONFIGURACIÓN */}
+          {(tieneAcceso('configuracion') || usuario.tipo_usuario_id === 1) && (
             <>
               <span className="menu-category">Configuración</span>
               <button className="sidebar-item">
@@ -345,7 +379,9 @@ const Dashboard = () => {
             {currentSection === 'panel' && (
               <div className="content-section-fade">
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Panel Principal</h3>
-                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>Seleccione un módulo del menú lateral para comenzar a operar.</p>
+                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                  Seleccione un módulo del menú lateral para comenzar a operar.
+                </p>
               </div>
             )}
 
@@ -353,9 +389,23 @@ const Dashboard = () => {
               <PlanComprasABM />
             )}
 
-            {/* 👇 RENDERIZADO DEL COMPONENTE HISTORIAL 👇 */}
             {currentSection === 'compras-historial' && (
               <Historial />
+            )}
+
+            {/* RENDERIZADO PROTEGIDO DEL COMPONENTE PENDIENTES */}
+            {currentSection === 'compras-pendientes' && (
+              esAdministrador && usuario.tipo_usuario_id !== 2 ? (
+                <Pendientes />
+              ) : (
+                <div className="content-section-fade text-center py-5">
+                  <ShieldAlert size={48} className="text-danger mb-3" style={{ margin: '0 auto' }} />
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Acceso Restringido</h3>
+                  <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                    No posee los permisos suficientes para acceder al módulo de aprobación de solicitudes.
+                  </p>
+                </div>
+              )
             )}
 
             {(currentSection === 'usuarios-ver' || currentSection === 'usuarios-crear') && (

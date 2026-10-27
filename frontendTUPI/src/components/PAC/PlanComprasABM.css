@@ -1,178 +1,234 @@
-/* ==========================================
-   ESTILOS GENERALES DEL CONTENEDOR DE COMPRAS
-   ========================================== */
+/* ==========================================================================
+   ECOSISTEMA TUPI UNNE - PLAN ANUAL DE COMPRAS (PAC)
+   Hoja de Estilos Principal Consolidada (PlanComprasABM.css)
+   ========================================================================== */
 
-.abm-container {
+/* Contenedor Principal */
+.abm-container,
+.historial-container,
+.pendientes-container,
+.detalle-solicitud-wrapper {
   padding: 1.5rem;
   max-width: 1400px;
   margin: 0 auto;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  color: #0f172a; /* Texto oscuro visible por defecto */
 }
 
-.abm-header {
+/* ==========================================================================
+   TÍTULOS Y ENCABEZADOS DE PÁGINA Y TARJETAS
+   ========================================================================== */
+
+.abm-header,
+.historial-header,
+.pendientes-header {
+  margin-bottom: 1.5rem;
+}
+
+.abm-title,
+.historial-title,
+.pendientes-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.abm-subtitle,
+.historial-subtitle,
+.pendientes-subtitle {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #64748b;
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   TARJETAS PRINCIPALES Y CONTENEDORES
+   ========================================================================== */
+
+.abm-card,
+.historial-card,
+.pendientes-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.abm-card .card-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 1.1rem 1.25rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
 }
 
-.abm-title {
-  font-size: 1.75rem;
+.abm-card .card-title {
+  font-size: 1.05rem;
   font-weight: 700;
-  color: #0f172a !important;
-  margin: 0;
-}
-
-.abm-subtitle {
-  font-size: 0.95rem;
-  color: #475569 !important;
-  margin-top: 0.25rem;
-}
-
-/* Tarjeta contenedora de secciones */
-.abm-card {
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #cbd5e1;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
   color: #0f172a;
-}
-
-.card-header {
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.card-title {
-  font-size: 1.15rem;
-  font-weight: 600;
-  color: #0f172a !important;
   margin: 0;
-}
-
-/* ==========================================
-   FORMULARIOS, INPUTS Y SELECTS (CORREGIDO)
-   ========================================== */
-
-.form-group {
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  align-items: center;
+  gap: 0.55rem;
+  letter-spacing: -0.01em;
 }
 
+/* Indicador de Carrito en el Catálogo */
+.badge-cart-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: #e0f2fe;
+  color: #0369a1;
+  font-size: 0.825rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid #bae6fd;
+}
+
+/* ==========================================================================
+   CONTROLES, INPUTS, DROPDOWNS Y FILTROS
+   ========================================================================== */
+
+.filter-item label,
+.filter-group label,
 .form-group label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #334155 !important;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 0.45rem;
+  display: block;
 }
 
-/* Fuerza el color visible del texto en TODOS los inputs */
-.form-control, 
-input[type="text"], 
-input[type="number"], 
-select, 
-textarea {
+.form-control,
+.search-input,
+.abm-card select.form-control,
+.filters-bar-wrapper select,
+.filters-row select {
   width: 100%;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.9rem;
-  border: 1px solid #94a3b8;
-  border-radius: 6px;
-  background-color: #ffffff !important;
-  color: #0f172a !important; /* Texto negro/gris muy oscuro siempre visible */
+  height: 38px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.875rem;
   font-weight: 500;
+  color: #1e293b;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-.form-control::placeholder,
-input::placeholder {
-  color: #94a3b8 !important; /* Placeholder visible pero suave */
-  opacity: 1;
+.form-control:focus,
+.search-input:focus,
+.filters-bar-wrapper select:focus,
+.filters-row select:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+  background-color: #ffffff;
 }
 
-.form-control:focus, 
-input:focus, 
-select:focus {
-  outline: none;
-  border-color: #0284c7 !important;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2) !important;
-  color: #0f172a !important;
+select.form-control,
+.filters-bar-wrapper select,
+.filters-row select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px;
+  padding-right: 2.25rem;
+  cursor: pointer;
+}
+
+.search-input-wrapper,
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.search-input-wrapper .search-icon,
+.search-box .search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: #0284c7;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.search-input-wrapper .search-input,
+.search-box .search-input {
+  padding-left: 2.35rem;
+}
+
+.form-control::placeholder,
+.search-input::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.form-control:disabled,
+.form-control[readonly],
+.form-control.bg-readonly {
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #64748b;
+  cursor: not-allowed;
 }
 
 .form-control-sm {
-  padding: 0.3rem 0.5rem;
-  font-size: 0.85rem;
+  height: 32px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.825rem;
+  border-radius: 5px;
 }
 
-/* Options dentro de los Selects */
-select option {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-}
-
-/* ==========================================
-   BARRA DE FILTROS AVANZADOS
-   ========================================== */
-
-.filters-bar-wrapper {
+/* Barrenas de Filtros */
+.filters-bar-wrapper,
+.filters-row {
   display: flex;
-  gap: 1rem;
+  gap: 1.25rem;
+  padding: 1.15rem 1.25rem;
   background-color: #f8fafc;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  margin-bottom: 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 8px 8px 0 0;
+  flex-wrap: wrap;
   align-items: flex-end;
 }
 
 .filter-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
   flex: 1;
+  min-width: 180px;
 }
 
-.filter-item.flex-2 {
+.filter-item.flex-2,
+.filter-group.flex-2 {
   flex: 2;
+  min-width: 280px;
 }
 
-.filter-item label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #334155 !important;
-}
-
-/* Buscador con ícono */
-.search-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.search-icon {
-  position: absolute;
-  left: 10px;
-  color: #64748b;
-  pointer-events: none;
-}
-
-.search-input {
-  padding-left: 35px !important;
-}
-
-/* ==========================================
-   TABLAS DE DATOS Y VISIBILIDAD DE CELDAS
-   ========================================== */
+/* ==========================================================================
+   TABLAS Y CATÁLOGOS DE BIENES
+   ========================================================================== */
 
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background-color: #ffffff;
 }
 
 .catalog-table-height {
@@ -183,262 +239,560 @@ select option {
 .abm-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   text-align: left;
-  color: #0f172a !important;
 }
 
 .abm-table th {
   background-color: #f1f5f9;
-  color: #1e293b !important;
+  color: #475569;
+  font-size: 0.775rem;
   font-weight: 700;
-  padding: 0.75rem 1rem;
-  border-bottom: 2px solid #cbd5e1;
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 .abm-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
-  color: #0f172a !important;
-}
-
-.abm-table td strong {
-  color: #0f172a !important;
+  color: #334155;
 }
 
 .abm-table tbody tr:hover {
   background-color: #f8fafc;
 }
 
-/* Fila de ítem seleccionado */
-.table-row-selected {
-  background-color: #f0fdf4 !important;
+.abm-table tr.table-row-selected {
+  background-color: #f0f9ff;
 }
 
-/* Checkbox personalizado */
 .checkbox-custom {
   width: 18px;
   height: 18px;
-  cursor: pointer;
   accent-color: #0284c7;
+  cursor: pointer;
+  border-radius: 4px;
 }
 
-/* ==========================================
-   BADGES DE ESTADO E INDICADORES
-   ========================================== */
-
-.badge-cart-indicator {
-  background-color: #e0f2fe;
-  color: #0369a1 !important;
-  padding: 0.4rem 0.85rem;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
+.badge-trimestre {
+  background-color: #e2e8f0;
+  color: #334155;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
 }
 
 .badge-status {
-  padding: 0.2rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.725rem;
+  font-weight: 700;
+  border-radius: 4px;
   background-color: #f1f5f9;
-  color: #475569 !important;
-  display: inline-block;
+  color: #64748b;
 }
 
 .badge-status.added {
   background-color: #dcfce7;
-  color: #15803d !important;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+/* ==========================================================================
+   METADATOS Y TARJETAS DE HISTORIAL / PENDIENTES / DETALLE
+   ========================================================================== */
+
+.solicitud-item-card,
+.pendientes-item-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  transition: all 0.2s ease-in-out;
+}
+
+.solicitud-item-card:hover,
+.pendientes-item-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.solicitud-header-info {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.solicitud-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1.25rem 1rem;
+  align-items: flex-start;
+  margin-top: 0.5rem;
+}
+
+.solicitud-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.solicitud-meta-label {
+  font-size: 0.725rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.solicitud-meta-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.inline-icon {
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+.autorizante-tag {
+  color: #0369a1;
+  background-color: #e0f2fe;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
-/* Botón de acción eliminar */
-.btn-action-icon {
-  background: none;
-  border: none;
-  padding: 0.4rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s;
+.badge-estado {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.725rem;
+  font-weight: 700;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
 }
 
-.btn-action-icon.delete {
-  color: #ef4444 !important;
+.badge-estado.pendiente {
+  background-color: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fcd34d;
 }
 
-.btn-action-icon.delete:hover {
+.badge-estado.aprobada {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.badge-estado.rechazada {
   background-color: #fee2e2;
-  color: #dc2626 !important;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
 }
 
-/* ==========================================
-   RESUMEN Y BARRA INFERIOR DE ENVÍO
-   ========================================== */
+.badge-estado.borrador {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+/* ==========================================================================
+   ESTILOS DE LA VISTA DETALLE SOLICITUD Y EVALUACIÓN
+   ========================================================================== */
+
+/* Banner de Motivo de Rechazo / Observación */
+.motivo-rechazo-banner {
+  background-color: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-left: 5px solid #ef4444;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  color: #991b1b;
+  box-shadow: 0 1px 2px rgba(239, 68, 68, 0.05);
+}
+
+.motivo-rechazo-banner .banner-icon {
+  color: #ef4444;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.motivo-rechazo-banner strong {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #7f1d1d;
+  display: block;
+}
+
+.motivo-rechazo-banner p {
+  font-size: 0.875rem;
+  color: #991b1b;
+  line-height: 1.45;
+}
+
+/* Resumen del Monto Total en DetalleSolicitud.jsx */
+.detalle-monto-resumen {
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 0.75rem;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0 0 12px 12px;
+  padding: 1rem 1.25rem;
+}
+
+.detalle-monto-resumen span {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.detalle-monto-resumen strong {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0284c7;
+  letter-spacing: -0.02em;
+}
+
+/* Grid Layout de Inspección (Tabla + Panel Lateral) */
+.detalle-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.detalle-tabla-container {
+  min-width: 0;
+}
+
+.detalle-panel-evaluacion {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.detalle-panel-evaluacion .panel-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.35rem;
+}
+
+.detalle-panel-evaluacion .panel-subtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 1.25rem;
+  line-height: 1.35;
+}
+
+.panel-buttons-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.panel-buttons-stack .btn-block {
+  width: 100%;
+}
+
+.panel-rechazo-box {
+  background-color: #fff5f5;
+  border: 1px solid #fed7d7;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+/* ==========================================================================
+   PIE DE TARJETA (MONTO ESTIMADO + BOTONES EN LISTAS)
+   ========================================================================== */
+
+.solicitud-footer-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.solicitud-monto-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.solicitud-monto-label {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.solicitud-monto-valor {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0284c7;
+  letter-spacing: -0.01em;
+}
+
+.solicitud-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
 
 .solicitud-summary-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 1.15rem 1.25rem;
   background-color: #f8fafc;
-  padding: 1.25rem;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  border-top: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 1.25rem;
 }
 
 .summary-info {
   display: flex;
   align-items: center;
-  gap: 2.5rem;
-  font-size: 0.95rem;
-  color: #0f172a !important;
+  gap: 2rem;
+  font-size: 0.925rem;
+  color: #475569;
 }
 
-.summary-total {
-  display: flex;
-  flex-direction: column;
-}
-
-.total-amount {
-  font-size: 1.5rem;
+.summary-info .total-amount {
+  font-size: 1.35rem;
   font-weight: 800;
-  color: #0284c7 !important;
+  color: #0284c7;
+  letter-spacing: -0.01em;
+  margin-left: 0.5rem;
 }
 
-/* ==========================================
-   BOTONES
-   ========================================== */
+.summary-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
 
-.btn {
-  padding: 0.6rem 1.2rem;
+/* ==========================================================================
+   BOTONES CON ESTILO TUPI UNNE
+   ========================================================================== */
+
+.btn-tupi {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  border-radius: 6px;
+  border-radius: 7px;
+  border: 1px solid transparent;
   cursor: pointer;
-  border: none;
-  transition: background-color 0.2s;
+  transition: all 0.15s ease-in-out;
+  line-height: 1;
 }
 
-.btn-primary {
+.btn-tupi:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-tupi-primario {
   background-color: #0284c7;
-  color: #ffffff !important;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2);
 }
 
-.btn-primary:hover:not(:disabled) {
+.btn-tupi-primario:hover:not(:disabled) {
   background-color: #0369a1;
+  box-shadow: 0 2px 5px rgba(2, 132, 199, 0.3);
 }
 
-.btn-primary:disabled {
-  background-color: #94a3b8;
-  cursor: not-allowed;
-  opacity: 0.7;
+.btn-tupi-secundario {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  color: #334155;
 }
 
-/* ==========================================
-   TEXTOS Y UTILIDADES
-   ========================================== */
-
-.text-gray {
-  color: #64748b !important;
+.btn-tupi-secundario:hover:not(:disabled) {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
 }
 
-.font-bold {
-  font-weight: 700 !important;
+.btn-tupi-descarga {
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #1e293b;
 }
 
-.text-primary {
-  color: #0284c7 !important;
+.btn-tupi-descarga:hover:not(:disabled) {
+  background-color: #e2e8f0;
+  color: #0f172a;
 }
 
-.text-muted {
-  color: #64748b !important;
-}
-
-.bg-readonly {
-  background-color: #f1f5f9 !important;
-  color: #334155 !important;
-  font-weight: 600;
-  cursor: not-allowed;
-  border-color: #cbd5e1 !important;
-}
-
-/* ==========================================
-   POP-UP FLOTANTE (TOAST NOTIFICATIONS)
-   ========================================== */
-
-.tupi-toast-popup {
-  position: fixed;
-  top: 25px;
-  right: 25px;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.9rem 1.2rem;
-  border-radius: 10px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
-  font-size: 0.9rem;
-  font-weight: 600;
-  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  min-width: 300px;
-  max-width: 450px;
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.tupi-toast-popup.success {
-  background-color: #065f46;
+.btn-tupi-peligro {
+  background-color: #ef4444;
   color: #ffffff;
-  border-left: 5px solid #10b981;
+  box-shadow: 0 1px 2px rgba(239, 68, 68, 0.2);
 }
 
-.tupi-toast-popup.error {
-  background-color: #991b1b;
-  color: #ffffff;
-  border-left: 5px solid #ef4444;
+.btn-tupi-peligro:hover:not(:disabled) {
+  background-color: #dc2626;
+  box-shadow: 0 2px 5px rgba(239, 68, 68, 0.3);
 }
 
-.toast-popup-content {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-.toast-close-btn {
+.btn-action-icon {
   background: none;
   border: none;
-  color: #ffffff;
-  opacity: 0.7;
   cursor: pointer;
-  padding: 2px;
+  padding: 0.4rem;
+  border-radius: 6px;
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-action-icon.delete:hover {
+  color: #ef4444;
+  background-color: #fee2e2;
+}
+
+/* Menú Desplegable de Exportación */
+.download-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.download-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 0.35rem;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  min-width: 180px;
+  overflow: hidden;
+}
+
+.download-menu-item {
   display: flex;
   align-items: center;
-  border-radius: 4px;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #334155;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
-.toast-close-btn:hover {
-  opacity: 1;
-  background-color: rgba(255, 255, 255, 0.15);
+.download-menu-item:hover {
+  background-color: #f1f5f9;
 }
 
-/* Animación de rotación del Spinner */
+.download-menu-item .text-pdf {
+  color: #ef4444;
+}
+
+.download-menu-item .text-excel {
+  color: #10b981;
+}
+
+/* Spinner */
+.spinner-rotation {
+  animation: spin 1s linear infinite;
+}
+
+/* ==========================================================================
+   ESTILOS ESPECÍFICOS PARA BOTONES DE EXPORTACIÓN (PDF Y EXCEL)
+   ========================================================================== */
+
+/* Íconos y texto dentro del menú desplegable */
+.download-menu-item .text-pdf {
+  color: #dc2626;
+}
+
+.download-menu-item .text-excel {
+  color: #16a34a;
+}
+
+/* Hover distintivo en el menú desplegable */
+.download-menu-item:hover:has(.text-pdf) {
+  background-color: #fef2f2;
+}
+
+.download-menu-item:hover:has(.text-excel) {
+  background-color: #f0fdf4;
+}
+
+/* Botones directos de exportación (si se usan fuera del menú desplegable) */
+.btn-tupi-pdf {
+  background-color: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.btn-tupi-pdf:hover:not(:disabled) {
+  background-color: #fee2e2;
+  border-color: #f87171;
+  color: #7f1d1d;
+}
+
+.btn-tupi-excel {
+  background-color: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.btn-tupi-excel:hover:not(:disabled) {
+  background-color: #dcfce7;
+  border-color: #4ade80;
+  color: #14532d;
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
@@ -448,58 +802,34 @@ select option {
   }
 }
 
-.spinner-rotation {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.spinner-rotation {
-  animation: spin 1s linear infinite;
-}
-
-/* ==========================================
-   RESPONSIVIDAD Y MEDIA QUERIES
-   ========================================== */
+/* ==========================================================================
+   RESPONSIVIDAD Y AJUSTES MÓVILES
+   ========================================================================== */
 
 @media (max-width: 992px) {
-  .filters-bar-wrapper {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filter-item.flex-2 {
-    flex: 1;
+  .detalle-grid-layout {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .abm-container {
-    padding: 1rem;
-  }
-
-  .abm-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
+  .solicitud-footer-bar,
   .solicitud-summary-bar {
     flex-direction: column;
-    gap: 1rem;
     align-items: stretch;
   }
 
-  .summary-info {
+  .solicitud-actions-group,
+  .summary-actions-group {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .summary-actions-group .btn-tupi {
+    width: 100%;
+  }
+
+  .filters-bar-wrapper {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
   }
 }

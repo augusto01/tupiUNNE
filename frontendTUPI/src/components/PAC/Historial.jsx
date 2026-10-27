@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
-  History, 
   FileEdit, 
-  Send, 
   Trash2, 
-  ChevronDown, 
-  ChevronUp, 
+  Eye,
   Clock, 
   CheckCircle2, 
   XCircle, 
   AlertCircle, 
-  Save, 
   FileText,
   Search,
   Loader2,
-  X
+  X,
+  User,
+  Building2,
+  Calendar,
+  FileSpreadsheet,
+  ShieldCheck
 } from 'lucide-react';
+import DetalleSolicitud from './DetalleSolicitud';
+import PlanComprasABM from './PlanComprasABM';
 import './Historial.css';
 
 const Historial = () => {
@@ -27,15 +30,12 @@ const Historial = () => {
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [busqueda, setBusqueda] = useState('');
 
-  const [expandedId, setExpandedId] = useState(null);
-  const [editingId, setEditingId] = useState(null);
-  const [draftItems, setDraftItems] = useState([]);
+  const [solicitudAInspeccionar, setSolicitudAInspeccionar] = useState(null);
+  const [solicitudAEditar, setSolicitudAEditar] = useState(null);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingId, setProcessingId] = useState(null);
-  const [processingAction, setProcessingAction] = useState(null);
 
-  // Estado para Pop-up Flotante
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const mostrarPopUp = (message, type = 'success') => {
@@ -48,7 +48,7 @@ const Historial = () => {
   const cargarHistorial = async () => {
     setLoading(true);
     try {
-      const res = await fetchAuth('/plan-compras/solicitudes-historial');
+      const res = await fetchAuth('/plan-compras/solicitudes-pendientes');
       if (res.ok) {
         const data = await res.json();
         setSolicitudes(Array.isArray(data) ? data : []);
@@ -70,98 +70,13 @@ const Historial = () => {
     }
   }, [token]);
 
-  const toggleExpand = (id) => {
-    if (editingId === id || isProcessing) return;
-    setExpandedId(expandedId === id ? null : id);
-  };
-
-  const handleStartEdit = (solicitud) => {
-    if (isProcessing) return;
-    setEditingId(solicitud.id);
-    setExpandedId(solicitud.id);
-    setDraftItems(JSON.parse(JSON.stringify(solicitud.renglones || [])));
-  };
-
-  const handleCancelEdit = () => {
-    if (isProcessing) return;
-    setEditingId(null);
-    setDraftItems([]);
-  };
-
-  const handleDraftChange = (renglonId, campo, valor) => {
-    if (isProcessing) return;
-    setDraftItems((prev) =>
-      prev.map((item) => {
-        if (item.id === renglonId || item.bien_id === renglonId) {
-          if (campo === 'cantidad') {
-            const cant = Math.max(1, parseInt(valor, 10) || 1);
-            return { ...item, cantidad: cant, subtotal: cant * item.precio_unitario };
-          }
-          if (campo === 'observacion') {
-            return { ...item, observacion: valor };
-          }
-        }
-        return item;
-      })
-    );
-  };
-
-  const handleSaveOrSubmit = async (solicitudId, nuevoEstado) => {
-    if (isProcessing) return;
-
-    setIsProcessing(true);
-    setProcessingId(solicitudId);
-    setProcessingAction(nuevoEstado === 'PENDIENTE' ? 'SUBMIT' : 'SAVE_BORRADOR');
-
-    const payload = {
-      estado: nuevoEstado,
-      renglones: draftItems.map((item) => ({
-        id: item.id,
-        bien_id: item.bien_id,
-        cantidad: item.cantidad,
-        precio_unitario: item.precio_unitario,
-        observacion: item.observacion || ''
-      }))
-    };
-
-    try {
-      const res = await fetchAuth(`/plan-compras/solicitudes/${solicitudId}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        mostrarPopUp(
-          nuevoEstado === 'PENDIENTE'
-            ? '¡Solicitud enviada exitosamente! Ahora se encuentra a la espera de aprobación.'
-            : 'Borrador actualizado correctamente.',
-          'success'
-        );
-        setEditingId(null);
-        setDraftItems([]);
-        cargarHistorial();
-      } else {
-        mostrarPopUp(data.error || 'Ocurrió un error al actualizar la solicitud.', 'error');
-      }
-    } catch (err) {
-      console.error('Error al guardar solicitud:', err);
-      mostrarPopUp('Error al conectar con el servidor.', 'error');
-    } finally {
-      setIsProcessing(false);
-      setProcessingId(null);
-      setProcessingAction(null);
-    }
-  };
-
-  const handleDeleteBorrador = async (solicitudId) => {
+  const handleDeleteBorrador = async (solicitudId, e) => {
+    if (e) e.stopPropagation();
     if (isProcessing) return;
     if (!window.confirm('¿Está seguro de que desea eliminar este borrador?')) return;
 
     setIsProcessing(true);
     setProcessingId(solicitudId);
-    setProcessingAction('DELETE');
 
     try {
       const res = await fetchAuth(`/plan-compras/solicitudes/${solicitudId}`, {
@@ -180,14 +95,88 @@ const Historial = () => {
     } finally {
       setIsProcessing(false);
       setProcessingId(null);
-      setProcessingAction(null);
     }
   };
+
+  const handleDescargarPDF = async (solicitudId) => {
+    try {
+      const res = await fetchAuth(`/plan-compras/solicitudes/${solicitudId}/pdf`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Solicitud_Autorizada_${solicitudId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        mostrarPopUp('No se pudo generar el documento PDF.', 'error');
+      }
+    } catch (err) {
+      mostrarPopUp('Error de conexión al descargar el PDF.', 'error');
+    }
+  };
+
+  const handleDescargarExcel = async (solicitudId) => {
+    try {
+      const res = await fetchAuth(`/plan-compras/solicitudes/${solicitudId}/excel`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Solicitud_${solicitudId}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        mostrarPopUp('No se pudo generar la planilla Excel.', 'error');
+      }
+    } catch (err) {
+      mostrarPopUp('Error de conexión al descargar el Excel.', 'error');
+    }
+  };
+
+  if (solicitudAEditar) {
+    return (
+      <PlanComprasABM
+        solicitudAEditar={solicitudAEditar}
+        onCancelarEdicion={() => setSolicitudAEditar(null)}
+        onGuardadoExitoso={() => {
+          setSolicitudAEditar(null);
+          cargarHistorial();
+        }}
+      />
+    );
+  }
+
+  if (solicitudAInspeccionar) {
+    return (
+      <div className="historial-container">
+        <DetalleSolicitud
+          solicitud={solicitudAInspeccionar}
+          esModoEvaluacion={false}
+          onVolver={() => setSolicitudAInspeccionar(null)}
+          onEditar={(sol) => {
+            setSolicitudAInspeccionar(null);
+            setSolicitudAEditar(sol);
+          }}
+          onDescargarPDF={handleDescargarPDF}
+          onDescargarExcel={handleDescargarExcel}
+        />
+      </div>
+    );
+  }
 
   const solicitudesFiltradas = solicitudes.filter((sol) => {
     const coincideEstado = filtroEstado === 'TODOS' || sol.estado === filtroEstado;
     const coincideBusqueda =
       sol.nro_convocatoria?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      sol.usuario_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      sol.usuario_apellido?.toLowerCase().includes(busqueda.toLowerCase()) ||
       String(sol.id).includes(busqueda);
     return coincideEstado && coincideBusqueda;
   });
@@ -195,71 +184,52 @@ const Historial = () => {
   const renderEstadoBadge = (estado) => {
     switch (estado) {
       case 'BORRADOR':
-        return (
-          <span className="badge-status-historial borrador">
-            <Clock size={13} /> Borrador
-          </span>
-        );
+        return <span className="badge-estado borrador">Borrador</span>;
       case 'PENDIENTE':
-        return (
-          <span className="badge-status-historial pendiente">
-            <AlertCircle size={13} /> Pendiente de Aprobación
-          </span>
-        );
+        return <span className="badge-estado pendiente">Pendiente</span>;
       case 'APROBADA':
-        return (
-          <span className="badge-status-historial aprobada">
-            <CheckCircle2 size={13} /> Aceptada
-          </span>
-        );
+        return <span className="badge-estado aprobada">Aprobada</span>;
       case 'RECHAZADA':
-        return (
-          <span className="badge-status-historial rechazada">
-            <XCircle size={13} /> Rechazada
-          </span>
-        );
+        return <span className="badge-estado rechazada">Rechazada</span>;
       default:
-        return <span className="badge-status-historial">{estado}</span>;
+        return <span className="badge-estado">{estado}</span>;
     }
   };
 
   return (
     <div className="historial-container">
-
-      {/* POP-UP FLOTANTE (TOAST) */}
       {toast.show && (
         <div className={`tupi-toast-popup ${toast.type}`}>
           <div className="toast-popup-content">
-            {toast.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+            {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
             <span>{toast.message}</span>
           </div>
           <button className="toast-close-btn" onClick={() => setToast({ ...toast, show: false })}>
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
       )}
 
       <div className="historial-header">
         <div>
-          <h1 className="historial-title">Historial de Solicitudes de Compras</h1>
+          <h1 className="historial-title">Historial de Solicitudes</h1>
           <p className="historial-subtitle">
-            Consulte el estado, modifique sus borradores o envíe requerimientos pendientes.
+            Consulte el estado, modifique borradores o corrija solicitudes devueltas para reenviarlas.
           </p>
         </div>
       </div>
 
-      {/* BARRA FILTROS */}
       <div className="historial-card mb-4">
         <div className="filters-row">
           <div className="filter-group flex-2">
             <label>Buscar Solicitud</label>
             <div className="search-box">
-              <Search size={16} className="search-icon" />
+              <Search size={15} className="search-icon" />
               <input
                 type="text"
                 disabled={isProcessing}
                 className="form-control search-input"
-                placeholder="Buscar por N° Convocatoria o ID..."
+                placeholder="Buscar por N° Convocatoria, ID o Solicitante..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
               />
@@ -277,244 +247,152 @@ const Historial = () => {
               <option value="TODOS">Todos los estados</option>
               <option value="BORRADOR">Borradores</option>
               <option value="PENDIENTE">Pendientes de Aprobación</option>
-              <option value="APROBADA">Aceptadas</option>
+              <option value="APROBADA">Aprobadas</option>
               <option value="RECHAZADA">Rechazadas</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* LISTADO */}
       <div className="historial-card">
         {loading ? (
           <div className="text-center py-5">
-            <div className="spinner-border text-primary" role="status"></div>
-            <p className="mt-2 text-muted">Cargando solicitudes...</p>
+            <Loader2 size={26} className="spinner-rotation text-primary mx-auto" />
+            <p className="mt-2 text-muted small">Cargando solicitudes...</p>
           </div>
         ) : solicitudesFiltradas.length === 0 ? (
           <div className="text-center py-5 text-muted">
-            <FileText size={40} className="mb-2 text-gray" />
-            <p>No se encontraron solicitudes registradas con los filtros seleccionados.</p>
+            <FileText size={36} className="mb-2 mx-auto text-gray" />
+            <p className="small">No se encontraron solicitudes con los filtros aplicados.</p>
           </div>
         ) : (
           <div className="solicitudes-list">
             {solicitudesFiltradas.map((sol) => {
-              const isExpanded = expandedId === sol.id;
-              const isEditing = editingId === sol.id;
-              const esBorrador = sol.estado === 'BORRADOR';
+              const esEditable = sol.estado === 'BORRADOR' || sol.estado === 'RECHAZADA';
               const estaProcesandoEsta = isProcessing && processingId === sol.id;
 
-              const listaRenglones = isEditing ? draftItems : sol.renglones || [];
-              const totalMonto = listaRenglones.reduce(
+              const totalMonto = (sol.renglones || sol.registros || []).reduce(
                 (acc, r) => acc + (parseFloat(r.precio_unitario) * parseInt(r.cantidad, 10) || 0),
                 0
               );
 
               return (
-                <div
-                  key={sol.id}
-                  className={`solicitud-item-card ${isExpanded ? 'expanded' : ''} ${
-                    isEditing ? 'editing' : ''
-                  }`}
-                >
-                  <div className="solicitud-main-row" onClick={() => toggleExpand(sol.id)}>
-                    <div className="solicitud-info">
-                      <div className="d-flex align-items-center gap-3">
-                        <span className="solicitud-id">Solicitud #{sol.id}</span>
-                        {renderEstadoBadge(sol.estado)}
-                      </div>
-                      <div className="solicitud-meta">
-                        <span><strong>Convocatoria:</strong> {sol.nro_convocatoria || 'S/N'}</span>
-                        <span>•</span>
-                        <span>
-                          <strong>Fecha:</strong>{' '}
-                          {sol.fecha_creacion
-                            ? new Date(sol.fecha_creacion).toLocaleDateString('es-AR')
-                            : 'N/A'}
+                <div key={sol.id} className="solicitud-item-card">
+                  {/* METADATOS Y ENCABEZADO */}
+                  <div className="solicitud-header-info">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>
+                        Solicitud #{sol.id}
+                      </strong>
+                      {renderEstadoBadge(sol.estado)}
+                    </div>
+
+                    <div className="solicitud-meta-grid">
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <User size={12} className="inline-icon" /> Solicitante
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.usuario_nombre ? `${sol.usuario_nombre} ${sol.usuario_apellido}` : 'Usuario Sistema'}
                         </span>
                       </div>
-                    </div>
 
-                    <div className="solicitud-actions-summary">
-                      <div className="solicitud-monto">
-                        <small>Total Estimado</small>
-                        <strong>${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <Building2 size={12} className="inline-icon" /> Dependencia
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.dependencia_nombre || 'Rectorado UNNE'}
+                        </span>
                       </div>
 
-                      <div className="btn-group-actions" onClick={(e) => e.stopPropagation()}>
-                        {esBorrador && !isEditing && (
-                          <>
-                            <button
-                              type="button"
-                              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
-                              disabled={isProcessing}
-                              onClick={() => handleStartEdit(sol)}
-                              title="Editar Borrador"
-                            >
-                              <FileEdit size={14} /> Editar
-                            </button>
-
-                            <button
-                              type="button"
-                              className="btn btn-outline-danger btn-sm d-flex align-items-center gap-1"
-                              disabled={isProcessing}
-                              onClick={() => handleDeleteBorrador(sol.id)}
-                              title="Eliminar Borrador"
-                            >
-                              {estaProcesandoEsta && processingAction === 'DELETE' ? (
-                                <Loader2 size={14} className="spinner-rotation" />
-                              ) : (
-                                <Trash2 size={14} />
-                              )}
-                            </button>
-                          </>
-                        )}
-                        <button type="button" className="btn-toggle-expand" disabled={isProcessing}>
-                          {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="solicitud-detail-body">
-                      <div className="detail-table-wrapper">
-                        <table className="historial-table">
-                          <thead>
-                            <tr>
-                              <th>Bien / Descripción</th>
-                              <th className="text-center" style={{ width: '100px' }}>Cantidad</th>
-                              <th className="text-right" style={{ width: '140px' }}>Precio Unit ($)</th>
-                              <th className="text-right" style={{ width: '140px' }}>Subtotal ($)</th>
-                              <th style={{ width: '300px' }}>Observación / Especificación</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {listaRenglones.length === 0 ? (
-                              <tr>
-                                <td colSpan="5" className="text-center py-3 text-muted">
-                                  Sin renglones asociados.
-                                </td>
-                              </tr>
-                            ) : (
-                              listaRenglones.map((item) => {
-                                const subtotalItem =
-                                  (parseFloat(item.precio_unitario) || 0) *
-                                  (parseInt(item.cantidad, 10) || 0);
-
-                                return (
-                                  <tr key={item.id || item.bien_id}>
-                                    <td>
-                                      <strong>{item.descripcion || item.bien_descripcion}</strong>
-                                    </td>
-                                    <td className="text-center">
-                                      {isEditing ? (
-                                        <input
-                                          type="number"
-                                          min="1"
-                                          disabled={isProcessing}
-                                          className="form-control form-control-sm text-center"
-                                          value={item.cantidad}
-                                          onChange={(e) =>
-                                            handleDraftChange(item.id || item.bien_id, 'cantidad', e.target.value)
-                                          }
-                                        />
-                                      ) : (
-                                        <span>{item.cantidad}</span>
-                                      )}
-                                    </td>
-                                    <td className="text-right">
-                                      ${parseFloat(item.precio_unitario || 0).toLocaleString('es-AR', {
-                                        minimumFractionDigits: 2
-                                      })}
-                                    </td>
-                                    <td className="text-right font-bold text-primary">
-                                      ${subtotalItem.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                                    </td>
-                                    <td>
-                                      {isEditing ? (
-                                        <input
-                                          type="text"
-                                          disabled={isProcessing}
-                                          className="form-control form-control-sm"
-                                          value={item.observacion || ''}
-                                          onChange={(e) =>
-                                            handleDraftChange(
-                                              item.id || item.bien_id,
-                                              'observacion',
-                                              e.target.value
-                                            )
-                                          }
-                                          placeholder="Añadir nota técnica..."
-                                        />
-                                      ) : (
-                                        <span className="text-muted small">
-                                          {item.observacion || 'Sin observaciones'}
-                                        </span>
-                                      )}
-                                    </td>
-                                  </tr>
-                                );
-                              })
-                            )}
-                          </tbody>
-                        </table>
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <FileSpreadsheet size={12} className="inline-icon" /> Convocatoria
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.nro_convocatoria || 'CDC:2026/01'}
+                        </span>
                       </div>
 
-                      {isEditing && (
-                        <div className="edit-actions-bar">
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            disabled={isProcessing}
-                            onClick={handleCancelEdit}
-                          >
-                            Cancelar
-                          </button>
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
+                          <Calendar size={12} className="inline-icon" /> Fecha
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.fecha_creacion ? new Date(sol.fecha_creacion).toLocaleDateString('es-AR') : 'N/A'}
+                        </span>
+                      </div>
 
-                          <div className="d-flex gap-2">
-                            <button
-                              type="button"
-                              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
-                              disabled={isProcessing}
-                              onClick={() => handleSaveOrSubmit(sol.id, 'BORRADOR')}
-                            >
-                              {estaProcesandoEsta && processingAction === 'SAVE_BORRADOR' ? (
-                                <>
-                                  <Loader2 size={14} className="spinner-rotation" />
-                                  <span>Guardando...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Save size={14} />
-                                  <span>Guardar Borrador</span>
-                                </>
-                              )}
-                            </button>
-
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-sm d-flex align-items-center gap-1"
-                              disabled={isProcessing}
-                              onClick={() => handleSaveOrSubmit(sol.id, 'PENDIENTE')}
-                            >
-                              {estaProcesandoEsta && processingAction === 'SUBMIT' ? (
-                                <>
-                                  <Loader2 size={14} className="spinner-rotation" />
-                                  <span>Enviando...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Send size={14} />
-                                  <span>Subir y Enviar Solicitud</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
+                      {(sol.admin_nombre || sol.usuario_autorizante) && (
+                        <div className="solicitud-meta-item">
+                          <span className="solicitud-meta-label">
+                            <ShieldCheck size={12} className="inline-icon" /> Evaluado por
+                          </span>
+                          <span className="solicitud-meta-value">
+                            <span className="autorizante-tag">
+                              {sol.admin_nombre 
+                                ? `${sol.admin_nombre} ${sol.admin_apellido}` 
+                                : `Admin ID: ${sol.usuario_autorizante}`}
+                            </span>
+                          </span>
                         </div>
                       )}
                     </div>
-                  )}
+                  </div>
+
+                  {/* PIE DE TARJETA CON MONTO ESTIMADO Y BOTONES DE ACCIÓN */}
+                  <div className="solicitud-footer-bar">
+                    <div className="solicitud-monto-group">
+                      <span className="solicitud-monto-label">Monto Estimado:</span>
+                      <span className="solicitud-monto-valor">
+                        ${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div className="solicitud-actions-group">
+                      {esEditable && (
+                        <>
+                          <button
+                            type="button"
+                            className="btn-tupi btn-tupi-secundario"
+                            disabled={isProcessing}
+                            onClick={() => setSolicitudAEditar(sol)}
+                          >
+                            <FileEdit size={14} />
+                            <span>Editar</span>
+                          </button>
+
+                          {sol.estado === 'BORRADOR' && (
+                            <button
+                              type="button"
+                              className="btn-tupi btn-tupi-peligro"
+                              disabled={isProcessing}
+                              onClick={(e) => handleDeleteBorrador(sol.id, e)}
+                            >
+                              {estaProcesandoEsta ? (
+                                <Loader2 size={14} className="spinner-rotation" />
+                              ) : (
+                                <>
+                                  <Trash2 size={14} />
+                                  <span>Eliminar</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </>
+                      )}
+
+                      <button
+                        type="button"
+                        className="btn-tupi btn-tupi-descarga"
+                        onClick={() => setSolicitudAInspeccionar(sol)}
+                      >
+                        <Eye size={14} />
+                        <span>Inspeccionar</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               );
             })}

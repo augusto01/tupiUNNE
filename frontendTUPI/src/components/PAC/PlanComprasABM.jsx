@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Search, ShoppingCart, Trash2, Send, Save, Loader2 } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Send, Save, Loader2, ArrowLeft } from 'lucide-react';
 import Swal from 'sweetalert2';
 import './PlanComprasABM.css';
 
-const PlanComprasABM = () => {
+const TRIMESTRES_OPCIONES = [
+  '1ER TRIMESTRE',
+  '2DO TRIMESTRE',
+  '3ER TRIMESTRE',
+  '4TO TRIMESTRE'
+];
+
+const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onGuardadoExitoso = null }) => {
   const { fetchAuth, token } = useAuth();
 
   const [rubros, setRubros] = useState([]);
@@ -23,6 +30,9 @@ const PlanComprasABM = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittingAction, setSubmittingAction] = useState(null);
 
+  // Determinación de modo edición
+  const esModoEdicion = Boolean(solicitudAEditar && (solicitudAEditar.id || solicitudAEditar.solicitud_id));
+
   useEffect(() => {
     const currentToken = token || localStorage.getItem('tupi_token') || localStorage.getItem('token');
     if (!currentToken) return;
@@ -38,27 +48,56 @@ const PlanComprasABM = () => {
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setRubros(data);
-          setRubroSeleccionado(data[0]);
+          const primerRubro = data[0].rubro_id ?? data[0];
+          setRubroSeleccionado(primerRubro);
         } else {
           setRubros([]);
         }
       })
       .catch(() => {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error de Carga',
-          text: 'No se pudieron obtener los rubros del servidor.'
-        });
+        Swal.fire('Error', 'No se pudieron obtener los rubros.', 'error');
       })
       .finally(() => setLoadingRubros(false));
-  }, [token]);
+
+    // Cargar ítems si es MODO EDICIÓN
+    if (esModoEdicion && solicitudAEditar) {
+      setNroConvocatoria(solicitudAEditar.nro_convocatoria || 'CDC:2026/01');
+      const itemsMap = {};
+      const renglones = solicitudAEditar.renglones || solicitudAEditar.registros || [];
+
+      renglones.forEach((r) => {
+        const idBien = parseInt(r.bien_id || r.id, 10);
+        if (!idBien) return;
+
+        const precioUnit = parseFloat(r.precio_unitario) || 0;
+        const cant = parseInt(r.cantidad, 10) || 1;
+
+        itemsMap[idBien] = {
+          bien_id: idBien,
+          descripcion: r.bien_descripcion || r.descripcion || 'Bien Seleccionado',
+          inciso: r.inciso || 'Bienes',
+          partida_principal: r.partida_principal || 'Partida',
+          cantidad_solicitada: cant,
+          precio_unitario: precioUnit,
+          trimestre: r.trimestre || '1ER TRIMESTRE',
+          observacion: r.observacion || '',
+          subtotal: cant * precioUnit
+        };
+      });
+      setSolicitudItems(itemsMap);
+    } else {
+      // MODO NUEVA SOLICITUD
+      setNroConvocatoria('CDC:2026/01');
+      setSolicitudItems({});
+    }
+  }, [token, solicitudAEditar, esModoEdicion]);
 
   useEffect(() => {
     const currentToken = token || localStorage.getItem('tupi_token') || localStorage.getItem('token');
     if (!currentToken || !rubroSeleccionado) return;
 
     setLoadingBienes(true);
-    fetchAuth(`/plan-compras/bienes-por-rubro?rubro=${encodeURIComponent(rubroSeleccionado)}`)
+    fetchAuth(`/plan-compras/bienes-por-rubro?rubro_id=${encodeURIComponent(rubroSeleccionado)}`)
       .then((res) => res.json())
       .then((data) => {
         setBienesCatalogo(Array.isArray(data) ? data : []);
@@ -88,23 +127,28 @@ const PlanComprasABM = () => {
 
   const handleToggleProducto = (bien) => {
     if (isSubmitting) return;
+    const idBien = parseInt(bien.bien_id ?? bien.id, 10);
+
     setSolicitudItems((prev) => {
-      const existe = prev[bien.id];
+      const existe = prev[idBien];
       if (existe) {
         const nuevo = { ...prev };
-        delete nuevo[bien.id];
+        delete nuevo[idBien];
         return nuevo;
       } else {
         const precioBase = obtenerPrecioBD(bien);
+        const trimestreBase = bien.trimestre || '1ER TRIMESTRE';
+
         return {
           ...prev,
-          [bien.id]: {
-            bien_id: bien.id,
+          [idBien]: {
+            bien_id: idBien,
             descripcion: bien.descripcion,
-            inciso: bien.inciso,
-            partida_principal: bien.partida_principal,
+            inciso: bien.inciso || 'Bienes',
+            partida_principal: bien.partida_principal || 'Partida',
             cantidad_solicitada: 1,
             precio_unitario: precioBase,
+            trimestre: trimestreBase,
             observacion: '',
             subtotal: precioBase
           }
@@ -128,8 +172,8 @@ const PlanComprasABM = () => {
       const item = prev[bienId];
       if (!item) return prev;
 
-      if (campo === 'observacion') {
-        return { ...prev, [bienId]: { ...item, observacion: valor } };
+      if (campo === 'observacion' || campo === 'trimestre') {
+        return { ...prev, [bienId]: { ...item, [campo]: valor } };
       }
 
       if (campo === 'cantidad_solicitada') {
@@ -148,7 +192,6 @@ const PlanComprasABM = () => {
     });
   };
 
-  // Modal de confirmación principal
   const solicitarConfirmacion = (nuevoEstado) => {
     const itemsAEnviar = Object.values(solicitudItems);
 
@@ -156,7 +199,7 @@ const PlanComprasABM = () => {
       Swal.fire({
         icon: 'warning',
         title: 'Solicitud Vacía',
-        text: 'Debe seleccionar al menos un producto del catálogo antes de continuar.'
+        text: 'Debe seleccionar al menos un producto del catálogo antes de enviar.'
       });
       return;
     }
@@ -164,15 +207,17 @@ const PlanComprasABM = () => {
     const esBorrador = nuevoEstado === 'BORRADOR';
 
     Swal.fire({
-      title: esBorrador ? '¿Guardar como borrador?' : '¿Seguro que querés agregar esta solicitud?',
+      title: esModoEdicion
+        ? (esBorrador ? '¿Guardar cambios en Borrador?' : '¿Reenviar Solicitud?')
+        : (esBorrador ? '¿Guardar como Borrador?' : '¿Enviar Solicitud?'),
       text: esBorrador
-        ? 'La solicitud se guardará en estado borrador y podrás editarla más adelante.'
-        : 'Una vez enviada, la solicitud pasará a revisión y no podrá modificarse.',
+        ? 'La solicitud mantendrá los cambios actualizados.'
+        : 'Se registrará la solicitud y se enviará a evaluación presupuestaria.',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#0284c7',
       cancelButtonColor: '#64748b',
-      confirmButtonText: esBorrador ? 'Sí, guardar borrador' : 'Sí, enviar solicitud',
+      confirmButtonText: esBorrador ? 'Sí, guardar' : (esModoEdicion ? 'Sí, reenviar' : 'Sí, enviar solicitud'),
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (result.isConfirmed) {
@@ -181,28 +226,45 @@ const PlanComprasABM = () => {
     });
   };
 
-  // Procesa la llamada al Backend tras confirmar
   const ejecutarProcesarSolicitud = async (nuevoEstado) => {
     if (isSubmitting) return;
 
     const itemsAEnviar = Object.values(solicitudItems);
+
+    if (itemsAEnviar.length === 0) {
+      Swal.fire('Atención', 'Seleccione al menos un producto del catálogo.', 'warning');
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmittingAction(nuevoEstado);
 
+    // Mapeo seguro con compatibilidad doble para backend (renglones / bienes_seleccionados)
+    const itemsFormateados = itemsAEnviar.map((i) => ({
+      bien_id: parseInt(i.bien_id, 10),
+      cantidad: parseInt(i.cantidad_solicitada, 10) || 1,
+      cantidad_solicitada: parseInt(i.cantidad_solicitada, 10) || 1,
+      precio_unitario: parseFloat(i.precio_unitario) || 0,
+      trimestre: i.trimestre || '1ER TRIMESTRE',
+      observacion: i.observacion ? i.observacion.trim() : ''
+    }));
+
     const payload = {
-      nro_convocatoria: nroConvocatoria,
+      nro_convocatoria: nroConvocatoria.trim() || 'CDC:2026/01',
       estado: nuevoEstado,
-      bienes_seleccionados: itemsAEnviar.map((i) => ({
-        bien_id: i.bien_id,
-        cantidad_solicitada: i.cantidad_solicitada,
-        precio_unitario: i.precio_unitario,
-        observacion: i.observacion || ''
-      }))
+      renglones: itemsFormateados,               // Por si el controller lee req.body.renglones
+      bienes_seleccionados: itemsFormateados     // Por si el controller lee req.body.bienes_seleccionados
     };
 
     try {
-      const res = await fetchAuth('/plan-compras/solicitudes', {
-        method: 'POST',
+      const url = esModoEdicion 
+        ? `/plan-compras/solicitudes/${solicitudAEditar.id}`
+        : '/plan-compras/solicitudes';
+
+      const method = esModoEdicion ? 'PUT' : 'POST';
+
+      const res = await fetchAuth(url, {
+        method,
         body: JSON.stringify(payload)
       });
 
@@ -211,27 +273,32 @@ const PlanComprasABM = () => {
       if (res.ok) {
         Swal.fire({
           icon: 'success',
-          title: nuevoEstado === 'BORRADOR' ? '¡Borrador Guardado!' : '¡Solicitud Enviada!',
+          title: esModoEdicion ? '¡Solicitud Actualizada!' : '¡Nueva Solicitud Creada!',
           text: nuevoEstado === 'BORRADOR'
-            ? `Se registró el borrador #${data.solicitudId} correctamente.`
-            : `La solicitud #${data.solicitudId} se envió a revisión con éxito.`,
+            ? 'Borrador guardado correctamente.'
+            : (esModoEdicion ? 'La solicitud fue reenviada a revisión.' : 'Su solicitud fue enviada exitosamente.'),
           confirmButtonColor: '#0284c7'
         });
 
-        setSolicitudItems({});
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        if (onGuardadoExitoso) {
+          onGuardadoExitoso();
+        } else {
+          setSolicitudItems({});
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       } else {
         Swal.fire({
           icon: 'error',
-          title: 'Error al Procesar',
-          text: data.error || 'Ocurrió un error al registrar la solicitud.'
+          title: `Error ${res.status}`,
+          text: data.error || data.mensaje || 'Respuesta no válida del servidor.'
         });
       }
     } catch (err) {
+      console.error('Error en fetchAuth:', err);
       Swal.fire({
         icon: 'error',
         title: 'Error de Conexión',
-        text: err.message || 'No se pudo conectar con el servidor.'
+        text: 'No se pudo conectar con el servidor.'
       });
     } finally {
       setIsSubmitting(false);
@@ -255,14 +322,28 @@ const PlanComprasABM = () => {
 
   return (
     <div className="abm-container">
+      {esModoEdicion && (
+        <div className="mb-3">
+          <button type="button" className="btn-tupi btn-tupi-descarga" onClick={onCancelarEdicion}>
+            <ArrowLeft size={16} />
+            <span>Volver al Historial</span>
+          </button>
+        </div>
+      )}
+
       <div className="abm-header">
         <div>
-          <h1 className="abm-title">Plan Anual de Compras 2026</h1>
-          <p className="abm-subtitle">Gestión y carga de requerimientos consolidados de la dependencia</p>
+          <h1 className="abm-title">
+            {esModoEdicion ? `Edición de Solicitud #${solicitudAEditar.id}` : 'Nueva Solicitud de Compra'}
+          </h1>
+          <p className="abm-subtitle">
+            {esModoEdicion 
+              ? 'Agregue, quite o modifique la cantidad y observaciones de los bienes requeridos.' 
+              : 'Seleccione del catálogo los bienes y cantidades requeridas para su dependencia'}
+          </p>
         </div>
       </div>
 
-      {/* IDENTIFICADOR CONVOCATORIA */}
       <div className="abm-card mb-4">
         <div className="card-header">
           <h2 className="card-title">1. Identificador de la Convocatoria</h2>
@@ -282,12 +363,11 @@ const PlanComprasABM = () => {
         </div>
       </div>
 
-      {/* CATÁLOGO DE BIENES */}
       <div className="abm-card mb-4">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h2 className="card-title">2. Selección del Catálogo de Bienes</h2>
           <span className="badge-cart-indicator">
-            <ShoppingCart size={16} /> {listaSolicitud.length} seleccionados
+            <ShoppingCart size={15} /> {listaSolicitud.length} seleccionados
           </span>
         </div>
 
@@ -303,9 +383,15 @@ const PlanComprasABM = () => {
                 value={rubroSeleccionado}
                 onChange={(e) => setRubroSeleccionado(e.target.value)}
               >
-                {rubros.map((r, index) => (
-                  <option key={index} value={r}>{r}</option>
-                ))}
+                {rubros.map((r) => {
+                  const idR = r.rubro_id ?? r;
+                  const nombreR = r.rubro_nombre ?? r.desc ?? r;
+                  return (
+                    <option key={idR} value={idR}>
+                      {nombreR}
+                    </option>
+                  );
+                })}
               </select>
             )}
           </div>
@@ -313,12 +399,12 @@ const PlanComprasABM = () => {
           <div className="filter-item flex-2">
             <label>Búsqueda en el Catálogo</label>
             <div className="search-input-wrapper">
-              <Search size={16} className="search-icon" />
+              <Search size={15} className="search-icon" />
               <input
                 type="text"
                 className="form-control search-input"
                 disabled={isSubmitting}
-                placeholder="Buscar bien..."
+                placeholder="Buscar bien para agregar..."
                 value={busquedaTexto}
                 onChange={(e) => setBusquedaTexto(e.target.value)}
               />
@@ -346,23 +432,25 @@ const PlanComprasABM = () => {
               <tr>
                 <th className="text-center" style={{ width: '60px' }}>Elegir</th>
                 <th>Descripción del Bien</th>
-                <th style={{ width: '220px' }}>Clasificación Presupuestaria</th>
-                <th className="text-right" style={{ width: '160px' }}>Precio Base BD ($)</th>
+                <th style={{ width: '180px' }}>Clasificación Presupuestaria</th>
+                <th className="text-center" style={{ width: '140px' }}>Trimestre Base</th>
+                <th className="text-right" style={{ width: '150px' }}>Precio Base BD ($)</th>
                 <th className="text-center" style={{ width: '100px' }}>Estado</th>
               </tr>
             </thead>
             <tbody>
               {loadingBienes ? (
-                <tr><td colSpan="5" className="text-center py-4">Cargando catálogo...</td></tr>
+                <tr><td colSpan="6" className="text-center py-4">Cargando catálogo...</td></tr>
               ) : bienesFiltrados.length === 0 ? (
-                <tr><td colSpan="5" className="text-center py-4 text-muted">No se encontraron bienes.</td></tr>
+                <tr><td colSpan="6" className="text-center py-4 text-muted">No se encontraron bienes.</td></tr>
               ) : (
                 bienesFiltrados.map((bien) => {
-                  const estaEnSolicitud = !!solicitudItems[bien.id];
+                  const idBien = parseInt(bien.bien_id ?? bien.id, 10);
+                  const estaEnSolicitud = !!solicitudItems[idBien];
                   const precioMuestra = obtenerPrecioBD(bien);
 
                   return (
-                    <tr key={bien.id} className={estaEnSolicitud ? 'table-row-selected' : ''}>
+                    <tr key={idBien} className={estaEnSolicitud ? 'table-row-selected' : ''}>
                       <td className="text-center">
                         <input
                           type="checkbox"
@@ -374,6 +462,11 @@ const PlanComprasABM = () => {
                       </td>
                       <td><strong>{bien.descripcion}</strong></td>
                       <td><small className="text-gray">{bien.inciso} | {bien.partida_principal}</small></td>
+                      <td className="text-center">
+                        <span className="badge-trimestre">
+                          {bien.trimestre || '1ER TRIMESTRE'}
+                        </span>
+                      </td>
                       <td className="text-right font-bold">
                         ${precioMuestra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </td>
@@ -393,11 +486,10 @@ const PlanComprasABM = () => {
         </div>
       </div>
 
-      {/* DETALLE DE REQUERIMIENTOS */}
       <div className="abm-card">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h2 className="card-title d-flex align-items-center gap-2">
-            <ShoppingCart size={20} /> 3. Detalle de Requerimientos
+            <ShoppingCart size={18} /> 3. Detalle de Requerimientos
           </h2>
         </div>
 
@@ -406,18 +498,19 @@ const PlanComprasABM = () => {
             <thead>
               <tr>
                 <th>Bien Seleccionado</th>
-                <th className="text-center" style={{ width: '100px' }}>Cantidad</th>
-                <th className="text-right" style={{ width: '150px' }}>Precio Unit ($)</th>
-                <th className="text-right" style={{ width: '150px' }}>Subtotal ($)</th>
-                <th style={{ width: '320px' }}>Observación</th>
+                <th className="text-center" style={{ width: '90px' }}>Cantidad</th>
+                <th style={{ width: '170px' }}>Trimestre Estimado</th>
+                <th className="text-right" style={{ width: '140px' }}>Precio Unit ($)</th>
+                <th className="text-right" style={{ width: '140px' }}>Subtotal ($)</th>
+                <th style={{ width: '280px' }}>Observación</th>
                 <th className="text-center" style={{ width: '50px' }}></th>
               </tr>
             </thead>
             <tbody>
               {listaSolicitud.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-5 text-muted">
-                    No ha seleccionado productos aún. Marque las casillas en el catálogo para comenzar.
+                  <td colSpan="7" className="text-center py-5 text-muted">
+                    No ha seleccionado productos aún. Marque las casillas en el catálogo superior para comenzar.
                   </td>
                 </tr>
               ) : (
@@ -437,6 +530,20 @@ const PlanComprasABM = () => {
                         value={item.cantidad_solicitada}
                         onChange={(e) => handleValueChange(item.bien_id, 'cantidad_solicitada', e.target.value)}
                       />
+                    </td>
+                    <td>
+                      <select
+                        className="form-control form-control-sm"
+                        disabled={isSubmitting}
+                        value={item.trimestre}
+                        onChange={(e) => handleValueChange(item.bien_id, 'trimestre', e.target.value)}
+                      >
+                        {TRIMESTRES_OPCIONES.map((tri, index) => (
+                          <option key={index} value={tri}>
+                            {tri}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="text-right">
                       <input
@@ -466,6 +573,7 @@ const PlanComprasABM = () => {
                         disabled={isSubmitting}
                         className="btn-action-icon delete"
                         onClick={() => handleRemoveItem(item.bien_id)}
+                        title="Quitar bien"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -477,31 +585,30 @@ const PlanComprasABM = () => {
           </table>
         </div>
 
-        {/* BOTONES */}
-        <div className="solicitud-summary-bar mt-4">
+        <div className="solicitud-summary-bar">
           <div className="summary-info">
             <div><span className="text-muted">Total de ítems:</span> <strong>{listaSolicitud.length}</strong></div>
-            <div className="summary-total">
+            <div>
               <span>Monto Total Estimado:</span>
               <span className="total-amount">${totalGeneral.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
             </div>
           </div>
 
-          <div className="d-flex gap-2">
+          <div className="summary-actions-group">
             <button
               type="button"
-              className="btn btn-outline-primary btn-lg d-flex align-items-center gap-2"
+              className="btn-tupi btn-tupi-secundario"
               disabled={listaSolicitud.length === 0 || isSubmitting}
               onClick={() => solicitarConfirmacion('BORRADOR')}
             >
               {isSubmitting && submittingAction === 'BORRADOR' ? (
                 <>
-                  <Loader2 size={18} className="spinner-rotation" />
+                  <Loader2 size={15} className="spinner-rotation" />
                   <span>Guardando...</span>
                 </>
               ) : (
                 <>
-                  <Save size={18} />
+                  <Save size={15} />
                   <span>Guardar Borrador</span>
                 </>
               )}
@@ -509,19 +616,19 @@ const PlanComprasABM = () => {
 
             <button
               type="button"
-              className="btn btn-primary btn-lg d-flex align-items-center gap-2"
+              className="btn-tupi btn-tupi-primario"
               disabled={listaSolicitud.length === 0 || isSubmitting}
               onClick={() => solicitarConfirmacion('PENDIENTE')}
             >
               {isSubmitting && submittingAction === 'PENDIENTE' ? (
                 <>
-                  <Loader2 size={18} className="spinner-rotation" />
+                  <Loader2 size={15} className="spinner-rotation" />
                   <span>Enviando...</span>
                 </>
               ) : (
                 <>
-                  <Send size={18} />
-                  <span>Enviar Solicitud Final</span>
+                  <Send size={15} />
+                  <span>{esModoEdicion ? 'Reenviar Solicitud' : 'Enviar Solicitud'}</span>
                 </>
               )}
             </button>

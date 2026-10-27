@@ -1,0 +1,66 @@
+/* ==========================================================================
+   ECOSISTEMA TUPI UNNE - BANDEJA DE SOLICITUDES PENDIENTES
+   Hoja de Estilos (Pendientes.css)
+   ========================================================================== */
+
+.pendientes-container {
+  padding: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.pendientes-header {
+  margin-bottom: 1.5rem;
+}
+
+.pendientes-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+
+.pendientes-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-bottom: 0;
+}
+
+.pendientes-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 1.25rem;
+  overflow: hidden;
+}
+
+.pendientes-item-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.pendientes-item-card:hover {
+  border-color: #0284c7;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
+}
+
+.meta-separator {
+  color: #cbd5e1;
+  margin: 0 0.35rem;
+}
+
+/* Responsividad para móviles */
+@media (max-width: 768px) {
+  .pendientes-container,
+  .historial-container {
+    padding: 1rem;
+  }
+
+  .filters-row {
+    flex-direction: column;
+  }
+}
