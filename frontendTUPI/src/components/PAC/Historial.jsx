@@ -48,7 +48,7 @@ const Historial = () => {
   const cargarHistorial = async () => {
     setLoading(true);
     try {
-      const res = await fetchAuth('/plan-compras/solicitudes-pendientes');
+      const res = await fetchAuth('/plan-compras/solicitudes-historial');
       if (res.ok) {
         const data = await res.json();
         setSolicitudes(Array.isArray(data) ? data : []);

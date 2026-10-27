@@ -793,6 +793,123 @@ select.form-control,
   color: #14532d;
 }
 
+/* ==========================================================================
+   AJUSTE DE GRID DINÁMICO EN DETALLE DE SOLICITUD
+   ========================================================================== */
+
+/* Por defecto (si existe el panel lateral de evaluación) */
+.detalle-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.5rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* 🎯 CUANDO NO HAY PANEL LATERAL (Modo inspección/historial o sin rechazo) */
+.detalle-grid-layout.full-width,
+.detalle-grid-layout.sin-panel-evaluacion {
+  grid-template-columns: 1fr !important;
+}
+
+/* Opcional: Si el contenedor de la tabla está solo, asegura que ocupe todo el espacio */
+.detalle-tabla-container {
+  min-width: 0;
+  width: 100%;
+}
+
+/* ==========================================================================
+   ANIMACIONES Y TRANSICIONES SUAVES
+   ========================================================================== */
+
+/* Entrada suave de la pantalla principal */
+.fade-in-animation {
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Desplazamiento hacia abajo para alertas y menús */
+.slide-down-animation {
+  animation: slideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Entrada lateral para el panel de evaluación */
+.slide-in-right-animation {
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Escalado suave para la caja de texto de rechazo */
+.scale-up-animation {
+  animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Animación del ícono de chevron en botones desplegables */
+.dropdown-chevron {
+  transition: transform 0.2s ease;
+}
+
+.dropdown-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Rotación continua para el spinner de carga */
+.spinner-rotation {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);
