@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react';
 
 export const useUsuarios = () => {
   const [listaUsuarios, setListaUsuarios] = useState([]);
-  const [tiposUsuario, setTiposUsuario] = useState([]); // Para el select de roles
-  const [dependencias, setDependencias] = useState([]); // Para el select de dependencias de la UNNE
+  const [tiposUsuario, setTiposUsuario] = useState([]); 
+  const [dependencias, setDependencias] = useState([]); 
   const [loading, setLoading] = useState(false);
   const [errorBackend, setErrorBackend] = useState(null);
 
@@ -18,7 +18,7 @@ export const useUsuarios = () => {
     };
   };
 
-  // 1. LISTAR OPERADORES (CON COUPLING DE DATA)
+  // 1. LISTAR OPERADORES
   const cargarUsuarios = useCallback(async () => {
     try {
       setLoading(true);
@@ -34,7 +34,7 @@ export const useUsuarios = () => {
       const data = await response.json();
       setListaUsuarios(data);
     } catch (err) {     
-      console.error(err);
+      console.error('Error cargando usuarios:', err);
       setErrorBackend('No se pudo cargar el ecosistema de usuarios.');
     } finally {
       setLoading(false);
@@ -57,7 +57,7 @@ export const useUsuarios = () => {
     }
   }, [BASE_URL]);
 
-  // 3. NUEVO: TRAER DEPENDENCIAS DINÁMICAS DESDE LA BD
+  // 3. TRAER DEPENDENCIAS DINÁMICAS (UOC)
   const cargarDependencias = useCallback(async () => {
     try {
       const response = await fetch(`${BASE_URL}/dependencias`, {
@@ -73,7 +73,7 @@ export const useUsuarios = () => {
     }
   }, [BASE_URL]);
 
-  // 4. PROCESAR ALTA O MODIFICACIÓN
+  // 4. PROCESAR ALTA O MODIFICACIÓN CON REFRESO AUTOMÁTICO EN TIEMPO REAL
   const guardarUsuario = async (formData, idUsuarioEditar = null) => {
     try {
       setErrorBackend(null);
@@ -92,31 +92,44 @@ export const useUsuarios = () => {
         throw new Error(errData.error || `Error al ${esEdicion ? 'actualizar' : 'crear'} el operador.`);
       }
 
+      // 🎯 Refresca la lista completa automáticamente desde el servidor
       await cargarUsuarios();
       return { ok: true };
     } catch (err) {
-      console.error(err);
+      console.error('Error al guardar usuario:', err);
       return { ok: false, error: err.message };
     }
   };
 
-  // 5. CAMBIO DE ESTADO / BAJA LÓGICA
+  // 5. CAMBIO DE ESTADO / BAJA LÓGICA CON REFRESO AUTOMÁTICO EN TIEMPO REAL
   const toggleBajaLogica = async (id) => {
     try {
       setErrorBackend(null);
-      const response = await fetch(`${API_URL}/${id}/toggle-status`, {
+      const url = `${API_URL}/${id}/baja`;
+
+      const response = await fetch(url, {
         method: 'PATCH',
         headers: getAuthHeaders()
       });
 
-      if (!response.ok) throw new Error('No se pudo modificar el estado del usuario.');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'No se pudo modificar el estado del usuario.');
+      }
 
+      const data = await response.json();
+
+      // 🎯 Actualiza el estado local en tiempo real sin recargar la página
       setListaUsuarios(prev => 
-        prev.map(u => u.id === id ? { ...u, activo: !u.activo } : u)
+        prev.map(u => u.id === id ? { ...u, activo: data.activo } : u)
       );
-      return { ok: true };
+
+      // Re-sincronizamos con el servidor para refrescar todo
+      await cargarUsuarios();
+
+      return { ok: true, activo: data.activo };
     } catch (err) {
-      console.error(err);
+      console.error('Error en toggle status:', err);
       return { ok: false, error: err.message };
     }
   };
@@ -124,12 +137,12 @@ export const useUsuarios = () => {
   return {
     listaUsuarios,
     tiposUsuario,
-    dependencias, // Se expone el listado de la UNNE
+    dependencias,
     loading,
     errorBackend,
     cargarUsuarios,
     cargarTiposUsuario,
-    cargarDependencias, // Se expone la función cargadora
+    cargarDependencias,
     guardarUsuario,
     toggleBajaLogica
   };

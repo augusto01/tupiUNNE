@@ -1,41 +1,37 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, UserCheck, User, IdCard, Phone, MapPin, Mail, Shield, Key, AlertCircle } from 'lucide-react';
-import ConfirmModal from '../Modals/ConfirmModal';
-import ToastNotification from '../Modals/ToastNotification';
+import { UserPlus, UserCheck, User, IdCard, Phone, Mail, Shield, AlertCircle } from 'lucide-react';
+import Swal from 'sweetalert2';
 import './UsuariosCRUD.css';
 
 const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], dependencias = [], onSave, onCancel }) => {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    password: '',
     nombre: '',
     apellido: '',
     dni: '',
     celular: '',
-    calle: '',
-    numero: '',
     tipo_usuario_id: '', 
     dependencia_id: ''   
   });
 
-  const [modalConfirmar, setModalConfirmar] = useState(false);
-  const [toastConfig, setToastConfig] = useState({ visible: false, mensaje: '', tipo: '' });
-  const [erroresDuplicados, setErroresDuplicados] = useState({ dniExiste: false, emailExiste: false });
+  // Validaciones de duplicados en tiempo real
+  const [erroresDuplicados, setErroresDuplicados] = useState({ 
+    dniExiste: false, 
+    emailExiste: false,
+    usernameExiste: false 
+  });
 
-  // Efecto para cargar los datos en caso de edición mapeando correctamente las FKs sueltas u objetos anidados
   useEffect(() => {
     if (userToEdit) {
-      console.log("👉 Datos originales del backend al editar:", userToEdit);
-
-      // 1. Buscamos el ID del rol por propiedad directa o resolviendo el texto contra el array de tiposUsuario
-      let normalizarRol = userToEdit.tipo_usuario_id || userToEdit.id_tipo_usuario || userToEdit.rol_id || '';
+      let normalizarRol = userToEdit.tipo_usuario_id || userToEdit.id_tipo_usuario || '';
       if (!normalizarRol && userToEdit.rol && tiposUsuario.length > 0) {
-        const encontrado = tiposUsuario.find(t => t.nombre === userToEdit.rol);
+        const encontrado = tiposUsuario.find(t => 
+          (t.nombre || '').toUpperCase() === (userToEdit.rol || '').toUpperCase()
+        );
         if (encontrado) normalizarRol = encontrado.id;
       }
 
-      // 2. Buscamos el ID de la dependencia por propiedad directa o resolviendo el texto contra el array de dependencias
       let normalizarDependencia = userToEdit.dependencia_id || userToEdit.id_dependencia || '';
       if (!normalizarDependencia && userToEdit.dependencia && dependencias.length > 0) {
         const encontrada = dependencias.find(d => d.nombre === userToEdit.dependencia);
@@ -50,32 +46,37 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
         apellido: userToEdit.apellido || '',
         dni: userToEdit.dni || '',
         celular: userToEdit.celular || '',
-        calle: userToEdit.calle || '',
-        numero: userToEdit.numero || '',
         tipo_usuario_id: normalizarRol ? normalizarRol.toString() : '', 
-        dependencia_id: normalizarDependencia ? normalizarDependencia.toString() : '',
-        password: '' 
+        dependencia_id: normalizarDependencia ? normalizarDependencia.toString() : ''
       });
     } else {
-      // Limpiamos el formulario si es una creación limpia
       setFormData({
-        username: '', email: '', password: '', nombre: '', apellido: '',
-        dni: '', celular: '', calle: '', numero: '', tipo_usuario_id: '', dependencia_id: ''
+        username: '', email: '', nombre: '', apellido: '',
+        dni: '', celular: '', tipo_usuario_id: '', dependencia_id: ''
       });
     }
-  }, [userToEdit, tiposUsuario, dependencias]); // Escucha cambios en los catálogos para resolver nombres si es necesario
+  }, [userToEdit, tiposUsuario, dependencias]);
 
-  // Validación de duplicados en tiempo real (excluyendo al usuario que se está editando)
+  // Comprobación de duplicados en tiempo real excluyendo al usuario actual si se edita
   useEffect(() => {
     const usuariosAComprobar = userToEdit 
       ? listaUsuarios.filter(u => u.id !== userToEdit.id)
       : listaUsuarios;
 
-    const dniExiste = formData.dni ? usuariosAComprobar.some(u => String(u.dni) === String(formData.dni)) : false;
-    const emailExiste = formData.email ? usuariosAComprobar.some(u => u.email.toLowerCase().trim() === formData.email.toLowerCase().trim()) : false;
+    const dniExiste = formData.dni 
+      ? usuariosAComprobar.some(u => String(u.dni) === String(formData.dni)) 
+      : false;
 
-    setErroresDuplicados({ dniExiste, emailExiste });
-  }, [formData.dni, formData.email, listaUsuarios, userToEdit]);
+    const emailExiste = formData.email 
+      ? usuariosAComprobar.some(u => (u.email || '').toLowerCase().trim() === formData.email.toLowerCase().trim()) 
+      : false;
+
+    const usernameExiste = formData.username 
+      ? usuariosAComprobar.some(u => (u.username || '').toLowerCase().trim() === formData.username.toLowerCase().trim()) 
+      : false;
+
+    setErroresDuplicados({ dniExiste, emailExiste, usernameExiste });
+  }, [formData.dni, formData.email, formData.username, listaUsuarios, userToEdit]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -91,56 +92,84 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
   const handleSubmitForm = (e) => {
     e.preventDefault();
     
-    if (erroresDuplicados.dniExiste || erroresDuplicados.emailExiste) return;
+    if (erroresDuplicados.dniExiste || erroresDuplicados.emailExiste || erroresDuplicados.usernameExiste) return;
 
     if (!formData.email.toLowerCase().endsWith('@unne.edu.ar')) {
-      setToastConfig({
-        visible: true,
-        mensaje: "El correo debe pertenecer al dominio @unne.edu.ar",
-        tipo: "error"
+      Swal.fire({
+        icon: 'error',
+        title: 'Correo no válido',
+        text: 'El correo debe pertenecer al dominio oficial @unne.edu.ar',
+        confirmButtonColor: '#0284c7'
       });
       return;
     }
 
     if (!formData.tipo_usuario_id || !formData.dependencia_id) {
-      setToastConfig({
-        visible: true,
-        mensaje: "Debe seleccionar un Rol y una Dependencia válidos de la UNNE.",
-        tipo: "error"
+      Swal.fire({
+        icon: 'warning',
+        title: 'Atención',
+        text: 'Debe seleccionar un Rol y una Unidad Operativa (UOC) válidos de la UNNE.',
+        confirmButtonColor: '#0284c7'
       });
       return;
     }
 
-    setModalConfirmar(true);
+    // Modal SweetAlert2 de confirmación
+    Swal.fire({
+      title: userToEdit ? '¿Guardar Cambios?' : '¿Confirmar Registro?',
+      text: userToEdit 
+        ? 'Se actualizarán las credenciales y la adscripción institucional del usuario.' 
+        : 'Se enviará un correo de bienvenida al usuario con el enlace de activación de contraseña (válido por 7 días).',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#059669',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: userToEdit ? 'Sí, guardar cambios' : 'Sí, registrar y enviar invitación',
+      cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        ejecutarGuardado();
+      }
+    });
   };
 
-  const ejecutarGuardadoConfirmado = async () => {
-    setModalConfirmar(false);
-    
-    // Le pasamos el formData y el ID si es una edición
+  const ejecutarGuardado = async () => {
     const resultado = await onSave(formData, userToEdit ? formData.id : null);
     
     if (resultado && !resultado.ok) {
-      setToastConfig({
-        visible: true,
-        mensaje: resultado.error || 'Error en el procesamiento del registro.',
-        tipo: 'error'
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de procesamiento',
+        text: resultado.error || 'No se pudo completar el registro del usuario.',
+        confirmButtonColor: '#0284c7'
+      });
+    } else {
+      Swal.fire({
+        icon: 'success',
+        title: userToEdit ? '¡Usuario Actualizado!' : '¡Invitación Enviada!',
+        text: userToEdit 
+          ? 'El legajo fue modificado correctamente.' 
+          : 'Se ha enviado un correo con el enlace de activación al operador.',
+        confirmButtonColor: '#059669'
       });
     }
   };
 
-  const botonDeshabilitado = erroresDuplicados.dniExiste || erroresDuplicados.emailExiste;
+  const botonDeshabilitado = erroresDuplicados.dniExiste || erroresDuplicados.emailExiste || erroresDuplicados.usernameExiste;
 
   return (
     <div className="formulario-usuario-container view-fade-in">
-      
       <div className="form-view-title-section">
         <div className="icon-wrapper-title">
           {userToEdit ? <UserCheck size={24} /> : <UserPlus size={24} />}
         </div>
         <div>
           <h2>{userToEdit ? 'Modificar Atributos de Usuario' : 'Nuevo Usuario'}</h2>
-          <p>{userToEdit ? 'Actualice las credenciales y la ubicación del agente.' : 'Complete el legajo digital para el alta en el sistema centralizado.'}</p>
+          <p>
+            {userToEdit 
+              ? 'Actualice el legajo y la adscripción institucional.' 
+              : 'Se enviará un correo institucional con el enlace para la creación de la clave de acceso.'}
+          </p>
         </div>
       </div>
 
@@ -190,30 +219,9 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
             </div>
           </div>
 
-          {/* SECCIÓN 2: DOMICILIO */}
+          {/* SECCIÓN 2: ROLES Y UOC */}
           <div className="form-section-block">
-            <h3><MapPin size={16} /> Localización Residencial</h3>
-            <div className="form-row row-flex-address">
-              <div className="form-group flex-grow-3">
-                <label>Calle</label>
-                <input type="text" name="calle" value={formData.calle} onChange={handleInputChange} placeholder="Ej: Av. Libertad" />
-              </div>
-              <div className="form-group flex-grow-1">
-                <label>Número</label>
-                <input 
-                  type="text" 
-                  name="numero" 
-                  value={formData.numero} 
-                  onChange={handleNumericInputChange} 
-                  placeholder="Ej: 5450" 
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* SECCIÓN 3: ROLES E INSTITUCIÓN UNNE */}
-          <div className="form-section-block">
-            <h3><Shield size={16} /> Asignación Institucional</h3>
+            <h3><Shield size={16} /> Asignación Institucional (UOC)</h3>
             <div className={`form-group ${erroresDuplicados.emailExiste ? 'input-error-shake' : ''}`}>
               <label><Mail size={14} /> Correo Electrónico Oficial *</label>
               <input 
@@ -251,14 +259,14 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
               </div>
               
               <div className="form-group">
-                <label>Unidad Académica / Dependencia *</label>
+                <label>Unidad Operativa de Contratación (UOC) *</label>
                 <select 
                   name="dependencia_id" 
                   value={formData.dependencia_id} 
                   onChange={handleInputChange} 
                   required
                 >
-                  <option value="">Seleccione Dependencia...</option>
+                  <option value="">Seleccione UOC / Dependencia...</option>
                   {dependencias.map(dep => (
                     <option key={dep.id} value={dep.id.toString()}>
                       {dep.nombre}
@@ -269,28 +277,25 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
             </div>
           </div>
 
-          {/* SECCIÓN 4: ACCESO Y CREDENCIALES */}
+          {/* SECCIÓN 3: ACCESO E IDENTIFICADOR */}
           <div className="form-section-block">
-            <h3><Key size={16} /> Credenciales de Acceso</h3>
+            <h3><User size={16} /> Credenciales de Acceso</h3>
             <div className="form-row row-2">
-              <div className="form-group">
+              <div className={`form-group ${erroresDuplicados.usernameExiste ? 'input-error-shake' : ''}`}>
                 <label>Nombre de Usuario (Username) *</label>
-                <input type="text" name="username" value={formData.username} onChange={handleInputChange} required placeholder="Ej: augusto.log" />
+                <input 
+                  type="text" 
+                  name="username" 
+                  value={formData.username} 
+                  onChange={handleInputChange} 
+                  required 
+                  placeholder="Ej: augusto.almiron" 
+                  className={erroresDuplicados.usernameExiste ? 'input-error-border' : ''}
+                />
+                {erroresDuplicados.usernameExiste && (
+                  <span className="error-text-msg"><AlertCircle size={12} /> El nombre de usuario ya está registrado</span>
+                )}
               </div>
-              
-              {!userToEdit && (
-                <div className="form-group">
-                  <label>Contraseña de Sistema *</label>
-                  <input 
-                    type="password" 
-                    name="password" 
-                    value={formData.password} 
-                    onChange={handleInputChange} 
-                    required 
-                    placeholder="Escriba una contraseña segura" 
-                  />
-                </div>
-              )}
             </div>
           </div>
 
@@ -311,7 +316,7 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
               ) : (
                 <>
                   <UserPlus size={16} />
-                  <span>Agregar Usuario</span>
+                  <span>Registrar y Enviar Enlace</span>
                 </>
               )}
             </button>
@@ -319,25 +324,6 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
 
         </form>
       </div>
-
-      <ConfirmModal 
-        isOpen={modalConfirmar}
-        tipo="success"
-        titulo={userToEdit ? '¿Guardar Cambios?' : '¿Confirmar Registro?'}
-        mensaje={userToEdit 
-          ? `Vas a impactar las modificaciones de credenciales de este operador en la base central.` 
-          : `Se dará de alta de manera inmediata el legajo del operador en el ecosistema de la UNNE.`}
-        onConfirm={ejecutarGuardadoConfirmado}
-        onCancel={() => setModalConfirmar(false)}
-      />
-
-      {toastConfig.visible && (
-        <ToastNotification 
-          mensaje={toastConfig.mensaje}
-          tipo={toastConfig.tipo}
-          onClose={() => setToastConfig(prev => ({ ...prev, visible: false }))}
-        />
-      )}
     </div>
   );
 };

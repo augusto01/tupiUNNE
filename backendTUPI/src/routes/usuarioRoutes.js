@@ -1,21 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const usuarioController = require('../controllers/UsuarioController');
-const auth = require('../middlewares/authMiddleware'); // <-- Importamos el middleware de protección
 
-// Aplicar el middleware de autenticación a todas las rutas de este archivo
-router.use(auth);
+// Catálogos
+router.get('/tipos-usuario', (req, res) => usuarioController.listarTiposUsuario(req, res));
+router.get('/dependencias', (req, res) => usuarioController.listarDependencias(req, res));
 
-// Listar todos los operadores -> GET http://localhost:5000/api/usuarios
-router.get('/', usuarioController.listar);
+//  RUTA PÚBLICA (NO debe llevar middleware de auth/token JWT)
+router.post('/activar-cuenta', (req, res) => usuarioController.activarCuenta(req, res));
 
-// Alta de nuevo operador -> POST http://localhost:5000/api/usuarios
-router.post('/', usuarioController.crear);
 
-// Modificación del registro -> PUT http://localhost:5000/api/usuarios/:id
-router.put('/:id', usuarioController.modificar);
 
-// Cambio de estado (baja lógica) -> PATCH http://localhost:5000/api/usuarios/:id/toggle-status
-router.patch('/:id/toggle-status', usuarioController.toggleBaja);
+// CRUD de Usuarios
+// GET /api/usuarios
+router.get('/', (req, res) => usuarioController.listar(req, res));
+
+// POST /api/usuarios
+router.post('/', (req, res) => usuarioController.crear(req, res));
+
+// PUT /api/usuarios/:id
+router.put('/:id', (req, res) => usuarioController.modificar(req, res));
+
+// PATCH /api/usuarios/:id/baja
+router.patch('/:id/baja', (req, res) => usuarioController.toggleBaja(req, res));
+
+
 
 module.exports = router;

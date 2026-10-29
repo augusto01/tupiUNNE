@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FiPlusCircle, FiEdit3, FiTrash2, FiRefreshCw, FiShield, 
-  FiUserCheck, FiUsers, FiCheckSquare, FiUser, FiFileText 
+  FiUserCheck, FiUsers, FiCheckSquare, FiUser, FiFileText, FiAward 
 } from 'react-icons/fi';
+import Swal from 'sweetalert2';
 import { useUsuarios } from '../hooks/useUsuarios';
 import FormularioUsuario from './FormularioUsuario';
-import ConfirmModal from '../Modals/ConfirmModal';
-import ToastNotification from '../Modals/ToastNotification';
+import MatrizPermisos from './MatrizPermisos';
+import FichaAgente from './FichaAgente';
 import './UsuariosCRUD.css';
 
-const ROLES_MAP = {
-  'Superusuario': { label: 'Super Usuario', class: 'super-user', icon: <FiShield size={12} /> },
-  'Administrador': { label: 'Administrador', class: 'admin-user', icon: <FiUserCheck size={12} /> },
-  'Operador': { label: 'Operador', class: 'standard', icon: <FiUsers size={12} /> },
+const ROLES_CONFIG = {
+  'SUPERADMIN': { label: 'Super Admin', class: 'super-user', icon: <FiShield size={12} /> },
+  'ADMINISTRADOR': { label: 'Administrador', class: 'admin-user', icon: <FiUserCheck size={12} /> },
+  'AUTORIZANTE': { label: 'Autorizante Sector (UOC)', class: 'autorizante-user', icon: <FiAward size={12} /> },
+  'USUARIO': { label: 'Usuario Común', class: 'standard', icon: <FiUsers size={12} /> },
 };
 
 const UsuariosCRUD = ({ sectionInicial, setSection }) => {
@@ -31,20 +33,7 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
 
   const [editingUser, setEditingUser] = useState(null);
   const [activeTab, setActiveTab] = useState('datos'); // 'datos', 'permisos' o 'detalles'
-  const [modalBajaConfig, setModalBajaConfig] = useState({ isOpen: false, tipo: '', titulo: '', mensaje: '', onConfirm: null });
-  const [toastConfig, setToastConfig] = useState({ visible: false, mensaje: '', tipo: '' });
-
-  // Estado local para los checkboxes de permisos dinámicos
   const [permisosDinamicos, setPermisosDinamicos] = useState([]);
-
-  // Permisos del ecosistema central TUPI
-  const todosLosPermisos = [
-    { slug: 'panel', nombre: 'Acceso al Dashboard Principal' },
-    { slug: 'usuarios', nombre: 'Gestión Completa de Personal (CRUD)' },
-    { slug: 'compras', nombre: 'Administración de Planes de Compras' },
-    { slug: 'correlatos', nombre: 'Vincular ítems y Matrices de Control' },
-    { slug: 'expedientes', nombre: 'Gestión de Expedientes' },
-  ];
 
   useEffect(() => {
     cargarUsuarios();
@@ -59,22 +48,15 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
     }
   }, [sectionInicial]);
 
-  // Inicializa los permisos cuando se selecciona un usuario para editar
   useEffect(() => {
     if (editingUser) {
-      const permisosUsuario = editingUser.permisos || []; 
-      setPermisosDinamicos(permisosUsuario);
+      setPermisosDinamicos(editingUser.permisos || []);
+    } else {
+      setPermisosDinamicos([]);
     }
   }, [editingUser]);
 
-  const mostrarToast = (mensaje, tipo = 'success') => {
-    setToastConfig({ visible: true, mensaje, tipo });
-  };
-
-  const cerrarModalBaja = () => setModalBajaConfig(prev => ({ ...prev, isOpen: false }));
-
   const irAEntornoUsuario = (user, pestañaInicial = 'datos') => {
-    console.log(`✏️ Abriendo entorno unificado en pestaña [${pestañaInicial}] para:`, user);
     setEditingUser(user);
     setActiveTab(pestañaInicial);
     setSection('usuarios-crear');
@@ -97,38 +79,93 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
     
     const resultado = await guardarUsuario(payloadCompleto, idFinal);
     
-    if (resultado.ok) {
-      mostrarToast(esEdicion ? 'Legajo y permisos actualizados correctamente.' : 'Operador registrado con éxito.', 'success');
+    if (resultado && resultado.ok) {
       setEditingUser(null);
       setSection('usuarios-ver');
+      cargarUsuarios();
     }
     return resultado;
   };
 
+  const handleSavePermisosUnicos = async () => {
+    if (!editingUser) return;
+
+    const payload = {
+      username: editingUser.username,
+      email: editingUser.email,
+      nombre: editingUser.nombre,
+      apellido: editingUser.apellido,
+      dni: editingUser.dni,
+      celular: editingUser.celular,
+      tipo_usuario_id: editingUser.tipo_usuario_id,
+      dependencia_id: editingUser.dependencia_id,
+      permisos: permisosDinamicos
+    };
+
+    const resultado = await guardarUsuario(payload, editingUser.id);
+
+    if (resultado && resultado.ok) {
+      Swal.fire({
+        icon: 'success',
+        title: '¡Permisos Actualizados!',
+        text: 'La matriz de permisos del operador fue guardada correctamente.',
+        confirmButtonColor: '#059669'
+      });
+      setEditingUser(null);
+      setSection('usuarios-ver');
+      cargarUsuarios();
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error de actualización',
+        text: resultado.error || 'No se pudieron actualizar los permisos.',
+        confirmButtonColor: '#0284c7'
+      });
+    }
+  };
+
+  //  Confirmación de Baja Lógica / Reactivación con SweetAlert2 que cubre el 100% de la pantalla
   const handleToggleBaja = (usuario) => {
     const iraAInactivo = usuario.activo;
-    
-    setModalBajaConfig({
-      isOpen: true,
-      tipo: iraAInactivo ? 'danger' : 'warning',
-      titulo: iraAInactivo ? '¿Procesar Baja Lógica?' : '¿Reactivar Operador?',
-      mensaje: iraAInactivo
-        ? `El operador ${usuario.nombre} perderá sus accesos inmediatos al sistema.`
-        : `Se restaurará la jerarquía y permisos de acceso para ${usuario.nombre}.`,
-      onConfirm: async () => {
-        cerrarModalBaja();
+
+    Swal.fire({
+      title: iraAInactivo ? '¿Procesar Baja Lógica?' : '¿Reactivar Operador?',
+      text: iraAInactivo
+        ? `El operador ${usuario.nombre} ${usuario.apellido} perderá acceso inmediato al sistema.`
+        : `Se restaurarán los accesos para ${usuario.nombre} ${usuario.apellido}.`,
+      icon: iraAInactivo ? 'warning' : 'question',
+      showCancelButton: true,
+      confirmButtonColor: iraAInactivo ? '#ef4444' : '#059669',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: iraAInactivo ? 'Sí, dar de baja' : 'Sí, reactivar',
+      cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
         const resultado = await toggleBajaLogica(usuario.id);
-        if (resultado.ok) {
-          mostrarToast(iraAInactivo ? 'Baja lógica procesada con éxito.' : 'Operador reactivado correctamente.', 'success');
+        if (resultado && resultado.ok) {
+          Swal.fire({
+            icon: 'success',
+            title: iraAInactivo ? 'Baja Procesada' : 'Usuario Reactivado',
+            text: iraAInactivo ? 'El operador fue dado de baja correctamente.' : 'El operador fue reactivado exitosamente.',
+            confirmButtonColor: '#0284c7'
+          });
+          // 🎯 Sincronización automática de la grilla
+          await cargarUsuarios();
         } else {
-          mostrarToast('Error al modificar el estado.', 'error');
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: resultado.error || 'No se pudo modificar el estado del usuario.',
+            confirmButtonColor: '#0284c7'
+          });
         }
       }
     });
   };
 
   const renderRolBadge = (rolRaw) => {
-    const config = ROLES_MAP[rolRaw] || { label: rolRaw || 'Sin Rol', class: 'standard', icon: <FiUsers size={12} /> };
+    const key = (rolRaw || '').toUpperCase();
+    const config = ROLES_CONFIG[key] || { label: rolRaw || 'Sin Rol', class: 'standard', icon: <FiUsers size={12} /> };
     return (
       <span className={`badge-rol ${config.class}`}>
         {config.icon}
@@ -137,7 +174,6 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
     );
   };
 
-  // INTERFAZ EN MODO TRABAJO (Pestañas unificadas sin modales)
   if (sectionInicial === 'usuarios-crear') {
     return (
       <div className="usuarios-edicion-wrapper view-fade-in">
@@ -156,7 +192,7 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
               onClick={() => setActiveTab('permisos')}
             >
               <FiCheckSquare size={14} />
-              <span>Permisos de Entorno</span>
+              <span>Matriz de Permisos</span>
             </button>
             <button 
               className={`tab-btn ${activeTab === 'detalles' ? 'active' : ''}`}
@@ -168,7 +204,6 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
           </div>
         )}
 
-        {/* PESTAÑA 1: FORMULARIO */}
         {activeTab === 'datos' && (
           <FormularioUsuario 
             userToEdit={editingUser} 
@@ -183,79 +218,21 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
           />
         )}
 
-        {/* PESTAÑA 2: CHECKBOXES DORADOS */}
         {activeTab === 'permisos' && (
-          <div className="permisos-tab-container card-container-glow">
-            <div className="permisos-tab-header">
-              <h4>Matriz de Permisos Atómicos</h4>
-              <p>Modifique los módulos del ecosistema para el legajo de <strong>{editingUser?.nombre} {editingUser?.apellido}</strong>.</p>
-            </div>
-            
-            <div className="permisos-checkbox-grid">
-              {todosLosPermisos.map(p => {
-                const checked = permisosDinamicos.includes(p.slug);
-                return (
-                  <div 
-                    key={p.slug} 
-                    className={`permiso-checkbox-card ${checked ? 'selected-item' : ''}`}
-                    onClick={() => handleCheckboxChange(p.slug)} // Al hacer click en la tarjeta conmuta el estado
-                  >
-                    <input 
-                      type="checkbox" 
-                      checked={checked}
-                      className="gold-checkbox"
-                      onChange={() => {}} // React exige un handler si el input está controlado, pero lo procesa el contenedor
-                    />
-                    <div className="permiso-checkbox-info">
-                      <span className="permiso-slug-badge">{p.slug}</span>
-                      <p className="permiso-nombre-desc">{p.nombre}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="form-submit-bar" style={{ marginTop: '2rem' }}>
-              <button type="button" className="btn-cancel" onClick={() => setSection('usuarios-ver')}>
-                Volver
-              </button>
-              <button 
-                type="button" 
-                className="btn-success-solid"
-                onClick={() => handleSaveUser(editingUser)} 
-              >
-                Guardar Permisos y Salir
-              </button>
-            </div>
-          </div>
+          <MatrizPermisos 
+            usuario={editingUser}
+            permisosSeleccionados={permisosDinamicos}
+            onChangePermiso={handleCheckboxChange}
+            onSave={handleSavePermisosUnicos}
+            onCancel={() => setSection('usuarios-ver')}
+          />
         )}
 
-        {/* PESTAÑA 3: FICHA DE DETALLES DEL AGENTE */}
-        {activeTab === 'detalles' && editingUser && (
-          <div className="permisos-tab-container card-container-glow view-fade-in">
-            <div className="permisos-tab-header" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
-              <h4>Resumen de Legajo Digital Centralizado</h4>
-              <p>Datos duros e histórico del operador registrados en el sistema central.</p>
-            </div>
-            
-            <div className="ficha-detalles-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem', marginTop: '1.5rem' }}>
-              <div className="detail-data-item"><strong>Nombre Completo:</strong> {editingUser.apellido}, {editingUser.nombre}</div>
-              <div className="detail-data-item"><strong>Nombre de Usuario:</strong> {editingUser.username || 'N/C'}</div>
-              <div className="detail-data-item"><strong>Documento Único (DNI):</strong> {editingUser.dni}</div>
-              <div className="detail-data-item"><strong>Correo Oficial:</strong> {editingUser.email}</div>
-              <div className="detail-data-item"><strong>Contacto Celular:</strong> {editingUser.celular || 'Sin Asignar'}</div>
-              <div className="detail-data-item"><strong>Domicilio Registrado:</strong> {editingUser.calle ? `${editingUser.calle} N° ${editingUser.numero || ''}` : 'S/D'}</div>
-              <div className="detail-data-item"><strong>Asignación Operativa:</strong> {editingUser.dependencia || 'Rectorado UNNE'}</div>
-              <div className="detail-data-item"><strong>Rol del Sistema:</strong> {editingUser.rol}</div>
-              <div className="detail-data-item"><strong>Estado del Legajo:</strong> {editingUser.activo ? 'Vigente / Activo' : 'Baja Lógica / Suspendido'}</div>
-            </div>
-
-            <div className="form-submit-bar" style={{ marginTop: '2.5rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
-              <button type="button" className="btn-cancel" onClick={() => setSection('usuarios-ver')}>
-                Cerrar Ficha y Volver
-              </button>
-            </div>
-          </div>
+        {activeTab === 'detalles' && (
+          <FichaAgente 
+            usuario={editingUser}
+            onVolver={() => setSection('usuarios-ver')}
+          />
         )}
       </div>
     );
@@ -268,7 +245,7 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
           <h3>Ecosistema de Usuarios</h3>
           <p>
             <FiShield size={14} className="inline-icon" /> 
-            Gestión jerárquica de accesos al sistema administrativo.
+            Gestión de usuarios y asignación de Unidades Operativas de Contratación (UOC).
           </p>
         </div>
         <button className="btn-success-premium" onClick={() => { setEditingUser(null); setSection('usuarios-crear'); }}>
@@ -280,7 +257,7 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
       {errorBackend && <div className="error-message-panel">{errorBackend}</div>}
       
       {loading ? (
-        <div className="loading-spinner-panel">Sincronizando base de datos...</div>
+        <div className="loading-spinner-panel">Sincronizando base de datos central...</div>
       ) : (
         <div className="usuarios-grid-card">
           <table className="usuarios-tabla">
@@ -288,7 +265,7 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
               <tr>
                 <th>Personal / Email</th>
                 <th>DNI / Celular</th>
-                <th>Dependencia</th>
+                <th>Unidad Operativa (UOC)</th>
                 <th>Rol Asignado</th>
                 <th>Estado</th>
                 <th style={{ textAlign: 'right', paddingRight: '1.5rem' }}>Acciones</th>
@@ -298,7 +275,7 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
               {listaUsuarios.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                    No se encontraron registros de personal.
+                    No se encontraron registros de usuarios en el sistema.
                   </td>
                 </tr>
               ) : (
@@ -312,8 +289,8 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
                       <div className="user-cell-dni">{u.dni}</div>
                       <div className="user-cell-phone">{u.celular || 'S/D'}</div>
                     </td>
-                    <td className="user-cell-facultad" style={{ maxWidth: '240px', fontSize: '0.85rem' }}>
-                      {u.dependencia || 'Rectorado UNNE'}
+                    <td className="user-cell-facultad" style={{ maxWidth: '260px', fontSize: '0.85rem' }}>
+                      {u.dependencia || 'Sin Asignar'}
                     </td>
                     <td>
                       {renderRolBadge(u.rol)}
@@ -326,8 +303,7 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
                     </td>
                     <td>
                       <div className="actions-wrapper">
-                        {/* Al presionar Editar, el operador cae directo en 'datos', pero tiene las pestañas arriba */}
-                        <button onClick={() => irAEntornoUsuario(u, 'datos')} disabled={!u.activo} className="btn-action edit" title="Editar Legajo e Historial">
+                        <button onClick={() => irAEntornoUsuario(u, 'datos')} disabled={!u.activo} className="btn-action edit" title="Editar Legajo">
                           <FiEdit3 size={15} />
                         </button>
                         <button onClick={() => handleToggleBaja(u)} className={`btn-action ${u.activo ? 'delete' : 'reactivate'}`} title={u.activo ? "Dar de baja" : "Reactivar"}>
@@ -341,23 +317,6 @@ const UsuariosCRUD = ({ sectionInicial, setSection }) => {
             </tbody>
           </table>
         </div>
-      )}
-
-      <ConfirmModal 
-        isOpen={modalBajaConfig.isOpen}
-        tipo={modalBajaConfig.tipo}
-        titulo={modalBajaConfig.titulo}
-        mensaje={modalBajaConfig.mensaje}
-        onConfirm={modalBajaConfig.onConfirm}
-        onCancel={cerrarModalBaja}
-      />
-
-      {toastConfig.visible && (
-        <ToastNotification 
-          mensaje={toastConfig.mensaje}
-          tipo={toastConfig.tipo}
-          onClose={() => setToastConfig(prev => ({ ...prev, visible: false }))}
-        />
       )}
     </div>
   );

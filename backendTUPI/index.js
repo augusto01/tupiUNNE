@@ -7,7 +7,6 @@ const usuarioRoutes = require('./src/routes/usuarioRoutes');
 const apiRoutes = require('./src/routes/apiRoutes');
 const expedienteRoutes = require('./src/routes/expedienteRoutes');
 
-// 👈 Agregar .default si el archivo de rutas utiliza "export default router"
 const planComprasRoutes = require('./src/routes/planComprasRoutes.js').default || require('./src/routes/planComprasRoutes.js');
 
 const app = express();
@@ -22,19 +21,27 @@ app.use(cors({
     'http://127.0.0.1:5174'
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Middlewares globales
 app.use(express.json());
 
-// Declaración de Rutas
+// ==============================================================
+// Declaración de Rutas (ORDEN CORREGIDO)
+// ==============================================================
+
+// 1. Autenticación y Usuarios (Tienen prioridad y manejan sus endpoints públicos)
 app.use('/api/auth', authRoutes);
-app.use('/api', apiRoutes);
-app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/usuarios', usuarioRoutes); // 👈 Puesto antes de /api para no ser bloqueado por apiRoutes
+
+// 2. Rutas Específicas
 app.use('/api/expedientes', expedienteRoutes);
 app.use('/api/plan-compras', planComprasRoutes);
+
+// 3. Router Genérico / Protegido de la API
+app.use('/api', apiRoutes); 
 
 // Ruta base de chequeo rápido
 app.get('/', (req, res) => {

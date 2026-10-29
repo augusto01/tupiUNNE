@@ -427,4 +427,4 @@ const DetalleSolicitud = ({
   );
 };
 
-export default DetalleSolicitud;
+export default DetalleSolicitud;                                            
