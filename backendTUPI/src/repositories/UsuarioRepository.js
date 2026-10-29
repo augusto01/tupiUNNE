@@ -24,7 +24,6 @@ class UsuarioRepository {
       ORDER BY u.apellido ASC, u.nombre ASC
     `);
 
-    // Cargar permisos consolidados (Directos + Por Rol) para cada usuario
     const usuariosConPermisos = await Promise.all(users.map(async (user) => {
       const [permisosRows] = await db.query(`
         SELECT DISTINCT p.slug 
@@ -49,7 +48,7 @@ class UsuarioRepository {
     return usuariosConPermisos;
   }
 
-  // 2. BUSCAR USUARIO POR ID (Impecable)
+  // 2. BUSCAR USUARIO POR ID
   async findById(id) {
     const [rows] = await db.query(`
       SELECT 
@@ -97,7 +96,18 @@ class UsuarioRepository {
     };
   }
 
-  // 3. CREAR USUARIO Y ASIGNAR PERMISOS ATÓMICAMENTE
+  // 3. OBTENER LISTADO DE ROLES Y DEPENDENCIAS
+  async findTiposUsuario() {
+    const [rows] = await db.query('SELECT tipos_usuarios_id AS id, nombre, descripcion FROM tipos_usuario');
+    return rows;
+  }
+
+  async findDependencias() {
+    const [rows] = await db.query('SELECT dependencia_id AS id, nombre FROM dependencias');
+    return rows;
+  }
+
+  // 4. CREAR USUARIO Y ASIGNAR PERMISOS ATÓMICAMENTE
   async create(datosUsuario, permisosSlugs) {
     const connection = await db.getConnection();
     try {
@@ -115,7 +125,7 @@ class UsuarioRepository {
         dependencia_id,
         reset_password_token,
         reset_password_expires,
-        activo // 👈 Permite definir estado inicial (0 para usuarios por activar)
+        activo
       } = datosUsuario;
 
       const estadoInicial = activo !== undefined ? activo : (reset_password_token ? 0 : 1);
@@ -170,7 +180,7 @@ class UsuarioRepository {
     }
   }
 
-  // 4. ACTUALIZAR USUARIO Y SINCRONIZAR PERMISOS ATÓMICAMENTE
+  // 5. ACTUALIZAR USUARIO Y SINCRONIZAR PERMISOS ATÓMICAMENTE
   async update(id, datosUsuario, permisosSlugs) {
     const connection = await db.getConnection();
     try {
@@ -216,7 +226,7 @@ class UsuarioRepository {
     }
   }
 
-  // 5. TOGGLE ESTADO BAJA LÓGICA
+  // 6. TOGGLE ESTADO BAJA LÓGICA
   async toggleEstado(id) {
     const [rows] = await db.query('SELECT activo FROM usuario WHERE usuario_id = ?', [id]);
     if (rows.length === 0) return null;

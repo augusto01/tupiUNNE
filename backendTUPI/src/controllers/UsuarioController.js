@@ -42,6 +42,7 @@ class UsuarioController {
 
   // 4. POST /api/usuarios (Creación con generación de Token de Activación de 7 Días)
  // POST /api/usuarios (Creación de usuario)
+// POST /api/usuarios (Creación de usuario)
 async crear(req, res) {
   try {
     const { username, email, nombre, apellido, dni, celular, tipo_usuario_id, dependencia_id, permisos } = req.body;
@@ -59,13 +60,23 @@ async crear(req, res) {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(randomPassword, salt);
 
-    // 2. Permisos por defecto segun el Rol
+    // 2. Permisos por defecto coincidiendo EXACTAMENTE con la tabla 'permisos' (slugs)
     let permisosFinales = Array.isArray(permisos) && permisos.length > 0 ? permisos : [];
     if (permisosFinales.length === 0) {
       const ID_ROL = Number(tipo_usuario_id);
-      if (ID_ROL === 1) permisosFinales = ['panel', 'usuarios', 'compras', 'correlatos', 'expedientes'];
-      else if (ID_ROL === 2) permisosFinales = ['panel', 'compras', 'correlatos', 'expedientes'];
-      else if (ID_ROL === 3 || ID_ROL === 4) permisosFinales = ['panel', 'compras', 'correlatos'];
+      if (ID_ROL === 1) {
+        // SuperAdmin
+        permisosFinales = ['dashboard', 'plan-compras', 'compras', 'usuarios', 'configuracion'];
+      } else if (ID_ROL === 2) {
+        // Usuario
+        permisosFinales = ['dashboard', 'plan-compras'];
+      } else if (ID_ROL === 3) {
+        // Administrador
+        permisosFinales = ['dashboard', 'plan-compras', 'compras'];
+      } else if (ID_ROL === 4) {
+        // Autorizante
+        permisosFinales = ['dashboard', 'plan-compras', 'compras'];
+      }
     }
 
     const datosUsuario = {
@@ -79,13 +90,14 @@ async crear(req, res) {
       tipo_usuario_id,
       dependencia_id,
       reset_password_token: rawToken,
-      reset_password_expires: resetExpires
+      reset_password_expires: resetExpires,
+      activo: 0 // El usuario nace inactivo hasta que confirma su clave por correo
     };
 
     // 3. Crear en Repositorio
     const nuevoId = await usuarioRepository.create(datosUsuario, permisosFinales);
 
-    // 4. Enviar mail
+    // 4. Enviar mail de activación
     this.enviarCorreoActivacion(datosUsuario.email, datosUsuario.nombre, datosUsuario.apellido, datosUsuario.username, rawToken)
       .catch(err => console.error('⚠️ No se pudo enviar el correo de activación:', err));
 
@@ -98,7 +110,7 @@ async crear(req, res) {
       dni,
       tipo_usuario_id,
       dependencia_id,
-      activo: true,
+      activo: false,
       permisos: permisosFinales,
       message: 'Usuario registrado correctamente. Se envió el correo de activación con validez de 7 días.'
     });
@@ -106,7 +118,6 @@ async crear(req, res) {
   } catch (error) {
     console.error('❌ Error al crear usuario:', error);
 
-    // Captura de claves duplicadas en MySQL (ER_DUP_ENTRY / 1062)
     if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
       return res.status(409).json({ 
         error: 'El Nombre de Usuario, DNI o Email ya se encuentra registrado en el sistema.' 
@@ -270,7 +281,7 @@ async crear(req, res) {
     }
   }
 
-  
+
 
   // 7. Método auxiliar para envío de mails con Nodemailer
   async enviarCorreoActivacion(email, nombre, apellido, username, token) {
