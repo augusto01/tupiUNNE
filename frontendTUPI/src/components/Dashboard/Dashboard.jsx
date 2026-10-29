@@ -35,17 +35,21 @@ const Dashboard = () => {
       apellido: userLocal?.apellido || '',
       rol: userLocal?.rol || 'Operador',
       tipo_usuario_id: parseInt(userLocal?.tipo_usuario_id, 10) || null,
-      dependencia: userLocal?.dependencia || 'Rectorado UNNE'
+      dependencia: userLocal?.dependencia || 'Rectorado UNNE',
+      permisos: userLocal?.permisos || []
     };
   });
 
-  // 2. Cargar Entorno y Permisos del LocalStorage de forma unificada
+  // 2. Cargar Entorno y Permisos unificados (Recupera directamente desde el objeto usuario si no existen claves sueltas)
   const [entorno, setEntorno] = useState(() => {
     try {
-      const permisosLocal = JSON.parse(localStorage.getItem('tupi_permisos')) || JSON.parse(localStorage.getItem('permisos'));
+      const permisosLocal = 
+        JSON.parse(localStorage.getItem('tupi_permisos')) || 
+        JSON.parse(localStorage.getItem('permisos')) || 
+        usuario.permisos;
 
       if (Array.isArray(permisosLocal) && permisosLocal.length > 0) {
-        // Caso 1: Estructura de entornos relacionales devuelta por authController
+        // Caso 1: Estructura de entornos relacionales
         if (permisosLocal[0] && typeof permisosLocal[0] === 'object' && permisosLocal[0].permisos) {
           return {
             facultad: permisosLocal[0].facultad_nombre || usuario.dependencia,
@@ -54,7 +58,7 @@ const Dashboard = () => {
           };
         }
         
-        // Caso 2: Array plano de slugs de permisos ['compras', 'usuarios', ...]
+        // Caso 2: Array plano de slugs ['dashboard', 'compras', 'plan-compras', ...]
         if (typeof permisosLocal[0] === 'string') {
           return {
             facultad: usuario.dependencia,
@@ -67,15 +71,14 @@ const Dashboard = () => {
       console.error("Error al leer permisos en Dashboard:", err);
     }
 
-    // Respaldo de desarrollo
     return { 
       facultad: usuario.dependencia, 
       rol: usuario.rol, 
-      permisos: [] 
+      permisos: usuario.permisos || [] 
     };
   });
 
-  // 3. Helper flexible para verificar acceso a Slugs o Módulos
+  // 3. Helper flexible para verificar acceso a Slugs
   const tieneAcceso = (slugPermiso) => {
     if (!Array.isArray(entorno.permisos)) return false;
     // Si es SuperAdmin (tipo_usuario_id = 1), tiene acceso total
@@ -83,19 +86,21 @@ const Dashboard = () => {
     return entorno.permisos.includes(slugPermiso);
   };
 
-  // 4. Validación robusta para Administradores / Evaluadores (SuperAdmin: 1, Administrador: 3)
-  const esAdministrador = 
+  // 4. Validación para Administradores / Evaluadores / Autorizantes (Tipos: 1=SuperAdmin, 3=Admin, 4=Autorizante)
+  const esAdministradorOAutorizante = 
     usuario.tipo_usuario_id === 1 || 
     usuario.tipo_usuario_id === 3 || 
+    usuario.tipo_usuario_id === 4 || 
     tieneAcceso('evaluar-solicitudes') ||
     tieneAcceso('pendientes') ||
     tieneAcceso('aprobar-solicitudes') ||
     usuario.rol?.toLowerCase().includes('admin') || 
+    usuario.rol?.toLowerCase().includes('autoriz') ||
     entorno.rol?.toLowerCase().includes('admin');
 
-  // Permitir módulo de Compras si el usuario tiene algún permiso relevante o rol 1, 2 o 3
+  // Permitir módulo de Compras si es tipo 1, 2, 3 o 4 o tiene permisos
   const puedeVerCompras = 
-    [1, 2, 3].includes(usuario.tipo_usuario_id) || 
+    [1, 2, 3, 4].includes(usuario.tipo_usuario_id) || 
     tieneAcceso('compras') || 
     tieneAcceso('plan-compras') || 
     tieneAcceso('crear-solicitud') ||
@@ -104,7 +109,7 @@ const Dashboard = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const [openDropdowns, setOpenDropdowns] = useState({
-    compras: true, // Abierto por defecto para facil navegación
+    compras: true,
     correlatos: false,
     usuarios: false,
     expedientes: false
@@ -179,7 +184,7 @@ const Dashboard = () => {
               </button>
               <ul className={`sidebar-submenu ${openDropdowns.compras ? 'open' : ''}`}>
                 <div className="submenu-inner">
-                  {/* Nueva Solicitud (Permitido para tipos 1, 2 y 3) */}
+                  {/* Nueva Solicitud */}
                   <li>
                     <a 
                       href="#nueva-compra" 
@@ -195,7 +200,7 @@ const Dashboard = () => {
                     </a>
                   </li>
 
-                  {/* Ver Historial (Permitido para tipos 1, 2 y 3) */}
+                  {/* Ver Historial */}
                   <li>
                     <a 
                       href="#historial-compras" 
@@ -211,8 +216,8 @@ const Dashboard = () => {
                     </a>
                   </li>
 
-                  {/* PENDIENTES: SÓLO ADMINISTRADORES Y SUPERADMINS (Tipos 1 y 3) */}
-                  {esAdministrador && usuario.tipo_usuario_id !== 2 && (
+                  {/* PENDIENTES: ADMINISTRADORES, SUPERADMINS Y AUTORIZANTES (Tipos 1, 3 y 4) */}
+                  {esAdministradorOAutorizante && usuario.tipo_usuario_id !== 2 && (
                     <li>
                       <a 
                         href="#pendientes-compras" 
@@ -233,7 +238,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* MÓDULO: GESTIÓN DE USUARIOS (Solo SuperAdmin o con permiso usuarios) */}
+          {/* MÓDULO: GESTIÓN DE USUARIOS */}
           {(tieneAcceso('usuarios') || usuario.tipo_usuario_id === 1) && (
             <div>
               <button 
@@ -395,7 +400,7 @@ const Dashboard = () => {
 
             {/* RENDERIZADO PROTEGIDO DEL COMPONENTE PENDIENTES */}
             {currentSection === 'compras-pendientes' && (
-              esAdministrador && usuario.tipo_usuario_id !== 2 ? (
+              esAdministradorOAutorizante && usuario.tipo_usuario_id !== 2 ? (
                 <Pendientes />
               ) : (
                 <div className="content-section-fade text-center py-5">
