@@ -180,7 +180,8 @@ async crear(req, res) {
 
  // POST /api/usuarios/activar-cuenta
   // POST /api/usuarios/activar-cuenta
-async activarCuenta(req, res) {
+// POST /api/usuarios/activar-cuenta
+  async activarCuenta(req, res) {
     try {
       const { token, password } = req.body;
 
@@ -213,7 +214,7 @@ async activarCuenta(req, res) {
 
       const usuario = rows[0];
 
-      // 2. Verificar vencimiento
+      // 2. Verificar vencimiento de 7 días
       const fechaExpiracion = new Date(usuario.reset_password_expires);
       const ahora = new Date();
 
@@ -235,10 +236,10 @@ async activarCuenta(req, res) {
         [hashedPassword, usuario.usuario_id]
       );
 
-      // 5. Obtener los datos completos del usuario para armar la sesión JWT
+      // 5. Obtener los datos completos del usuario con sus permisos
       const usuarioCompleto = await usuarioRepository.findById(usuario.usuario_id);
 
-      // 6. Generar el Token JWT de autenticación para que quede logueado automáticamente
+      // 6. Generar el Token JWT e INCLUIR PERMISOS para que entren activos al instante
       const jwtSecret = process.env.JWT_SECRET || 'tu_secreto_jwt';
       const tokenSesion = jwt.sign(
         { 
@@ -246,7 +247,8 @@ async activarCuenta(req, res) {
           username: usuarioCompleto.username, 
           email: usuarioCompleto.email, 
           tipo_usuario_id: usuarioCompleto.tipo_usuario_id,
-          dependencia_id: usuarioCompleto.dependencia_id 
+          dependencia_id: usuarioCompleto.dependencia_id,
+          permisos: usuarioCompleto.permisos || [] // 👈 Se agregan los permisos al JWT
         },
         jwtSecret,
         { expiresIn: '24h' }
@@ -254,7 +256,7 @@ async activarCuenta(req, res) {
 
       console.log(`✅ Cuenta activada y JWT generado con éxito para el usuario ID: ${usuario.usuario_id}`);
 
-      // 7. Retornar el token JWT y los datos del usuario al frontend
+      // 7. Retornar el token JWT y los datos completos del usuario
       return res.status(200).json({ 
         ok: true, 
         message: 'Cuenta activada correctamente.',
@@ -267,6 +269,8 @@ async activarCuenta(req, res) {
       return res.status(500).json({ error: 'Error interno del servidor al activar la cuenta.' });
     }
   }
+
+  
 
   // 7. Método auxiliar para envío de mails con Nodemailer
   async enviarCorreoActivacion(email, nombre, apellido, username, token) {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Key, ShieldCheck, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Key, ShieldCheck, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 import './ActivarCuenta.css';
 
@@ -14,14 +14,22 @@ const ActivarCuenta = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Estados para controlar interactividad/mensajes en tiempo real
+  const [touchedPassword, setTouchedPassword] = useState(false);
+  const [touchedConfirm, setTouchedConfirm] = useState(false);
+
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  // Validaciones en tiempo real
+  const esPasswordCorta = password.length > 0 && password.length < 8;
+  const noCoinciden = confirmPassword.length > 0 && password !== confirmPassword;
+  const esFormularioValido = password.length >= 8 && password === confirmPassword;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (loading) return;
 
-    // 1. Validar presencia del token
     if (!token) {
       Swal.fire({
         icon: 'error',
@@ -32,27 +40,7 @@ const ActivarCuenta = () => {
       return;
     }
 
-    // 2. Validar longitud mínima de 8 caracteres
-    if (password.trim().length < 8) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Contraseña muy corta',
-        text: 'La contraseña debe tener un mínimo de 8 caracteres.',
-        confirmButtonColor: '#0284c7'
-      });
-      return;
-    }
-
-    // 3. Validar que las contraseñas coincidan
-    if (password !== confirmPassword) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Las contraseñas no coinciden',
-        text: 'Asegúrate de ingresar exactamente la misma contraseña en ambos campos.',
-        confirmButtonColor: '#0284c7'
-      });
-      return;
-    }
+    if (!esFormularioValido) return;
 
     try {
       setLoading(true);
@@ -71,31 +59,32 @@ const ActivarCuenta = () => {
         throw new Error(data.error || 'No se pudo activar la cuenta.');
       }
 
-      // Limpiar datos previos en localStorage
+      // 1. Limpiar sesiones anteriores de localStorage
       localStorage.clear();
 
-      // Guardar token y sesión
+      // 2. Persistir token y datos de usuario completos (incluyendo permisos parseados)
       if (data.token) {
         localStorage.setItem('tupi_token', data.token);
         localStorage.setItem('token', data.token);
       }
       if (data.usuario) {
+        // Aseguramos que los permisos viajen en el objeto del usuario guardado
         localStorage.setItem('tupi_user', JSON.stringify(data.usuario));
         localStorage.setItem('usuario', JSON.stringify(data.usuario));
       }
 
       setLoading(false);
 
-      // Alerta con contador dinámico e ingreso automático al dashboard
+      // 3. Alerta de éxito e ingreso al Dashboard
       let timerInterval;
       Swal.fire({
         icon: 'success',
         title: '¡Cuenta activada con éxito!',
-        html: 'Serás redirigido al sitio en <b id="swal-timer">3</b> segundos...',
+        html: 'Serás redirigido al panel en <b id="swal-timer">3</b> segundos...',
         timer: 3000,
         timerProgressBar: true,
         confirmButtonColor: '#059669',
-        confirmButtonText: 'Ir al sitio ahora',
+        confirmButtonText: 'Ir al Dashboard ahora',
         allowOutsideClick: false,
         didOpen: () => {
           const timerElement = document.getElementById('swal-timer');
@@ -110,6 +99,7 @@ const ActivarCuenta = () => {
           clearInterval(timerInterval);
         }
       }).then(() => {
+        // Recarga completa para forzar a los Providers de React Router/AuthContext a leer la nueva sesión
         window.location.href = '/dashboard';
       });
 
@@ -137,16 +127,19 @@ const ActivarCuenta = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="activar-form">
+          {/* Nueva Contraseña */}
           <div className="form-group-activar">
             <label><Key size={14} /> Nueva Contraseña</label>
             <div className="password-input-wrapper">
               <input 
                 type={showPassword ? "text" : "password"} 
                 value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
+                onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => setTouchedPassword(true)}
                 required 
                 placeholder="Mínimo 8 caracteres"
                 disabled={loading}
+                className={touchedPassword && esPasswordCorta ? 'input-error' : (password.length >= 8 ? 'input-success' : '')}
               />
               <button 
                 type="button" 
@@ -157,8 +150,20 @@ const ActivarCuenta = () => {
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            {/* Mensaje de validación en tiempo real */}
+            {touchedPassword && esPasswordCorta && (
+              <span className="error-text-field">
+                <AlertCircle size={12} /> La contraseña debe tener al menos 8 caracteres.
+              </span>
+            )}
+            {password.length >= 8 && (
+              <span className="success-text-field">
+                <CheckCircle2 size={12} /> Longitud válida.
+              </span>
+            )}
           </div>
 
+          {/* Confirmar Contraseña */}
           <div className="form-group-activar">
             <label><Key size={14} /> Confirmar Contraseña</label>
             <div className="password-input-wrapper">
@@ -166,9 +171,11 @@ const ActivarCuenta = () => {
                 type={showConfirmPassword ? "text" : "password"} 
                 value={confirmPassword} 
                 onChange={(e) => setConfirmPassword(e.target.value)} 
+                onBlur={() => setTouchedConfirm(true)}
                 required 
                 placeholder="Repite tu contraseña"
                 disabled={loading}
+                className={touchedConfirm && noCoinciden ? 'input-error' : (confirmPassword.length >= 8 && !noCoinciden ? 'input-success' : '')}
               />
               <button 
                 type="button" 
@@ -179,9 +186,24 @@ const ActivarCuenta = () => {
                 {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
+            {/* Mensaje de validación en tiempo real */}
+            {touchedConfirm && noCoinciden && (
+              <span className="error-text-field">
+                <AlertCircle size={12} /> Las contraseñas no coinciden.
+              </span>
+            )}
+            {confirmPassword.length >= 8 && !noCoinciden && (
+              <span className="success-text-field">
+                <CheckCircle2 size={12} /> Las contraseñas coinciden.
+              </span>
+            )}
           </div>
 
-          <button type="submit" className="btn-activar-submit" disabled={loading}>
+          <button 
+            type="submit" 
+            className="btn-activar-submit" 
+            disabled={loading || !esFormularioValido}
+          >
             {loading ? (
               <>
                 <Loader2 size={18} className="spinner-icon" />
