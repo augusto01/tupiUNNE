@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Key, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Key, ShieldCheck, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import './ActivarCuenta.css';
 
 const ActivarCuenta = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const navigate = useNavigate();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -20,9 +19,9 @@ const ActivarCuenta = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // FRENO ANTI-DOBLE SUBMIT: Si ya está procesando, no deja mandar otra petición
     if (loading) return;
 
+    // 1. Validar presencia del token
     if (!token) {
       Swal.fire({
         icon: 'error',
@@ -33,21 +32,23 @@ const ActivarCuenta = () => {
       return;
     }
 
-    if (password.length < 8) {
+    // 2. Validar longitud mínima de 8 caracteres
+    if (password.trim().length < 8) {
       Swal.fire({
         icon: 'warning',
         title: 'Contraseña muy corta',
-        text: 'La contraseña debe tener al menos 8 caracteres.',
+        text: 'La contraseña debe tener un mínimo de 8 caracteres.',
         confirmButtonColor: '#0284c7'
       });
       return;
     }
 
+    // 3. Validar que las contraseñas coincidan
     if (password !== confirmPassword) {
       Swal.fire({
         icon: 'warning',
-        title: 'Contraseñas no coinciden',
-        text: 'Asegúrate de escribir la misma contraseña en ambos campos.',
+        title: 'Las contraseñas no coinciden',
+        text: 'Asegúrate de ingresar exactamente la misma contraseña en ambos campos.',
         confirmButtonColor: '#0284c7'
       });
       return;
@@ -70,10 +71,10 @@ const ActivarCuenta = () => {
         throw new Error(data.error || 'No se pudo activar la cuenta.');
       }
 
-      // 🎯 1. LIMPIAR SESIÓN ANTERIOR (por si estaba logueado con Rectorado/Admin)
+      // Limpiar datos previos en localStorage
       localStorage.clear();
 
-      // 🎯 2. GUARDAR LA NUEVA SESIÓN DEL USUARIO RECIÉN ACTIVADO
+      // Guardar token y sesión
       if (data.token) {
         localStorage.setItem('tupi_token', data.token);
         localStorage.setItem('token', data.token);
@@ -85,29 +86,41 @@ const ActivarCuenta = () => {
 
       setLoading(false);
 
-      // 🎯 3. MOSTRAR LA ALERTA DE ÉXITO Y LUEGO NAVEGAR
+      // Alerta con contador dinámico e ingreso automático al dashboard
+      let timerInterval;
       Swal.fire({
         icon: 'success',
-        title: '¡Cuenta Activada!',
-        text: `Hola ${data.usuario?.nombre || ''}, tu clave fue configurada correctamente.`,
+        title: '¡Cuenta activada con éxito!',
+        html: 'Serás redirigido al sitio en <b id="swal-timer">3</b> segundos...',
+        timer: 3000,
+        timerProgressBar: true,
         confirmButtonColor: '#059669',
-        confirmButtonText: 'Ir al Panel Principal',
-        allowOutsideClick: false
-      }).then((result) => {
-        if (result.isConfirmed || result.isDismissed) {
-          // Forzamos la redirección y refresco para levantar la nueva sesión
-          window.location.href = '/dashboard';
+        confirmButtonText: 'Ir al sitio ahora',
+        allowOutsideClick: false,
+        didOpen: () => {
+          const timerElement = document.getElementById('swal-timer');
+          timerInterval = setInterval(() => {
+            const timeLeft = Swal.getTimerLeft();
+            if (timeLeft && timerElement) {
+              timerElement.textContent = Math.ceil(timeLeft / 1000);
+            }
+          }, 200);
+        },
+        willClose: () => {
+          clearInterval(timerInterval);
         }
+      }).then(() => {
+        window.location.href = '/dashboard';
       });
 
     } catch (err) {
-      console.error('❌ Error en activación:', err);
+      console.error('❌ Error al activar la cuenta:', err);
       setLoading(false);
-      
+
       Swal.fire({
         icon: 'error',
-        title: 'Enlace Inválido o Expirado',
-        text: err.message || 'Ocurrió un error al procesar la activación.',
+        title: 'Error de activación',
+        text: err.message || 'Ocurrió un problema al procesar la activación.',
         confirmButtonColor: '#0284c7'
       });
     }
@@ -117,11 +130,10 @@ const ActivarCuenta = () => {
     <div className="activar-cuenta-wrapper">
       <div className="activar-card-box">
         <div className="activar-header">
-          <div className="icon-badge">
-            <ShieldCheck size={32} />
-          </div>
-          <h2>Activar Cuenta - TUPI UNNE</h2>
-          <p>Configura tu clave de acceso personal para ingresar al sistema.</p>
+          <img src="/logo-unne.png" alt="Logo UNNE" className="logo-unne-img" />
+          <h2>Sistema TUPI - UNNE</h2>
+          <p className="subtitle-activar">Activar Cuenta de Usuario</p>
+          <span className="desc-activar">Configura tu clave de acceso personal para ingresar al sistema.</span>
         </div>
 
         <form onSubmit={handleSubmit} className="activar-form">
@@ -170,7 +182,14 @@ const ActivarCuenta = () => {
           </div>
 
           <button type="submit" className="btn-activar-submit" disabled={loading}>
-            {loading ? 'Activando Cuenta...' : 'Establecer Contraseña e Ingresar'}
+            {loading ? (
+              <>
+                <Loader2 size={18} className="spinner-icon" />
+                <span>Estableciendo contraseña...</span>
+              </>
+            ) : (
+              'Establecer Contraseña e Ingresar'
+            )}
           </button>
         </form>
       </div>

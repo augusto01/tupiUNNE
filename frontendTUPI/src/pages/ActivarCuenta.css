@@ -1,168 +1,184 @@
-/* ActivarCuenta.css - Estilos aislados y centrados */
+/* Reset local para evitar márgenes desalineados */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
 
 .activar-cuenta-wrapper {
-  position: fixed;
-  top: 0;
-  left: 0;
+  min-height: 100vh;
   width: 100vw;
-  height: 100vh;
-  z-index: 99999;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #0d131f; /* Fondo oscuro TUPI */
-  background-image: 
-    radial-gradient(at 10% 10%, rgba(2, 132, 199, 0.12) 0px, transparent 50%),
-    radial-gradient(at 90% 90%, rgba(5, 150, 105, 0.12) 0px, transparent 50%);
-  padding: 1.5rem;
+  background-color: #f8fafc;
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+  background-size: 24px 24px;
+  padding: 20px;
   box-sizing: border-box;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
 }
 
 .activar-card-box {
-  background-color: #172131;
-  border: 1px solid #28374d;
-  border-radius: 12px;
+  background: #ffffff;
   width: 100%;
   max-width: 440px;
-  padding: 2.5rem 2rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  animation: popInCard 0.35s ease-out forwards;
+  padding: 36px 32px;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+  border: 1px solid #e2e8f0;
+  margin: auto;
 }
 
 .activar-header {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 28px;
 }
 
-.activar-header .icon-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  background-color: rgba(2, 132, 199, 0.15);
-  color: #38bdf8;
-  border-radius: 12px;
-  margin-bottom: 1rem;
-  border: 1px solid rgba(56, 189, 248, 0.2);
+.logo-unne-img {
+  height: 64px;
+  width: auto;
+  object-fit: contain;
+  margin-bottom: 12px;
 }
 
 .activar-header h2 {
-  color: #f8fafc;
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   font-weight: 700;
-  margin: 0 0 0.5rem 0;
+  color: #0f172a;
+  margin: 0 0 4px 0;
 }
 
-.activar-header p {
-  color: #94a3b8;
-  font-size: 0.88rem;
-  margin: 0;
+.subtitle-activar {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0284c7;
+  margin: 0 0 8px 0;
+}
+
+.desc-activar {
+  font-size: 0.85rem;
+  color: #64748b;
+  display: block;
   line-height: 1.4;
 }
 
 .activar-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 20px;
 }
 
 .form-group-activar {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 6px;
 }
 
 .form-group-activar label {
-  color: #cbd5e1;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  gap: 6px;
 }
 
-/* Wrapper para input + ojito */
 .password-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
-  width: 100%;
 }
 
 .password-input-wrapper input {
   width: 100%;
-  padding: 0.75rem 2.75rem 0.75rem 0.9rem;
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  padding: 12px 42px 12px 14px;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  color: #f8fafc;
   font-size: 0.95rem;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  color: #0f172a;
+  background-color: #f8fafc;
+  transition: all 0.2s ease;
   box-sizing: border-box;
 }
 
 .password-input-wrapper input:focus {
+  outline: none;
   border-color: #0284c7;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
-/* Botón del ojito */
+.password-input-wrapper input:disabled {
+  background-color: #f1f5f9;
+  cursor: not-allowed;
+}
+
 .toggle-eye-btn {
   position: absolute;
-  right: 10px;
-  background: transparent;
+  right: 12px;
+  background: none;
   border: none;
-  color: #64748b;
+  color: #94a3b8;
   cursor: pointer;
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
-  border-radius: 4px;
   transition: color 0.2s;
 }
 
 .toggle-eye-btn:hover {
-  color: #38bdf8;
+  color: #0284c7;
 }
 
-/* Botón principal */
 .btn-activar-submit {
-  margin-top: 0.5rem;
   width: 100%;
-  padding: 0.85rem;
-  background-color: #10b981;
+  padding: 12px 16px;
+  background-color: #0284c7;
   color: #ffffff;
   border: none;
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  margin-top: 8px;
 }
 
 .btn-activar-submit:hover:not(:disabled) {
-  background-color: #059669;
-  transform: translateY(-1px);
+  background-color: #0369a1;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
 }
 
 .btn-activar-submit:disabled {
-  opacity: 0.6;
+  background-color: #94a3b8;
   cursor: not-allowed;
 }
 
-@keyframes popInCard {
+/* Spinner animado */
+.spinner-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
   from {
-    opacity: 0;
-    transform: scale(0.96) translateY(10px);
+    transform: rotate(0deg);
   }
   to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: rotate(360deg);
   }
 }
