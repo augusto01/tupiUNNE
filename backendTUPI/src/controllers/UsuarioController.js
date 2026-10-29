@@ -60,22 +60,22 @@ async crear(req, res) {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(randomPassword, salt);
 
-    // 2. Permisos por defecto coincidiendo EXACTAMENTE con la tabla 'permisos' (slugs)
+    // 2. Permisos por defecto coincidiendo EXACTAMENTE con la jerarquía nueva (1 = Máximo, 4 = Mínimo)
     let permisosFinales = Array.isArray(permisos) && permisos.length > 0 ? permisos : [];
     if (permisosFinales.length === 0) {
       const ID_ROL = Number(tipo_usuario_id);
       if (ID_ROL === 1) {
-        // SuperAdmin
+        // 1: SuperAdmin (Acceso total)
         permisosFinales = ['dashboard', 'plan-compras', 'compras', 'usuarios', 'configuracion'];
       } else if (ID_ROL === 2) {
-        // Usuario
-        permisosFinales = ['dashboard', 'plan-compras'];
+        // 2: Administrador (Gestión general)
+        permisosFinales = ['dashboard', 'plan-compras', 'compras', 'usuarios'];
       } else if (ID_ROL === 3) {
-        // Administrador
+        // 3: Autorizante (Gestión y evaluación de UOC)
         permisosFinales = ['dashboard', 'plan-compras', 'compras'];
       } else if (ID_ROL === 4) {
-        // Autorizante
-        permisosFinales = ['dashboard', 'plan-compras', 'compras'];
+        // 4: Usuario (Carga de solicitudes)
+        permisosFinales = ['dashboard', 'plan-compras'];
       }
     }
 

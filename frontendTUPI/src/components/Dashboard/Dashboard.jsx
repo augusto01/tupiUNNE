@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  LayoutDashboard, 
   FileSpreadsheet, 
   Layers, 
   Settings, 
@@ -40,7 +39,7 @@ const Dashboard = () => {
     };
   });
 
-  // 2. Cargar Entorno y Permisos unificados (Recupera directamente desde el objeto usuario si no existen claves sueltas)
+  // 2. Cargar Entorno y Permisos unificados
   const [entorno, setEntorno] = useState(() => {
     try {
       const permisosLocal = 
@@ -49,7 +48,6 @@ const Dashboard = () => {
         usuario.permisos;
 
       if (Array.isArray(permisosLocal) && permisosLocal.length > 0) {
-        // Caso 1: Estructura de entornos relacionales
         if (permisosLocal[0] && typeof permisosLocal[0] === 'object' && permisosLocal[0].permisos) {
           return {
             facultad: permisosLocal[0].facultad_nombre || usuario.dependencia,
@@ -58,7 +56,6 @@ const Dashboard = () => {
           };
         }
         
-        // Caso 2: Array plano de slugs ['dashboard', 'compras', 'plan-compras', ...]
         if (typeof permisosLocal[0] === 'string') {
           return {
             facultad: usuario.dependencia,
@@ -81,26 +78,23 @@ const Dashboard = () => {
   // 3. Helper flexible para verificar acceso a Slugs
   const tieneAcceso = (slugPermiso) => {
     if (!Array.isArray(entorno.permisos)) return false;
-    // Si es SuperAdmin (tipo_usuario_id = 1), tiene acceso total
     if (usuario.tipo_usuario_id === 1) return true;
     return entorno.permisos.includes(slugPermiso);
   };
 
-  // 4. Validación para Administradores / Evaluadores / Autorizantes (Tipos: 1=SuperAdmin, 3=Admin, 4=Autorizante)
+  // 4. Validación para Administradores y Autorizantes según jerarquía:
+  // SuperAdmin (1), Administrador (2), Autorizante (3)
   const esAdministradorOAutorizante = 
-    usuario.tipo_usuario_id === 1 || 
-    usuario.tipo_usuario_id === 3 || 
-    usuario.tipo_usuario_id === 4 || 
+    (usuario.tipo_usuario_id !== null && usuario.tipo_usuario_id <= 3) || 
     tieneAcceso('evaluar-solicitudes') ||
     tieneAcceso('pendientes') ||
     tieneAcceso('aprobar-solicitudes') ||
     usuario.rol?.toLowerCase().includes('admin') || 
-    usuario.rol?.toLowerCase().includes('autoriz') ||
-    entorno.rol?.toLowerCase().includes('admin');
+    usuario.rol?.toLowerCase().includes('autoriz');
 
-  // Permitir módulo de Compras si es tipo 1, 2, 3 o 4 o tiene permisos
+  // Permitir módulo de Compras a todos los roles habilitados (1, 2, 3, 4)
   const puedeVerCompras = 
-    [1, 2, 3, 4].includes(usuario.tipo_usuario_id) || 
+    (usuario.tipo_usuario_id !== null && usuario.tipo_usuario_id <= 4) || 
     tieneAcceso('compras') || 
     tieneAcceso('plan-compras') || 
     tieneAcceso('crear-solicitud') ||
@@ -216,8 +210,8 @@ const Dashboard = () => {
                     </a>
                   </li>
 
-                  {/* PENDIENTES: ADMINISTRADORES, SUPERADMINS Y AUTORIZANTES (Tipos 1, 3 y 4) */}
-                  {esAdministradorOAutorizante && usuario.tipo_usuario_id !== 2 && (
+                  {/* Solicitudes Pendientes (Habilitado para Roles 1, 2 y 3) */}
+                  {esAdministradorOAutorizante && usuario.tipo_usuario_id !== 4 && (
                     <li>
                       <a 
                         href="#pendientes-compras" 
@@ -238,7 +232,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* MÓDULO: GESTIÓN DE USUARIOS */}
+          {/* MÓDULO: GESTIÓN DE USUARIOS (Solo SuperAdmin - ID 1) */}
           {(tieneAcceso('usuarios') || usuario.tipo_usuario_id === 1) && (
             <div>
               <button 
@@ -398,9 +392,9 @@ const Dashboard = () => {
               <Historial />
             )}
 
-            {/* RENDERIZADO PROTEGIDO DEL COMPONENTE PENDIENTES */}
+            {/* RENDERIZADO PROTEGIDO DEL COMPONENTE PENDIENTES EN EL ÁREA DE TRABAJO */}
             {currentSection === 'compras-pendientes' && (
-              esAdministradorOAutorizante && usuario.tipo_usuario_id !== 2 ? (
+              esAdministradorOAutorizante && usuario.tipo_usuario_id !== 4 ? (
                 <Pendientes />
               ) : (
                 <div className="content-section-fade text-center py-5">

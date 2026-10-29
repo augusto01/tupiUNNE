@@ -82,17 +82,18 @@ exports.login = async (req, res) => {
 
     // 4. Firmar el Token JWT
     const token = jwt.sign(
-      { 
-        id: userIdParam, 
-        usuario_id: userIdParam,
-        username: usuarioData.username, 
-        tipo_usuario_id: usuarioData.tipo_usuario_id,
-        entornos: entornosProcesados,
-        permisos: listaPermisosPlana
-      },
-      process.env.JWT_SECRET || 'tupi_secret_key_rectorado',
-      { expiresIn: '8h' }
-    );
+        { 
+          id: userIdParam, 
+          usuario_id: userIdParam,
+          username: usuarioData.username, 
+          tipo_usuario_id: usuarioData.tipo_usuario_id,
+          dependencia_id: usuarioData.dependencia_id, 
+          entornos: entornosProcesados,
+          permisos: listaPermisosPlana
+        },
+        process.env.JWT_SECRET || 'tupi_secret_key_rectorado',
+        { expiresIn: '8h' }
+      );
 
     // 5. Devolver al Front los datos de autenticación, usuario, entornos y permisos
     return res.json({

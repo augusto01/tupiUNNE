@@ -1,23 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Eye, Search, UserCheck, Loader2, User, Building2, Calendar, FileSpreadsheet, ShieldCheck } from 'lucide-react';
+import { Eye, Search, UserCheck, Loader2, User, Building2, Calendar, FileSpreadsheet, ShieldCheck, Filter } from 'lucide-react';
 import Swal from 'sweetalert2';
 import DetalleSolicitud from './DetalleSolicitud';
 import './Pendientes.css';
 
 const Pendientes = () => {
-  const { fetchAuth, token } = useAuth();
+  const { fetchAuth, token, user } = useAuth();
 
-  const [solicitudes, setSolicitudes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [busqueda, setBusqueda] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('TODOS');
-  const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null);
-  const [procesandoId, setProcesandoId] = useState(null);
+  // Obtención robusta del usuario logueado para identificar su rol y UOC
+  const usuarioLogueado = user || JSON.parse(localStorage.getItem('tupi_user')) || JSON.parse(localStorage.getItem('usuario')) || {};
+
+// El Autorizante ahora es tipo_usuario_id === 3
+const esAutorizanteUoc = parseInt(usuarioLogueado?.tipo_usuario_id, 10) === 3;
+
+const [solicitudes, setSolicitudes] = useState([]);
+const [loading, setLoading] = useState(true);
+const [busqueda, setBusqueda] = useState('');
+const [filtroEstado, setFiltroEstado] = useState('TODOS');
+const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null);
+const [procesandoId, setProcesandoId] = useState(null);
 
   const cargarPendientes = async () => {
     setLoading(true);
     try {
+      // Llama al endpoint único. El backend filtra por la UOC del usuario si es Autorizante (tipo_usuario_id = 4)
       const res = await fetchAuth('/plan-compras/solicitudes-pendientes');
       if (res.ok) {
         const data = await res.json();
@@ -168,11 +175,30 @@ const Pendientes = () => {
 
   return (
     <div className="pendientes-container">
-      <div className="pendientes-header">
+      {/* ENCABEZADO ADAPTATIVO SEGÚN ROL */}
+      <div className="pendientes-header d-flex justify-content-between align-items-center">
         <div>
-          <h1 className="pendientes-title">Gestión de Solicitudes Pendientes</h1>
-          <p className="pendientes-subtitle">Panel de aprobación y revisión administrativa</p>
+          <h1 className="pendientes-title">
+            {esAutorizanteUoc 
+              ? 'Autorización de Solicitudes UOC' 
+              : 'Gestión de Solicitudes Pendientes'}
+          </h1>
+          <p className="pendientes-subtitle">
+            {esAutorizanteUoc 
+              ? `Revisión y aprobación para la UOC: ${usuarioLogueado?.dependencia || usuarioLogueado?.dependencia_nombre || 'Asignada'}`
+              : 'Panel de aprobación y revisión administrativa global'}
+          </p>
         </div>
+
+        {/* Badge distintivo para Autorizante */}
+        {esAutorizanteUoc && (
+          <div className="uoc-badge-container d-flex align-items-center gap-2 p-2 px-3 rounded" style={{ backgroundColor: '#e0f2fe', color: '#0369a1' }}>
+            <Building2 size={16} />
+            <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+              UOC: {usuarioLogueado?.dependencia || 'Mi Dependencia'}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="pendientes-card mb-4">
@@ -215,7 +241,11 @@ const Pendientes = () => {
         ) : pendientesFiltradas.length === 0 ? (
           <div className="text-center py-5 text-muted">
             <UserCheck size={36} className="mb-2 mx-auto text-gray" />
-            <p className="small">No se encontraron solicitudes con el filtro seleccionado.</p>
+            <p className="small">
+              {esAutorizanteUoc 
+                ? 'No se encontraron solicitudes pendientes en su UOC.' 
+                : 'No se encontraron solicitudes con el filtro seleccionado.'}
+            </p>
           </div>
         ) : (
           <div className="solicitudes-list">
@@ -248,7 +278,7 @@ const Pendientes = () => {
 
                       <div className="solicitud-meta-item">
                         <span className="solicitud-meta-label">
-                          <Building2 size={12} className="inline-icon" /> Dependencia
+                          <Building2 size={12} className="inline-icon" /> Dependencia / UOC
                         </span>
                         <span className="solicitud-meta-value">
                           {sol.dependencia_nombre || 'Rectorado UNNE'}
