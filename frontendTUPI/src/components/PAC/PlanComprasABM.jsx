@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Search, ShoppingCart, Trash2, Send, Save, Loader2, ArrowLeft } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Send, Save, Loader2, ArrowLeft, Building2, ChevronDown, Check, MessageSquare } from 'lucide-react';
 import Swal from 'sweetalert2';
 import './PlanComprasABM.css';
 
@@ -12,11 +12,19 @@ const TRIMESTRES_OPCIONES = [
 ];
 
 const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onGuardadoExitoso = null }) => {
-  const { fetchAuth, token } = useAuth();
+  const { fetchAuth, token, user } = useAuth();
 
+  // Estados de catálogo y áreas
   const [rubros, setRubros] = useState([]);
   const [rubroSeleccionado, setRubroSeleccionado] = useState('');
+  const [areas, setAreas] = useState([]);
+  const [areaSeleccionada, setAreaSeleccionada] = useState('');
   const [bienesCatalogo, setBienesCatalogo] = useState([]);
+
+  // Buscador de Áreas en el Dropdown
+  const [busquedaAreaText, setBusquedaAreaText] = useState('');
+  const [isAreaDropdownOpen, setIsAreaDropdownOpen] = useState(false);
+  const dropdownAreaRef = useRef(null);
 
   const [busquedaTexto, setBusquedaTexto] = useState('');
   const [filtroInciso, setFiltroInciso] = useState('TODOS');
@@ -24,15 +32,28 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
 
   const [planEstado, setPlanEstado] = useState({ habilitado: true, mensaje: '' });
   const [nroConvocatoria, setNroConvocatoria] = useState('CDC:2026/01');
+  const [observacionGeneral, setObservacionGeneral] = useState(''); // 🎯 Estado de la observación general
   const [loadingRubros, setLoadingRubros] = useState(true);
+  const [loadingAreas, setLoadingAreas] = useState(true);
   const [loadingBienes, setLoadingBienes] = useState(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittingAction, setSubmittingAction] = useState(null);
 
-  // Determinación de modo edición
   const esModoEdicion = Boolean(solicitudAEditar && (solicitudAEditar.id || solicitudAEditar.solicitud_id));
 
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownAreaRef.current && !dropdownAreaRef.current.contains(event.target)) {
+        setIsAreaDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Cargar estado del plan, rubros y áreas disponibles por UOC
   useEffect(() => {
     const currentToken = token || localStorage.getItem('tupi_token') || localStorage.getItem('token');
     if (!currentToken) return;
@@ -42,13 +63,45 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
       .then((data) => setPlanEstado(data))
       .catch((err) => console.error('Error estado plan:', err.message));
 
+    // Cargar áreas solicitantes de la UOC / Dependencia del usuario
+    setLoadingAreas(true);
+    const usuarioLogueado = user || JSON.parse(localStorage.getItem('tupi_user')) || JSON.parse(localStorage.getItem('usuario')) || {};
+    const depId = usuarioLogueado.dependencia_id || '';
+
+    fetchAuth(`/plan-compras/areas?dependencia_id=${depId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const unicas = [];
+          const nombresVistos = new Set();
+          
+          data.forEach(item => {
+            const claveUnica = `${(item.nombre || '').toLowerCase().trim()}_${item.dependencia_id}`;
+            if (!nombresVistos.has(claveUnica)) {
+              nombresVistos.add(claveUnica);
+              unicas.push(item);
+            }
+          });
+
+          setAreas(unicas);
+          if (!esModoEdicion && unicas.length > 0) {
+            setAreaSeleccionada(unicas[0].id ?? unicas[0].area_id);
+          }
+        } else {
+          setAreas([]);
+        }
+      })
+      .catch((err) => console.error('Error al obtener áreas:', err.message))
+      .finally(() => setLoadingAreas(false));
+
+    // Cargar catálogo de rubros
     setLoadingRubros(true);
     fetchAuth('/plan-compras/rubros')
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setRubros(data);
-          const primerRubro = data[0].rubro_id ?? data[0];
+          const primerRubro = data[0].rubro_id ?? data[0].id ?? data[0];
           setRubroSeleccionado(primerRubro);
         } else {
           setRubros([]);
@@ -59,9 +112,13 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
       })
       .finally(() => setLoadingRubros(false));
 
-    // Cargar ítems si es MODO EDICIÓN
     if (esModoEdicion && solicitudAEditar) {
       setNroConvocatoria(solicitudAEditar.nro_convocatoria || 'CDC:2026/01');
+      setObservacionGeneral(solicitudAEditar.observaciones || solicitudAEditar.observacion || '');
+      if (solicitudAEditar.area_id) {
+        setAreaSeleccionada(solicitudAEditar.area_id);
+      }
+      
       const itemsMap = {};
       const renglones = solicitudAEditar.renglones || solicitudAEditar.registros || [];
 
@@ -86,12 +143,46 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
       });
       setSolicitudItems(itemsMap);
     } else {
-      // MODO NUEVA SOLICITUD
       setNroConvocatoria('CDC:2026/01');
+      setObservacionGeneral('');
       setSolicitudItems({});
     }
-  }, [token, solicitudAEditar, esModoEdicion]);
+  }, [token, solicitudAEditar, esModoEdicion, user]);
 
+  // Helper para normalizar texto
+  const limpiarTexto = (str) => {
+    if (!str) return '';
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  // Áreas filtradas con búsqueda ultra flexible
+  const areasFiltradasBuscador = useMemo(() => {
+    const busquedaLimpia = limpiarTexto(busquedaAreaText);
+    if (!busquedaLimpia) return areas;
+
+    const palabrasBusqueda = busquedaLimpia.split(' ');
+
+    return areas.filter((a) => {
+      const nombreLimpio = limpiarTexto(a.nombre);
+      const depLimpia = limpiarTexto(a.dependencia_nombre);
+      const textoCompleto = `${nombreLimpio} ${depLimpia}`;
+
+      return palabrasBusqueda.every((palabra) => textoCompleto.includes(palabra));
+    });
+  }, [areas, busquedaAreaText]);
+
+  // Objeto del área actualmente seleccionada
+  const objetoAreaSeleccionada = useMemo(() => {
+    return areas.find(a => (a.id ?? a.area_id) === parseInt(areaSeleccionada, 10));
+  }, [areas, areaSeleccionada]);
+
+  // Cargar bienes filtrados por el rubro
   useEffect(() => {
     const currentToken = token || localStorage.getItem('tupi_token') || localStorage.getItem('token');
     if (!currentToken || !rubroSeleccionado) return;
@@ -193,8 +284,16 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
   };
 
   const solicitarConfirmacion = (nuevoEstado) => {
-    const itemsAEnviar = Object.values(solicitudItems);
+    if (!areaSeleccionada) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Área Solicitante requerida',
+        text: 'Debe seleccionar el área o dependencia a la cual se asignará la solicitud.'
+      });
+      return;
+    }
 
+    const itemsAEnviar = Object.values(solicitudItems);
     if (itemsAEnviar.length === 0) {
       Swal.fire({
         icon: 'warning',
@@ -228,18 +327,11 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
 
   const ejecutarProcesarSolicitud = async (nuevoEstado) => {
     if (isSubmitting) return;
-
     const itemsAEnviar = Object.values(solicitudItems);
-
-    if (itemsAEnviar.length === 0) {
-      Swal.fire('Atención', 'Seleccione al menos un producto del catálogo.', 'warning');
-      return;
-    }
 
     setIsSubmitting(true);
     setSubmittingAction(nuevoEstado);
 
-    // Mapeo seguro con compatibilidad doble para backend (renglones / bienes_seleccionados)
     const itemsFormateados = itemsAEnviar.map((i) => ({
       bien_id: parseInt(i.bien_id, 10),
       cantidad: parseInt(i.cantidad_solicitada, 10) || 1,
@@ -251,9 +343,11 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
 
     const payload = {
       nro_convocatoria: nroConvocatoria.trim() || 'CDC:2026/01',
+      area_id: parseInt(areaSeleccionada, 10),
+      observaciones: observacionGeneral.trim(), // 🎯 Envío de la observación general
       estado: nuevoEstado,
-      renglones: itemsFormateados,               // Por si el controller lee req.body.renglones
-      bienes_seleccionados: itemsFormateados     // Por si el controller lee req.body.bienes_seleccionados
+      renglones: itemsFormateados,
+      bienes_seleccionados: itemsFormateados
     };
 
     try {
@@ -284,6 +378,7 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
           onGuardadoExitoso();
         } else {
           setSolicitudItems({});
+          setObservacionGeneral('');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       } else {
@@ -344,25 +439,127 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
         </div>
       </div>
 
-      <div className="abm-card mb-4">
+      {/* BLOQUE 1: Datos Generales (Convocatoria, Área y Observaciones Generales) */}
+      <div className="abm-card mb-4 overflow-visible">
         <div className="card-header">
-          <h2 className="card-title">1. Identificador de la Convocatoria</h2>
+          <h2 className="card-title">1. Datos Generales de la Solicitud</h2>
         </div>
-        <div className="abm-form">
-          <div className="form-group mb-0">
-            <label>Nro. Convocatoria / Referencia Interna</label>
-            <input
-              type="text"
-              className="form-control"
-              disabled={isSubmitting}
-              value={nroConvocatoria}
-              onChange={(e) => setNroConvocatoria(e.target.value)}
-              placeholder="Ej: CDC:2026/01"
-            />
+        
+        <div className="card-body-padding">
+          <div className="abm-form grid-datos-generales">
+            {/* Columna 1: Convocatoria */}
+            <div className="form-group mb-0">
+              <label>Nro. Convocatoria / Ref. Interna</label>
+              <input
+                type="text"
+                className="form-control"
+                disabled={isSubmitting}
+                value={nroConvocatoria}
+                onChange={(e) => setNroConvocatoria(e.target.value)}
+                placeholder="Ej: CDC:2026/01"
+              />
+            </div>
+
+            {/* Columna 2: Selector de Área */}
+            <div className="form-group mb-0 form-group-dropdown-wrapper" ref={dropdownAreaRef}>
+              <label className="d-flex align-items-center gap-1">
+                <Building2 size={15} /> Área / Unidad Origen (*)
+              </label>
+              {loadingAreas ? (
+                <p className="text-muted small mt-2">Cargando áreas...</p>
+              ) : (
+                <div className="searchable-select-container">
+                  <button
+                    type="button"
+                    className="searchable-select-trigger form-control text-start d-flex justify-content-between align-items-center"
+                    disabled={isSubmitting}
+                    onClick={() => setIsAreaDropdownOpen(!isAreaDropdownOpen)}
+                  >
+                    <span className="text-truncate">
+                      {objetoAreaSeleccionada 
+                        ? `${objetoAreaSeleccionada.nombre} ${objetoAreaSeleccionada.dependencia_nombre ? `(${objetoAreaSeleccionada.dependencia_nombre})` : ''}`
+                        : '-- Seleccionar Área --'}
+                    </span>
+                    <ChevronDown size={16} className={`ms-2 flex-shrink-0 transition-transform ${isAreaDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isAreaDropdownOpen && (
+                    <div className="searchable-select-dropdown shadow-lg">
+                      <div className="searchable-input-wrapper">
+                        <Search size={15} className="searchable-search-icon" />
+                        <input
+                          type="text"
+                          className="form-control searchable-search-input"
+                          placeholder="Buscar por palabra clave (ej: estudios, patrimonio, tics)..."
+                          autoFocus
+                          value={busquedaAreaText}
+                          onChange={(e) => setBusquedaAreaText(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="searchable-options-list">
+                        {areasFiltradasBuscador.length === 0 ? (
+                          <div className="searchable-no-results">
+                            No se encontraron áreas o dependencias coincidentes.
+                          </div>
+                        ) : (
+                          areasFiltradasBuscador.map((a) => {
+                            const idA = a.id ?? a.area_id;
+                            const esSeleccionado = parseInt(areaSeleccionada, 10) === idA;
+
+                            return (
+                              <div
+                                key={idA}
+                                className={`searchable-option-item ${esSeleccionado ? 'selected' : ''}`}
+                                onClick={() => {
+                                  setAreaSeleccionada(idA);
+                                  setIsAreaDropdownOpen(false);
+                                  setBusquedaAreaText('');
+                                }}
+                              >
+                                <div className="option-content">
+                                  <span className="option-title">{a.nombre}</span>
+                                  {a.dependencia_nombre && (
+                                    <span className="option-badge">
+                                      <Building2 size={11} /> {a.dependencia_nombre}
+                                    </span>
+                                  )}
+                                </div>
+                                {esSeleccionado && (
+                                  <div className="option-check-icon">
+                                    <Check size={16} />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Columna 3: Input de Observaciones Generales a la derecha */}
+            <div className="form-group mb-0">
+              <label className="d-flex align-items-center gap-1">
+                <MessageSquare size={15} /> Observaciones Generales
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                disabled={isSubmitting}
+                value={observacionGeneral}
+                onChange={(e) => setObservacionGeneral(e.target.value)}
+                placeholder="Observaciones o notas adicionales..."
+              />
+            </div>
           </div>
         </div>
       </div>
 
+      {/* BLOQUE 2: Catálogo de Bienes */}
       <div className="abm-card mb-4">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h2 className="card-title">2. Selección del Catálogo de Bienes</h2>
@@ -384,8 +581,8 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
                 onChange={(e) => setRubroSeleccionado(e.target.value)}
               >
                 {rubros.map((r) => {
-                  const idR = r.rubro_id ?? r;
-                  const nombreR = r.rubro_nombre ?? r.desc ?? r;
+                  const idR = r.rubro_id ?? r.id ?? r;
+                  const nombreR = r.rubro_nombre ?? r.nombre ?? r.desc ?? r;
                   return (
                     <option key={idR} value={idR}>
                       {nombreR}
@@ -486,6 +683,7 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
         </div>
       </div>
 
+      {/* BLOQUE 3: Detalle de Ítems */}
       <div className="abm-card">
         <div className="card-header d-flex justify-content-between align-items-center">
           <h2 className="card-title d-flex align-items-center gap-2">

@@ -35,32 +35,14 @@
   overflow: hidden;
 }
 
-.pendientes-item-card {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1rem 1.25rem;
-  transition: all 0.2s ease;
+.uoc-badge-container {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
 }
 
-.pendientes-item-card:hover {
-  border-color: #0284c7;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
-}
-
-.meta-separator {
-  color: #cbd5e1;
-  margin: 0 0.35rem;
-}
-
-/* Responsividad para móviles */
 @media (max-width: 768px) {
-  .pendientes-container,
-  .historial-container {
+  .pendientes-container {
     padding: 1rem;
-  }
-
-  .filters-row {
-    flex-direction: column;
   }
 }

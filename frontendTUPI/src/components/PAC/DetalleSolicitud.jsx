@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
 import { 
   ArrowLeft, 
-  FileEdit, 
-  Download, 
   FileText, 
   FileSpreadsheet, 
   CheckCircle2, 
   XCircle, 
   AlertTriangle, 
-  Building2, 
   User, 
+  Building2, 
   Calendar, 
-  ShieldCheck,
-  ChevronDown,
+  Layers,
+  MessageSquare,
+  FileEdit,
   Loader2
 } from 'lucide-react';
+import './DetalleSolicitud.css';
+import './PlanComprasABM.css';
 
 const DetalleSolicitud = ({ 
   solicitud, 
@@ -28,7 +29,6 @@ const DetalleSolicitud = ({
   onDescargarExcel,
   estaProcesando = false
 }) => {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [motivoRechazo, setMotivoRechazo] = useState('');
   const [errorRechazo, setErrorRechazo] = useState('');
   const [mostrarCampoRechazo, setMostrarCampoRechazo] = useState(false);
@@ -38,10 +38,7 @@ const DetalleSolicitud = ({
 
   const esEditable = solicitud.estado === 'BORRADOR' || solicitud.estado === 'RECHAZADA';
   const esAprobada = solicitud.estado === 'APROBADA';
-  
-  // El panel lateral de acciones SOLO se muestra si es modo evaluación Y la solicitud está PENDIENTE
   const mostrarPanelLateral = esModoEvaluacion && solicitud.estado === 'PENDIENTE';
-
   const isSubmitting = estaProcesando || loadingLocal;
 
   const renglones = solicitud.renglones || solicitud.registros || [];
@@ -51,7 +48,6 @@ const DetalleSolicitud = ({
     return acc + cant * precio;
   }, 0);
 
-  // 🎯 Handler para Aprobar (Soporta 'onAprobar' de Pendientes.jsx o 'onEvaluacion')
   const handleAprobarClick = async (e) => {
     if (e) e.preventDefault();
     if (isSubmitting) return;
@@ -70,7 +66,6 @@ const DetalleSolicitud = ({
     }
   };
 
-  // 🎯 Handler para Devolver / Rechazar (Soporta 'onRechazar' de Pendientes.jsx o 'onEvaluacion')
   const handleConfirmarRechazoClick = async (e) => {
     if (e) e.preventDefault();
     if (isSubmitting) return;
@@ -113,9 +108,9 @@ const DetalleSolicitud = ({
 
   return (
     <div className="detalle-solicitud-wrapper fade-in-animation">
-      {/* 1. Encabezado de la Vista */}
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-        <div className="d-flex align-items-center gap-3">
+      {/* Encabezado */}
+      <div className="detalle-header-bar">
+        <div className="d-flex align-items-center gap-3 flex-wrap">
           <button 
             type="button" 
             className="btn-tupi btn-tupi-secundario" 
@@ -129,13 +124,11 @@ const DetalleSolicitud = ({
           {renderEstadoBadge(solicitud.estado)}
         </div>
 
-        {/* Acciones Superiores */}
         <div className="summary-actions-group">
-          {/* Botón de Edición directa (Si es borrador o rechazada) */}
           {esEditable && !esModoEvaluacion && onEditar && (
             <button
               type="button"
-              className="btn-tupi btn-tupi-secundario"
+              className="btn-tupi btn-tupi-editar"
               onClick={() => onEditar(solicitud)}
               disabled={isSubmitting}
             >
@@ -144,52 +137,33 @@ const DetalleSolicitud = ({
             </button>
           )}
 
-          {/* Menú Desplegable de Exportaciones (Restringido a solicitudes APROBADAS) */}
           {esAprobada && (
-            <div className="download-dropdown-wrapper">
+            <div className="download-inline-buttons">
               <button
                 type="button"
-                className="btn-tupi btn-tupi-primario"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="btn-tupi btn-tupi-pdf btn-sm-tupi"
+                onClick={() => onDescargarPDF && onDescargarPDF(solicitud.id)}
+                title="Descargar comprobante en PDF"
               >
-                <Download size={16} />
-                <span>Exportar Comprobante</span>
-                <ChevronDown size={14} className={`dropdown-chevron ${dropdownOpen ? 'open' : ''}`} />
+                <FileText size={14} />
+                <span>PDF</span>
               </button>
 
-              {dropdownOpen && (
-                <div className="download-menu-dropdown slide-down-animation">
-                  <button
-                    type="button"
-                    className="download-menu-item"
-                    onClick={() => {
-                      setDropdownOpen(false);
-                      if (onDescargarPDF) onDescargarPDF(solicitud.id);
-                    }}
-                  >
-                    <FileText size={16} className="text-pdf" />
-                    <span>Documento PDF (.pdf)</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="download-menu-item"
-                    onClick={() => {
-                      setDropdownOpen(false);
-                      if (onDescargarExcel) onDescargarExcel(solicitud.id);
-                    }}
-                  >
-                    <FileSpreadsheet size={16} className="text-excel" />
-                    <span>Planilla Excel (.xlsx)</span>
-                  </button>
-                </div>
-              )}
+              <button
+                type="button"
+                className="btn-tupi btn-tupi-excel btn-sm-tupi"
+                onClick={() => onDescargarExcel && onDescargarExcel(solicitud.id)}
+                title="Descargar comprobante en Excel"
+              >
+                <FileSpreadsheet size={14} />
+                <span>Excel</span>
+              </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* 2. Tarjeta de Metadatos de la Solicitud */}
+      {/* Tarjeta de Metadatos */}
       <div className="solicitud-header-info mb-4">
         <div className="solicitud-meta-grid">
           <div className="solicitud-meta-item">
@@ -200,6 +174,15 @@ const DetalleSolicitud = ({
               {solicitud.usuario_nombre 
                 ? `${solicitud.usuario_nombre} ${solicitud.usuario_apellido}` 
                 : 'Usuario Institucional'}
+            </span>
+          </div>
+
+          <div className="solicitud-meta-item">
+            <span className="solicitud-meta-label">
+              <Layers size={13} className="inline-icon" /> Área Origen
+            </span>
+            <span className="solicitud-meta-value">
+              {solicitud.area_nombre || 'Sin Área Asignada'}
             </span>
           </div>
 
@@ -232,49 +215,43 @@ const DetalleSolicitud = ({
             </span>
           </div>
 
-          {(solicitud.admin_nombre || solicitud.usuario_autorizante) && (
+          {(solicitud.observaciones || solicitud.observacion) && (
             <div className="solicitud-meta-item">
               <span className="solicitud-meta-label">
-                <ShieldCheck size={13} className="inline-icon" /> Evaluado por
+                <MessageSquare size={13} className="inline-icon" /> Observaciones
               </span>
               <span className="solicitud-meta-value">
-                <span className="autorizante-tag">
-                  {solicitud.admin_nombre 
-                    ? `${solicitud.admin_nombre} ${solicitud.admin_apellido}` 
-                    : `Admin ID: ${solicitud.usuario_autorizante}`}
-                </span>
+                {solicitud.observaciones || solicitud.observacion}
               </span>
             </div>
           )}
         </div>
       </div>
 
-      {/* 3. Banner de Motivo de Rechazo / Observación (Si aplica) */}
+      {/* 🎯 Banner de Rechazo Centrado y Responsivo */}
       {solicitud.motivo_rechazo && (
-        <div className="motivo-rechazo-banner mb-4 slide-down-animation">
-          <AlertTriangle size={20} className="banner-icon flex-shrink-0" />
-          <div>
+        <div className="motivo-rechazo-banner mb-4">
+          <AlertTriangle size={22} className="banner-icon" />
+          <div className="banner-content">
             <strong>Observaciones de Devolución / Rechazo:</strong>
-            <p className="mb-0 mt-1">{solicitud.motivo_rechazo}</p>
+            <p>{solicitud.motivo_rechazo}</p>
           </div>
         </div>
       )}
 
-      {/* 4. GRID DINÁMICO: Si no hay panel lateral, aplica 'full-width' para expandir al 100% */}
-      <div className={`detalle-grid-layout ${!mostrarPanelLateral ? 'full-width' : ''}`}>
-        
-        {/* Columna Principal: Tabla de Bienes Solicitados */}
+      {/* Grid del Detalle */}
+      <div className={`detalle-grid-layout ${!mostrarPanelLateral ? 'sin-panel-evaluacion' : ''}`}>
         <div className="detalle-tabla-container">
-          <div className="abm-card">
-            <div className="card-header">
+          <div className="detalle-card-tabla">
+            <div className="card-header-table">
               <h3 className="card-title">Detalle de Bienes Solicitados</h3>
             </div>
 
             <div className="table-wrapper">
-              <table className="abm-table">
+              <table className="detalle-tabla">
                 <thead>
                   <tr>
-                    <th style={{ width: '60px' }}>N°</th>
+                    <th style={{ width: '60px' }} className="text-center">N°</th>
                     <th>Bien / Descripción</th>
                     <th className="text-center">Trimestre</th>
                     <th className="text-center">Cantidad</th>
@@ -328,16 +305,20 @@ const DetalleSolicitud = ({
               </table>
             </div>
 
-            <div className="detalle-monto-resumen">
-              <span>Monto Total Estimado:</span>
-              <strong>${montoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</strong>
+            {/* 🎯 Pie de Monto Total Estilizado como Pill/Tarjeta */}
+            <div className="detalle-monto-footer">
+              <div className="solicitud-monto-group">
+                <span className="solicitud-monto-label">Monto Total Estimado:</span>
+                <span className="solicitud-monto-valor">
+                  ${montoTotal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Columna Lateral de Evaluación Administrativa (Únicamente activo en vista PENDIENTES) */}
         {mostrarPanelLateral && (
-          <div className="detalle-panel-evaluacion slide-in-right-animation">
+          <div className="detalle-panel-evaluacion">
             <h3 className="panel-title">Evaluación Administrativa</h3>
             <p className="panel-subtitle">
               Audite la solicitud y determine la aprobación o devolución del requerimiento.
@@ -372,8 +353,8 @@ const DetalleSolicitud = ({
                 </button>
               </div>
             ) : (
-              <div className="panel-rechazo-box scale-up-animation">
-                <label className="form-label font-weight-bold text-danger mb-1">
+              <div className="panel-rechazo-box">
+                <label className="form-label font-weight-bold text-danger mb-1" style={{ fontSize: '0.8rem' }}>
                   Motivo de la Devolución:
                 </label>
                 <textarea
@@ -385,7 +366,7 @@ const DetalleSolicitud = ({
                   onChange={(e) => setMotivoRechazo(e.target.value)}
                 />
                 {errorRechazo && (
-                  <small className="text-danger d-block mb-2 font-weight-bold">
+                  <small className="text-danger d-block mb-2 font-weight-bold" style={{ fontSize: '0.75rem' }}>
                     {errorRechazo}
                   </small>
                 )}
@@ -400,7 +381,7 @@ const DetalleSolicitud = ({
                     {isSubmitting ? (
                       <Loader2 size={16} className="spinner-rotation" />
                     ) : (
-                      <span>Confirmar Devolución</span>
+                      <span>Confirmar</span>
                     )}
                   </button>
 
@@ -421,10 +402,9 @@ const DetalleSolicitud = ({
             )}
           </div>
         )}
-
       </div>
     </div>
   );
 };
 
-export default DetalleSolicitud;                                            
+export default DetalleSolicitud;

@@ -3,10 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   FileEdit, 
   Trash2, 
-  Eye,
-  Clock, 
+  Eye, 
   CheckCircle2, 
-  XCircle, 
   AlertCircle, 
   FileText,
   Search,
@@ -16,7 +14,10 @@ import {
   Building2,
   Calendar,
   FileSpreadsheet,
-  ShieldCheck
+  ShieldCheck,
+  Layers,
+  MessageSquare,
+  Download
 } from 'lucide-react';
 import DetalleSolicitud from './DetalleSolicitud';
 import PlanComprasABM from './PlanComprasABM';
@@ -35,6 +36,7 @@ const Historial = () => {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingId, setProcessingId] = useState(null);
+  const [exportingConsolidado, setExportingConsolidado] = useState(null); // 'pdf' | 'excel' | null
 
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
@@ -140,6 +142,35 @@ const Historial = () => {
     }
   };
 
+  const handleDescargarConsolidado = async (tipo) => {
+    setExportingConsolidado(tipo);
+    try {
+      const endpoint = tipo === 'excel'
+        ? '/plan-compras/solicitudes/exportar/excel-consolidado'
+        : '/plan-compras/solicitudes/exportar/pdf-consolidado';
+
+      const res = await fetchAuth(endpoint);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = tipo === 'excel' ? 'Plan_Anual_Compras_Consolidado.xlsx' : 'Plan_Anual_Compras_Consolidado.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        mostrarPopUp(`Consolidado ${tipo.toUpperCase()} descargado con éxito.`);
+      } else {
+        mostrarPopUp('No se pudo generar el reporte consolidado.', 'error');
+      }
+    } catch (err) {
+      mostrarPopUp('Error de conexión al exportar el consolidado.', 'error');
+    } finally {
+      setExportingConsolidado(null);
+    }
+  };
+
   if (solicitudAEditar) {
     return (
       <PlanComprasABM
@@ -177,6 +208,8 @@ const Historial = () => {
       sol.nro_convocatoria?.toLowerCase().includes(busqueda.toLowerCase()) ||
       sol.usuario_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
       sol.usuario_apellido?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      sol.area_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+      sol.observaciones?.toLowerCase().includes(busqueda.toLowerCase()) ||
       String(sol.id).includes(busqueda);
     return coincideEstado && coincideBusqueda;
   });
@@ -197,7 +230,7 @@ const Historial = () => {
   };
 
   return (
-    <div className="historial-container">
+    <div className="historial-container fade-in-animation">
       {toast.show && (
         <div className={`tupi-toast-popup ${toast.type}`}>
           <div className="toast-popup-content">
@@ -210,13 +243,17 @@ const Historial = () => {
         </div>
       )}
 
-      <div className="historial-header">
+      {/* ENCABEZADO Y ACCIONES DE EXPORTACIÓN CONSOLIDADA */}
+      <div className="historial-header d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
           <h1 className="historial-title">Historial de Solicitudes</h1>
           <p className="historial-subtitle">
-            Consulte el estado, modifique borradores o corrija solicitudes devueltas para reenviarlas.
+            Consulte el estado, modifique borradores o exporte consolidados presupuestarios.
           </p>
         </div>
+
+        {/* Grupo de Exportación Masiva / Consolidada */}
+        
       </div>
 
       <div className="historial-card mb-4">
@@ -229,7 +266,7 @@ const Historial = () => {
                 type="text"
                 disabled={isProcessing}
                 className="form-control search-input"
-                placeholder="Buscar por N° Convocatoria, ID o Solicitante..."
+                placeholder="Buscar por N° Convocatoria, Área, ID o Solicitante..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
               />
@@ -299,6 +336,15 @@ const Historial = () => {
 
                       <div className="solicitud-meta-item">
                         <span className="solicitud-meta-label">
+                          <Layers size={12} className="inline-icon" /> Área Origen
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.area_nombre || 'General'}
+                        </span>
+                      </div>
+
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
                           <Building2 size={12} className="inline-icon" /> Dependencia
                         </span>
                         <span className="solicitud-meta-value">
@@ -323,6 +369,17 @@ const Historial = () => {
                           {sol.fecha_creacion ? new Date(sol.fecha_creacion).toLocaleDateString('es-AR') : 'N/A'}
                         </span>
                       </div>
+
+                      {(sol.observaciones || sol.observacion) && (
+                        <div className="solicitud-meta-item">
+                          <span className="solicitud-meta-label">
+                            <MessageSquare size={12} className="inline-icon" /> Observaciones
+                          </span>
+                          <span className="solicitud-meta-value text-truncate">
+                            {sol.observaciones || sol.observacion}
+                          </span>
+                        </div>
+                      )}
 
                       {(sol.admin_nombre || sol.usuario_autorizante) && (
                         <div className="solicitud-meta-item">
@@ -349,49 +406,73 @@ const Historial = () => {
                         ${totalMonto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
-
-                    <div className="solicitud-actions-group">
-                      {esEditable && (
-                        <>
-                          <button
-                            type="button"
-                            className="btn-tupi btn-tupi-secundario"
-                            disabled={isProcessing}
-                            onClick={() => setSolicitudAEditar(sol)}
-                          >
-                            <FileEdit size={14} />
-                            <span>Editar</span>
-                          </button>
-
-                          {sol.estado === 'BORRADOR' && (
+                      <div className="solicitud-actions-group">
+                        {sol.estado === 'APROBADA' && (
+                          <div className="download-inline-buttons">
                             <button
                               type="button"
-                              className="btn-tupi btn-tupi-peligro"
-                              disabled={isProcessing}
-                              onClick={(e) => handleDeleteBorrador(sol.id, e)}
+                              className="btn-tupi btn-tupi-pdf btn-sm-tupi"
+                              onClick={() => handleDescargarPDF(sol.id)}
+                              title="Descargar comprobante en PDF"
                             >
-                              {estaProcesandoEsta ? (
-                                <Loader2 size={14} className="spinner-rotation" />
-                              ) : (
-                                <>
-                                  <Trash2 size={14} />
-                                  <span>Eliminar</span>
-                                </>
-                              )}
+                              <FileText size={13} />
+                              <span>PDF</span>
                             </button>
-                          )}
-                        </>
-                      )}
 
-                      <button
-                        type="button"
-                        className="btn-tupi btn-tupi-descarga"
-                        onClick={() => setSolicitudAInspeccionar(sol)}
-                      >
-                        <Eye size={14} />
-                        <span>Inspeccionar</span>
-                      </button>
-                    </div>
+                            <button
+                              type="button"
+                              className="btn-tupi btn-tupi-excel btn-sm-tupi"
+                              onClick={() => handleDescargarExcel(sol.id)}
+                              title="Descargar comprobante en Excel"
+                            >
+                              <FileSpreadsheet size={13} />
+                              <span>Excel</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {esEditable && (
+                          <>
+                            <button
+                              type="button"
+                              className="btn-tupi btn-tupi-editar"
+                              disabled={isProcessing}
+                              onClick={() => setSolicitudAEditar(sol)}
+                            >
+                              <FileEdit size={14} />
+                              <span>Editar</span>
+                            </button>
+
+                            {sol.estado === 'BORRADOR' && (
+                              <button
+                                type="button"
+                                className="btn-action-icon delete"
+                                disabled={isProcessing}
+                                onClick={(e) => handleDeleteBorrador(sol.id, e)}
+                                title="Eliminar borrador"
+                              >
+                                {estaProcesandoEsta ? (
+                                  <Loader2 size={14} className="spinner-rotation" />
+                                ) : (
+                                  <>
+                                    <Trash2 size={14} />
+                                    <span>Eliminar</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        <button
+                          type="button"
+                          className="btn-tupi btn-tupi-descarga"
+                          onClick={() => setSolicitudAInspeccionar(sol)}
+                        >
+                          <Eye size={14} />
+                          <span>Inspeccionar</span>
+                        </button>
+                      </div>
                   </div>
                 </div>
               );

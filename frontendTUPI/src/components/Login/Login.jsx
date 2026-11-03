@@ -213,12 +213,16 @@ const Login = () => {
 
           <div className="ui-divider-text">O</div>
 
-          {/* Botón UNNE */}
-          <button type="button" className="btn-alternative-unne" disabled={isLoading}>
+          {/* Botón UNNE --ACTIVAR CUANDO TENGAMOS SAML IMPLEMENTADO
+          
+           <button type="button" className="btn-alternative-unne" disabled={isLoading}>
             <img src="/logo-unne.png" alt="UNNE" style={{ height: '16px', objectFit: 'contain' }} />
             <span>Ingresar con Entorno UNNE</span>
             <ExternalLink size={14} style={{ marginLeft: 'auto', opacity: 0.6 }} />
           </button>
+          
+          */}
+         
 
           <footer className="login-footer-minimal">
             &copy; {new Date().getFullYear()} TUPI &mdash; Rectorado UNNE

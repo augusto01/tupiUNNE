@@ -1,6 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Eye, Search, UserCheck, Loader2, User, Building2, Calendar, FileSpreadsheet, ShieldCheck, Filter } from 'lucide-react';
+import { 
+  Eye, 
+  Search, 
+  UserCheck, 
+  Loader2, 
+  User, 
+  Building2, 
+  Calendar, 
+  FileSpreadsheet, 
+  ShieldCheck, 
+  Layers,
+  MessageSquare,
+  FileText
+} from 'lucide-react';
 import Swal from 'sweetalert2';
 import DetalleSolicitud from './DetalleSolicitud';
 import './Pendientes.css';
@@ -8,23 +21,20 @@ import './Pendientes.css';
 const Pendientes = () => {
   const { fetchAuth, token, user } = useAuth();
 
-  // Obtención robusta del usuario logueado para identificar su rol y UOC
   const usuarioLogueado = user || JSON.parse(localStorage.getItem('tupi_user')) || JSON.parse(localStorage.getItem('usuario')) || {};
+  const esAutorizanteUoc = parseInt(usuarioLogueado?.tipo_usuario_id, 10) === 3;
 
-// El Autorizante ahora es tipo_usuario_id === 3
-const esAutorizanteUoc = parseInt(usuarioLogueado?.tipo_usuario_id, 10) === 3;
-
-const [solicitudes, setSolicitudes] = useState([]);
-const [loading, setLoading] = useState(true);
-const [busqueda, setBusqueda] = useState('');
-const [filtroEstado, setFiltroEstado] = useState('TODOS');
-const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null);
-const [procesandoId, setProcesandoId] = useState(null);
+  const [solicitudes, setSolicitudes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('TODOS');
+  const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null);
+  const [procesandoId, setProcesandoId] = useState(null);
+  const [exportingConsolidado, setExportingConsolidado] = useState(null);
 
   const cargarPendientes = async () => {
     setLoading(true);
     try {
-      // Llama al endpoint único. El backend filtra por la UOC del usuario si es Autorizante (tipo_usuario_id = 4)
       const res = await fetchAuth('/plan-compras/solicitudes-pendientes');
       if (res.ok) {
         const data = await res.json();
@@ -140,6 +150,34 @@ const [procesandoId, setProcesandoId] = useState(null);
     }
   };
 
+  const handleDescargarConsolidado = async (tipo) => {
+    setExportingConsolidado(tipo);
+    try {
+      const endpoint = tipo === 'excel'
+        ? '/plan-compras/solicitudes/exportar/excel-consolidado'
+        : '/plan-compras/solicitudes/exportar/pdf-consolidado';
+
+      const res = await fetchAuth(endpoint);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = tipo === 'excel' ? 'Plan_Anual_Compras_Consolidado.xlsx' : 'Plan_Anual_Compras_Consolidado.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        Swal.fire('Error', 'No se pudo generar el consolidado.', 'error');
+      }
+    } catch (err) {
+      Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
+    } finally {
+      setExportingConsolidado(null);
+    }
+  };
+
   if (solicitudSeleccionada) {
     return (
       <div className="pendientes-container">
@@ -164,6 +202,8 @@ const [procesandoId, setProcesandoId] = useState(null);
         s.nro_convocatoria?.toLowerCase().includes(busqueda.toLowerCase()) ||
         s.usuario_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
         s.usuario_apellido?.toLowerCase().includes(busqueda.toLowerCase()) ||
+        s.area_nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+        s.observaciones?.toLowerCase().includes(busqueda.toLowerCase()) ||
         String(s.id).includes(busqueda);
       return coincideEstado && coincideBusqueda;
     })
@@ -174,9 +214,9 @@ const [procesandoId, setProcesandoId] = useState(null);
     });
 
   return (
-    <div className="pendientes-container">
-      {/* ENCABEZADO ADAPTATIVO SEGÚN ROL */}
-      <div className="pendientes-header d-flex justify-content-between align-items-center">
+    <div className="pendientes-container fade-in-animation">
+      {/* ENCABEZADO */}
+      <div className="pendientes-header d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
           <h1 className="pendientes-title">
             {esAutorizanteUoc 
@@ -190,15 +230,19 @@ const [procesandoId, setProcesandoId] = useState(null);
           </p>
         </div>
 
-        {/* Badge distintivo para Autorizante */}
-        {esAutorizanteUoc && (
-          <div className="uoc-badge-container d-flex align-items-center gap-2 p-2 px-3 rounded" style={{ backgroundColor: '#e0f2fe', color: '#0369a1' }}>
-            <Building2 size={16} />
-            <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
-              UOC: {usuarioLogueado?.dependencia || 'Mi Dependencia'}
-            </span>
-          </div>
-        )}
+        {/* Acciones de Consolidación */}
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          {esAutorizanteUoc && (
+            <div className="uoc-badge-container d-flex align-items-center gap-2 p-2 px-3 rounded me-2">
+              <Building2 size={16} />
+              <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
+                UOC: {usuarioLogueado?.dependencia || 'Mi Dependencia'}
+              </span>
+            </div>
+          )}
+
+          
+        </div>
       </div>
 
       <div className="pendientes-card mb-4">
@@ -210,7 +254,7 @@ const [procesandoId, setProcesandoId] = useState(null);
               <input
                 type="text"
                 className="form-control search-input"
-                placeholder="Buscar por N° Convocatoria, ID o Solicitante..."
+                placeholder="Buscar por N° Convocatoria, Área, ID o Solicitante..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
               />
@@ -278,6 +322,15 @@ const [procesandoId, setProcesandoId] = useState(null);
 
                       <div className="solicitud-meta-item">
                         <span className="solicitud-meta-label">
+                          <Layers size={12} className="inline-icon" /> Área Origen
+                        </span>
+                        <span className="solicitud-meta-value">
+                          {sol.area_nombre || 'General'}
+                        </span>
+                      </div>
+
+                      <div className="solicitud-meta-item">
+                        <span className="solicitud-meta-label">
                           <Building2 size={12} className="inline-icon" /> Dependencia / UOC
                         </span>
                         <span className="solicitud-meta-value">
@@ -303,6 +356,17 @@ const [procesandoId, setProcesandoId] = useState(null);
                         </span>
                       </div>
 
+                      {(sol.observaciones || sol.observacion) && (
+                        <div className="solicitud-meta-item">
+                          <span className="solicitud-meta-label">
+                            <MessageSquare size={12} className="inline-icon" /> Observaciones
+                          </span>
+                          <span className="solicitud-meta-value text-truncate">
+                            {sol.observaciones || sol.observacion}
+                          </span>
+                        </div>
+                      )}
+
                       {(sol.admin_nombre || sol.usuario_autorizante) && (
                         <div className="solicitud-meta-item">
                           <span className="solicitud-meta-label">
@@ -320,8 +384,8 @@ const [procesandoId, setProcesandoId] = useState(null);
                     </div>
                   </div>
 
-                  {/* PIE DE TARJETA CON MONTO ESTIMADO Y BOTÓN DE ACCIÓN */}
-                  <div className="solicitud-footer-bar">
+                  {/* PIE DE TARJETA CON MONTO ESTIMADO Y BOTONES CENTRADOS */}
+                  <div className="solicitud-footer-bar d-flex justify-content-between align-items-center">
                     <div className="solicitud-monto-group">
                       <span className="solicitud-monto-label">Monto Estimado:</span>
                       <span className="solicitud-monto-valor">
@@ -329,7 +393,32 @@ const [procesandoId, setProcesandoId] = useState(null);
                       </span>
                     </div>
 
+                    {/* 🎯 Botonera Centrada con PDF, Excel y Evaluar */}
                     <div className="solicitud-actions-group">
+                      {sol.estado === 'APROBADA' && (
+                        <div className="download-inline-buttons">
+                          <button
+                            type="button"
+                            className="btn-tupi btn-tupi-pdf btn-sm-tupi"
+                            onClick={() => handleDescargarPDF(sol.id)}
+                            title="Descargar comprobante en PDF"
+                          >
+                            <FileText size={13} />
+                            <span>PDF</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="btn-tupi btn-tupi-excel btn-sm-tupi"
+                            onClick={() => handleDescargarExcel(sol.id)}
+                            title="Descargar comprobante en Excel"
+                          >
+                            <FileSpreadsheet size={13} />
+                            <span>Excel</span>
+                          </button>
+                        </div>
+                      )}
+
                       <button
                         type="button"
                         className="btn-tupi btn-tupi-primario"

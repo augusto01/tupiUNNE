@@ -1,11 +1,10 @@
 import express from 'express';
-// Importación por defecto de tu middleware de autenticación
 import auth from '../middlewares/authMiddleware.js';
 
-// TODAS las funciones importadas desde un ÚNICO controlador
 import { 
   getEstadoPlan, 
   getRubros, 
+  getAreas, // 👈 Nueva función importada
   getBienesPorRubro, 
   crearSolicitud, 
   getHistorialSolicitudes, 
@@ -19,25 +18,27 @@ import {
 
 const router = express.Router();
 
-// 🔒 APLICACIÓN GLOBAL DEL MIDDLEWARE DE AUTENTICACIÓN
-// Esto garantiza que req.usuario quede poblado antes de cada endpoint
+// 🔒 Aplicación global del middleware de autenticación
 router.use(auth);
 
 // --- Rutas del Usuario Solicitante ---
 router.get('/estado', getEstadoPlan);
 router.get('/rubros', getRubros);
+router.get('/areas', getAreas); 
 router.get('/bienes-por-rubro', getBienesPorRubro);
 router.post('/solicitudes', crearSolicitud);
-router.get('/solicitudes-historial', getHistorialSolicitudes); // 👈 Filtra solo por el usuario logueado
+router.get('/solicitudes-historial', getHistorialSolicitudes);
 router.put('/solicitudes/:id', updateSolicitud);
 router.delete('/solicitudes/:id', deleteSolicitud);
 
 // --- Rutas de Administración y Evaluaciones ---
-router.get('/solicitudes-pendientes', getSolicitudesPendientes); // 👈 Carga bandeja global
+router.get('/solicitudes-pendientes', getSolicitudesPendientes);
 router.post('/solicitudes/:id/evaluar', evaluarSolicitud);
 
 // --- Exportaciones ---
 router.get('/solicitudes/:id/pdf', descargarPDFSolicitud);
 router.get('/solicitudes/:id/excel', descargarExcelSolicitud);
+
+
 
 export default router;

@@ -1,27 +1,8 @@
 import planComprasRepository from '../repositories/PlanComprasRepository.js';
-import PDFDocument from 'pdfkit';
-import ExcelJS from 'exceljs';
 import path from 'path';
 import fs from 'fs';
 import { generarPDFSolicitud } from '../services/pdfService.js';
 import { generarExcelSolicitud } from '../services/excelService.js';
-
-// Helper para encontrar el logo en la carpeta public del frontend
-const obtenerRutaLogo = () => {
-  const rutasPosibles = [
-    path.resolve('../frontend/public/logo-unne.png'),
-    path.resolve('../frontendTUPI/public/logo-unne.png'),
-    path.resolve('public/logo-unne.png'),
-    path.resolve('../public/logo-unne.png')
-  ];
-
-  for (const ruta of rutasPosibles) {
-    if (fs.existsSync(ruta)) {
-      return ruta;
-    }
-  }
-  return null;
-};
 
 // 1. Obtener el estado del Plan Anual
 export const getEstadoPlan = async (req, res) => {
@@ -50,6 +31,18 @@ export const getRubros = async (req, res) => {
   } catch (error) {
     console.error('Error al obtener la lista de rubros:', error);
     return res.status(500).json({ error: 'Error al consultar los rubros en la base de datos.' });
+  }
+};
+
+// 2b. Obtener lista de Áreas
+export const getAreas = async (req, res) => {
+  try {
+    const dependenciaId = req.user?.dependencia_id || req.query.dependencia_id || null;
+    const areas = await planComprasRepository.getAreas(dependenciaId);
+    return res.json(areas);
+  } catch (error) {
+    console.error('Error al obtener áreas por UOC:', error);
+    return res.status(500).json({ error: 'Error al obtener la lista de áreas' });
   }
 };
 
@@ -83,28 +76,33 @@ export const updateConfiguracionPlan = async (req, res) => {
   }
 };
 
-// 5. Crear Solicitud
+// 5. Crear Solicitud (Soporta `area_id` y `observaciones`)
 export const crearSolicitud = async (req, res) => {
-  const { nro_convocatoria, bienes_seleccionados, estado } = req.body;
-  const usuarioId = req.usuario?.usuario_id ?? req.usuario?.id ?? req.user?.usuario_id ?? req.user?.id;
+  const { nro_convocatoria, area_id, observaciones, bienes_seleccionados, renglones, estado } = req.body;
+  
+  // Extrae de forma segura el usuario autenticado
+  const usuarioId = req.usuario?.usuario_id ?? req.usuario?.id ?? req.user?.usuario_id ?? req.user?.id ?? req.user?.id_usuario;
   const estadoFinal = estado ?? 'PENDIENTE';
   const convocatoria = nro_convocatoria ?? 'CDC:2026/01';
+  const listaBienes = renglones || bienes_seleccionados || [];
 
   if (!usuarioId) {
-    return res.status(401).json({ error: 'Usuario no identificado.' });
+    return res.status(401).json({ error: 'Usuario no identificado o sesión inválida.' });
   }
 
-  if (!bienes_seleccionados || !Array.isArray(bienes_seleccionados) || bienes_seleccionados.length === 0) {
+  if (!listaBienes || !Array.isArray(listaBienes) || listaBienes.length === 0) {
     return res.status(400).json({ error: 'Debe enviar al menos un bien para generar la solicitud.' });
   }
 
   try {
-    const solicitudId = await planComprasRepository.crearSolicitud(
-      usuarioId, 
-      convocatoria, 
-      estadoFinal, 
-      bienes_seleccionados
-    );
+    const solicitudId = await planComprasRepository.crearSolicitud({
+      usuario_id: usuarioId,
+      area_id: area_id || null,
+      nro_convocatoria: convocatoria,
+      observaciones: observaciones || null,
+      estado: estadoFinal,
+      renglones: listaBienes
+    });
 
     return res.status(201).json({
       message: 'Solicitud registrada correctamente',
@@ -135,28 +133,19 @@ export const getHistorialSolicitudes = async (req, res) => {
   }
 };
 
-// 7. Obtener Solicitudes Pendientes (Bandeja por Rol/Dependencia)
+// 7. Obtener Solicitudes Pendientes
 export const getSolicitudesPendientes = async (req, res) => {
   try {
     const usuarioLogueado = req.usuario || req.user || {};
     
-    // Normalizamos tipo_usuario_id a número
     const tipoUsuarioId = Number(usuarioLogueado.tipo_usuario_id || usuarioLogueado.tipo_usuario || 0);
-    
-    // Leemos la dependencia buscando en todas las propiedades posibles
     const dependenciaId = usuarioLogueado.dependencia_id || usuarioLogueado.dependenciaId;
-
-    console.log(`🔍 Petición de pendientes - Tipo Usuario: ${tipoUsuarioId}, Dependencia ID: ${dependenciaId}`);
 
     let respuesta;
 
-    // Con la nueva jerarquía:
-    // ID 1 (SuperAdmin) y ID 2 (Administrador) -> Ven TODAS las solicitudes
-    // ID 3 (Autorizante) y ID 4 (Usuario) -> Ven SOLO su UOC / Dependencia
     if ((tipoUsuarioId === 3 || tipoUsuarioId === 4) && dependenciaId) {
       respuesta = await planComprasRepository.getSolicitudesPorDependencia(dependenciaId);
     } else {
-      // Si es Admin/SuperAdmin O si el usuario Autorizante no tiene dependencia asignada
       respuesta = await planComprasRepository.getSolicitudesPendientes();
     }
 
@@ -170,7 +159,7 @@ export const getSolicitudesPendientes = async (req, res) => {
 // 8. Actualizar Solicitud / Borrador
 export const updateSolicitud = async (req, res) => {
   const { id } = req.params;
-  const { nro_convocatoria, estado, renglones, bienes_seleccionados } = req.body;
+  const { nro_convocatoria, area_id, observaciones, estado, renglones, bienes_seleccionados } = req.body;
 
   const listaRenglones = renglones || bienes_seleccionados || [];
 
@@ -184,7 +173,14 @@ export const updateSolicitud = async (req, res) => {
     const nuevoEstado = estado || 'PENDIENTE';
     const nroConvocatoriaFinal = nro_convocatoria || 'CDC:2026/01';
 
-    await planComprasRepository.updateSolicitud(id, nroConvocatoriaFinal, nuevoEstado, listaRenglones);
+    await planComprasRepository.updateSolicitud(
+      id, 
+      area_id, 
+      nroConvocatoriaFinal, 
+      nuevoEstado, 
+      listaRenglones, 
+      observaciones
+    );
 
     return res.json({ 
       mensaje: nuevoEstado === 'BORRADOR' 
@@ -200,7 +196,7 @@ export const updateSolicitud = async (req, res) => {
   }
 };
 
-// 9. Evaluar Solicitud (Aprobar o Rechazar)
+// 9. Evaluar Solicitud
 export const evaluarSolicitud = async (req, res) => {
   const { id } = req.params;
   const { estado, motivo_rechazo } = req.body;
@@ -229,7 +225,7 @@ export const evaluarSolicitud = async (req, res) => {
   }
 };
 
-// 10. Eliminar Solicitud / Borrador
+// 10. Eliminar Solicitud
 export const deleteSolicitud = async (req, res) => {
   const { id } = req.params;
 
@@ -261,7 +257,6 @@ export const descargarPDFSolicitud = async (req, res) => {
       });
     }
 
-    // Delegamos la generación del PDF al servicio especializado
     generarPDFSolicitud(res, sol, renglones);
 
   } catch (error) {
@@ -289,7 +284,6 @@ export const descargarExcelSolicitud = async (req, res) => {
       });
     }
 
-    // Delegamos la generación del Excel al servicio especializado
     await generarExcelSolicitud(res, sol, renglones);
 
   } catch (error) {
