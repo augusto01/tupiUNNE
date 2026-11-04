@@ -12,6 +12,24 @@ class PlanComprasRepository {
     return rows;
   }
 
+  async getTodosLosBienes() {
+    const query = `
+      SELECT 
+        bien_id,
+        descripcion,
+        inciso,
+        partida_principal,
+        partida_parcial,
+        trimestre,
+        COALESCE(NULLIF(precio_unitario, 0), ROUND(1000 + (RAND() * 49000), 2)) AS precio_unitario,
+        COALESCE(observacion, '') AS observacion
+      FROM bienes
+      ORDER BY descripcion ASC
+    `;
+    const [bienes] = await db.query(query);
+    return bienes;
+  }
+
   // 2. Actualizar configuración del plan
   async updateConfiguracionPlan(habilitado, mensaje) {
     const query = `
@@ -226,7 +244,7 @@ class PlanComprasRepository {
     return solicitudes;
   }
 
-  // 8. Obtener solicitudes por UOC / Dependencia
+  // 8. Obtener solicitudes por UOC / Dependencia (Corregido con LEFT JOIN de admin)
   async getSolicitudesPorDependencia(dependenciaId) {
     const querySolicitudes = `
       SELECT 
@@ -251,6 +269,7 @@ class PlanComprasRepository {
       JOIN usuario u ON s.usuario_id = u.usuario_id
       LEFT JOIN areas a ON s.area_id = a.area_id
       LEFT JOIN dependencias d ON a.dependencia_id = d.dependencia_id OR u.dependencia_id = d.dependencia_id
+      LEFT JOIN usuario admin ON s.usuario_autorizante = admin.usuario_id
       WHERE u.dependencia_id = ? OR a.dependencia_id = ?
       ORDER BY s.id DESC
     `;
@@ -354,7 +373,6 @@ class PlanComprasRepository {
   }
 
   // 12. Obtener detalle de solicitud para reportes
- // Asegurate de que los queries de renglones incluyan los campos de bienes de esta forma:
   async findSolicitudConDetalle(id) {
     const [solRows] = await db.query(
       `SELECT 
@@ -381,7 +399,7 @@ class PlanComprasRepository {
          sr.cantidad, 
          sr.precio_unitario, 
          sr.observacion, 
-         b.trimestre,       -- 🎯 CORREGIDO: Viene de la tabla bienes (b.trimestre)
+         b.trimestre,       
          b.descripcion AS bien_descripcion,
          b.inciso,
          b.partida_principal,

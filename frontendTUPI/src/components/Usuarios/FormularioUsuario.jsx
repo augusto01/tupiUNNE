@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, UserCheck, User, IdCard, Phone, Mail, Shield, AlertCircle } from 'lucide-react';
+import { UserPlus, UserCheck, User, IdCard, Phone, Mail, Shield, AlertCircle, Lock } from 'lucide-react';
 import Swal from 'sweetalert2';
 import './UsuariosCRUD.css';
 
@@ -7,6 +7,7 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
   const [formData, setFormData] = useState({
     username: '',
     email: '',
+    password: '', // 👈 Nuevo campo de contraseña
     nombre: '',
     apellido: '',
     dni: '',
@@ -42,6 +43,7 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
         id: userToEdit.id,
         username: userToEdit.username || '',
         email: userToEdit.email || '',
+        password: '', // Al editar se deja en blanco por si no se quiere cambiar
         nombre: userToEdit.nombre || '',
         apellido: userToEdit.apellido || '',
         dni: userToEdit.dni || '',
@@ -51,13 +53,13 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
       });
     } else {
       setFormData({
-        username: '', email: '', nombre: '', apellido: '',
+        username: '', email: '', password: '', nombre: '', apellido: '',
         dni: '', celular: '', tipo_usuario_id: '', dependencia_id: ''
       });
     }
   }, [userToEdit, tiposUsuario, dependencias]);
 
-  // Comprobación de duplicados en tiempo real excluyendo al usuario actual si se edita
+  // Comprobación de duplicados en tiempo real
   useEffect(() => {
     const usuariosAComprobar = userToEdit 
       ? listaUsuarios.filter(u => u.id !== userToEdit.id)
@@ -104,6 +106,17 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
       return;
     }
 
+    // Validación de contraseña obligatoria solo al crear
+    if (!userToEdit && (!formData.password || formData.password.length < 8)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Contraseña requerida',
+        text: 'La contraseña inicial debe tener al menos 8 caracteres.',
+        confirmButtonColor: '#0284c7'
+      });
+      return;
+    }
+
     if (!formData.tipo_usuario_id || !formData.dependencia_id) {
       Swal.fire({
         icon: 'warning',
@@ -118,13 +131,13 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
     Swal.fire({
       title: userToEdit ? '¿Guardar Cambios?' : '¿Confirmar Registro?',
       text: userToEdit 
-        ? 'Se actualizarán las credenciales y la adscripción institucional del usuario.' 
-        : 'Se enviará un correo de bienvenida al usuario con el enlace de activación de contraseña (válido por 7 días).',
+        ? 'Se actualizarán los datos y credenciales del usuario.' 
+        : 'Se registrará el nuevo usuario con la contraseña asignada.',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#059669',
       cancelButtonColor: '#64748b',
-      confirmButtonText: userToEdit ? 'Sí, guardar cambios' : 'Sí, registrar y enviar invitación',
+      confirmButtonText: userToEdit ? 'Sí, guardar cambios' : 'Sí, registrar usuario',
       cancelButtonText: 'Cancelar'
     }).then(async (result) => {
       if (result.isConfirmed) {
@@ -146,10 +159,8 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
     } else {
       Swal.fire({
         icon: 'success',
-        title: userToEdit ? '¡Usuario Actualizado!' : '¡Invitación Enviada!',
-        text: userToEdit 
-          ? 'El legajo fue modificado correctamente.' 
-          : 'Se ha enviado un correo con el enlace de activación al operador.',
+        title: userToEdit ? '¡Usuario Actualizado!' : '¡Usuario Registrado!',
+        text: userToEdit ? 'El legajo fue modificado correctamente.' : 'La cuenta ha sido creada exitosamente.',
         confirmButtonColor: '#059669'
       });
     }
@@ -168,7 +179,7 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
           <p>
             {userToEdit 
               ? 'Actualice el legajo y la adscripción institucional.' 
-              : 'Se enviará un correo institucional con el enlace para la creación de la clave de acceso.'}
+              : 'Complete los datos del operador y establezca su contraseña inicial de acceso.'}
           </p>
         </div>
       </div>
@@ -296,6 +307,18 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
                   <span className="error-text-msg"><AlertCircle size={12} /> El nombre de usuario ya está registrado</span>
                 )}
               </div>
+
+              <div className="form-group">
+                <label><Lock size={14} /> Contraseña {userToEdit ? '(Opcional)' : '*'}</label>
+                <input 
+                  type="password" 
+                  name="password" 
+                  value={formData.password} 
+                  onChange={handleInputChange} 
+                  {...(!userToEdit ? { required: true } : {})}
+                  placeholder={userToEdit ? "Dejar en blanco para mantener la actual" : "Mínimo 8 caracteres"} 
+                />
+              </div>
             </div>
           </div>
 
@@ -316,7 +339,7 @@ const FormularioUsuario = ({ userToEdit, listaUsuarios = [], tiposUsuario = [], 
               ) : (
                 <>
                   <UserPlus size={16} />
-                  <span>Registrar y Enviar Enlace</span>
+                  <span>Registrar Usuario</span>
                 </>
               )}
             </button>

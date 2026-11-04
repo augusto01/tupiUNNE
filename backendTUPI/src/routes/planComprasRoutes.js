@@ -18,7 +18,7 @@ import {
 
 const router = express.Router();
 
-// 🔒 Aplicación global del middleware de autenticación
+//  Aplicación global del middleware de autenticación
 router.use(auth);
 
 // --- Rutas del Usuario Solicitante ---

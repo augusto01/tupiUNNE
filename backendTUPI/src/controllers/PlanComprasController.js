@@ -1,21 +1,17 @@
 import planComprasRepository from '../repositories/PlanComprasRepository.js';
-import path from 'path';
-import fs from 'fs';
-import { generarPDFSolicitud } from '../services/pdfService.js';
-import { generarExcelSolicitud } from '../services/excelService.js';
+import { generarPDFSolicitud, generarPDFConsolidado } from '../services/pdfService.js';
+import { generarExcelSolicitud, generarExcelConsolidado } from '../services/excelService.js';
 
 // 1. Obtener el estado del Plan Anual
 export const getEstadoPlan = async (req, res) => {
   try {
     const rows = await planComprasRepository.getEstadoPlan();
-
     if (rows.length > 0) {
       return res.json({
         habilitado: Boolean(rows[0].habilitado),
         mensaje: rows[0].mensaje || ''
       });
     }
-
     return res.json({ habilitado: true, mensaje: '' });
   } catch (error) {
     console.error('Error al verificar estado del plan:', error.message);
@@ -34,7 +30,7 @@ export const getRubros = async (req, res) => {
   }
 };
 
-// 2b. Obtener lista de Áreas
+// 2b. Obtener lista de Áreas (filtradas por dependencia si corresponde)
 export const getAreas = async (req, res) => {
   try {
     const dependenciaId = req.user?.dependencia_id || req.query.dependencia_id || null;
@@ -46,19 +42,20 @@ export const getAreas = async (req, res) => {
   }
 };
 
-// 3. Obtener bienes por Rubro
+// 3. Obtener bienes por Rubro (Soporta opción "TODOS" o vacío)
 export const getBienesPorRubro = async (req, res) => {
   const { rubro_id } = req.query;
 
-  if (!rubro_id) {
-    return res.status(400).json({ error: 'Debe especificar el parámetro rubro_id.' });
-  }
-
   try {
-    const bienes = await planComprasRepository.getBienesPorRubro(rubro_id);
+    let bienes;
+    if (!rubro_id || rubro_id === '' || rubro_id === 'TODOS') {
+      bienes = await planComprasRepository.getTodosLosBienes();
+    } else {
+      bienes = await planComprasRepository.getBienesPorRubro(rubro_id);
+    }
     return res.json(bienes);
   } catch (error) {
-    console.error('Error al obtener bienes por rubro:', error);
+    console.error('Error al obtener bienes:', error);
     return res.status(500).json({ error: 'Error al consultar el catálogo de bienes.' });
   }
 };
@@ -66,7 +63,6 @@ export const getBienesPorRubro = async (req, res) => {
 // 4. Configuración del Plan
 export const updateConfiguracionPlan = async (req, res) => {
   const { habilitado, mensaje } = req.body;
-
   try {
     await planComprasRepository.updateConfiguracionPlan(habilitado, mensaje);
     return res.json({ message: 'Configuración del plan actualizada correctamente' });
@@ -76,12 +72,10 @@ export const updateConfiguracionPlan = async (req, res) => {
   }
 };
 
-// 5. Crear Solicitud (Soporta `area_id` y `observaciones`)
+// 5. Crear Solicitud
 export const crearSolicitud = async (req, res) => {
   const { nro_convocatoria, area_id, observaciones, bienes_seleccionados, renglones, estado } = req.body;
-  
-  // Extrae de forma segura el usuario autenticado
-  const usuarioId = req.usuario?.usuario_id ?? req.usuario?.id ?? req.user?.usuario_id ?? req.user?.id ?? req.user?.id_usuario;
+  const usuarioId = req.usuario?.usuario_id ?? req.usuario?.id ?? req.user?.usuario_id ?? req.user?.id;
   const estadoFinal = estado ?? 'PENDIENTE';
   const convocatoria = nro_convocatoria ?? 'CDC:2026/01';
   const listaBienes = renglones || bienes_seleccionados || [];
@@ -118,18 +112,14 @@ export const crearSolicitud = async (req, res) => {
 export const getHistorialSolicitudes = async (req, res) => {
   try {
     const usuarioId = req.usuario?.usuario_id || req.usuario?.id || req.user?.usuario_id || req.user?.id;
-
     if (!usuarioId) {
-      return res.status(401).json({ 
-        error: 'No autorizado. Se requiere una sesión válida para consultar su historial.' 
-      });
+      return res.status(401).json({ error: 'No autorizado.' });
     }
-
     const historialPropio = await planComprasRepository.getSolicitudesPorUsuario(usuarioId);
     return res.json(historialPropio);
   } catch (error) {
     console.error('Error al obtener el historial personal:', error);
-    return res.status(500).json({ error: 'Error interno al consultar su historial de solicitudes.' });
+    return res.status(500).json({ error: 'Error interno al consultar su historial.' });
   }
 };
 
@@ -137,19 +127,16 @@ export const getHistorialSolicitudes = async (req, res) => {
 export const getSolicitudesPendientes = async (req, res) => {
   try {
     const usuarioLogueado = req.usuario || req.user || {};
-    
     const tipoUsuarioId = Number(usuarioLogueado.tipo_usuario_id || usuarioLogueado.tipo_usuario || 0);
     const dependenciaId = usuarioLogueado.dependencia_id || usuarioLogueado.dependenciaId;
 
-    let respuesta;
-
+    let respuesta = [];
     if ((tipoUsuarioId === 3 || tipoUsuarioId === 4) && dependenciaId) {
       respuesta = await planComprasRepository.getSolicitudesPorDependencia(dependenciaId);
     } else {
       respuesta = await planComprasRepository.getSolicitudesPendientes();
     }
-
-    return res.json(respuesta);
+    return res.json(Array.isArray(respuesta) ? respuesta : []);
   } catch (error) {
     console.error('Error al obtener solicitudes pendientes:', error);
     return res.status(500).json({ error: 'Error al consultar las solicitudes pendientes.' });
@@ -160,13 +147,10 @@ export const getSolicitudesPendientes = async (req, res) => {
 export const updateSolicitud = async (req, res) => {
   const { id } = req.params;
   const { nro_convocatoria, area_id, observaciones, estado, renglones, bienes_seleccionados } = req.body;
-
   const listaRenglones = renglones || bienes_seleccionados || [];
 
   if (!Array.isArray(listaRenglones) || listaRenglones.length === 0) {
-    return res.status(400).json({ 
-      error: 'La solicitud debe incluir al menos un bien para ser procesada.' 
-    });
+    return res.status(400).json({ error: 'La solicitud debe incluir al menos un bien.' });
   }
 
   try {
@@ -174,25 +158,13 @@ export const updateSolicitud = async (req, res) => {
     const nroConvocatoriaFinal = nro_convocatoria || 'CDC:2026/01';
 
     await planComprasRepository.updateSolicitud(
-      id, 
-      area_id, 
-      nroConvocatoriaFinal, 
-      nuevoEstado, 
-      listaRenglones, 
-      observaciones
+      id, area_id, nroConvocatoriaFinal, nuevoEstado, listaRenglones, observaciones
     );
 
-    return res.json({ 
-      mensaje: nuevoEstado === 'BORRADOR' 
-        ? 'Borrador actualizado correctamente.' 
-        : 'Solicitud actualizada y reenviada exitosamente a revisión.',
-      id 
-    });
+    return res.json({ mensaje: 'Solicitud actualizada exitosamente.', id });
   } catch (error) {
     console.error('Error al actualizar solicitud:', error);
-    return res.status(500).json({ 
-      error: 'Error interno del servidor al actualizar la solicitud.' 
-    });
+    return res.status(500).json({ error: 'Error interno al actualizar la solicitud.' });
   }
 };
 
@@ -205,7 +177,6 @@ export const evaluarSolicitud = async (req, res) => {
   if (!['APROBADA', 'RECHAZADA'].includes(estado)) {
     return res.status(400).json({ error: 'Estado no válido.' });
   }
-
   if (estado === 'RECHAZADA' && (!motivo_rechazo || !motivo_rechazo.trim())) {
     return res.status(400).json({ error: 'Debe ingresar un motivo para rechazar la solicitud.' });
   }
@@ -213,81 +184,69 @@ export const evaluarSolicitud = async (req, res) => {
   try {
     const motivoFinal = estado === 'RECHAZADA' ? motivo_rechazo.trim() : null;
     await planComprasRepository.evaluarSolicitud(id, estado, adminId, motivoFinal);
-
-    return res.json({ 
-      message: estado === 'APROBADA' 
-        ? 'Solicitud aprobada exitosamente.' 
-        : 'Solicitud rechazada con retroalimentación registrada.' 
-    });
+    return res.json({ message: 'Evaluación registrada con éxito.' });
   } catch (error) {
     console.error('Error al procesar evaluación:', error);
-    return res.status(500).json({ error: 'Error al actualizar el estado de la solicitud.' });
+    return res.status(500).json({ error: 'Error al actualizar el estado.' });
   }
 };
 
 // 10. Eliminar Solicitud
 export const deleteSolicitud = async (req, res) => {
   const { id } = req.params;
-
   try {
     await planComprasRepository.deleteSolicitud(id);
     return res.json({ message: 'Solicitud eliminada correctamente.' });
   } catch (error) {
-    console.error('Error al eliminar la solicitud:', error);
+    console.error('Error al eliminar:', error);
     return res.status(500).json({ error: 'Error al eliminar la solicitud.' });
   }
 };
 
-// 11. Descargar PDF
+// 11 y 12. Descargas Individuales (PDF / Excel)
 export const descargarPDFSolicitud = async (req, res) => {
   const { id } = req.params;
-
   try {
     const detalle = await planComprasRepository.findSolicitudConDetalle(id);
-
-    if (!detalle) {
-      return res.status(404).json({ error: 'Solicitud no encontrada.' });
+    if (!detalle || detalle.solicitud.estado !== 'APROBADA') {
+      return res.status(403).json({ error: 'Solicitud no encontrada o no aprobada.' });
     }
-
-    const { solicitud: sol, renglones } = detalle;
-
-    if (sol.estado !== 'APROBADA') {
-      return res.status(403).json({ 
-        error: 'Únicamente está permitido emitir documentos de solicitudes APROBADAS.' 
-      });
-    }
-
-    generarPDFSolicitud(res, sol, renglones);
-
+    generarPDFSolicitud(res, detalle.solicitud, detalle.renglones);
   } catch (error) {
-    console.error('Error generando PDF:', error);
     res.status(500).json({ error: 'Error al generar el PDF.' });
   }
 };
 
-// 12. Descargar Excel
 export const descargarExcelSolicitud = async (req, res) => {
   const { id } = req.params;
-
   try {
     const detalle = await planComprasRepository.findSolicitudConDetalle(id);
-
-    if (!detalle) {
-      return res.status(404).json({ error: 'Solicitud no encontrada.' });
+    if (!detalle || detalle.solicitud.estado !== 'APROBADA') {
+      return res.status(403).json({ error: 'Solicitud no encontrada o no aprobada.' });
     }
-
-    const { solicitud: sol, renglones } = detalle;
-
-    if (sol.estado !== 'APROBADA') {
-      return res.status(403).json({ 
-        error: 'Únicamente está permitido emitir documentos de solicitudes APROBADAS.' 
-      });
-    }
-
-    await generarExcelSolicitud(res, sol, renglones);
-
+    await generarExcelSolicitud(res, detalle.solicitud, detalle.renglones);
   } catch (error) {
-    console.error('Error generando Excel:', error);
     res.status(500).json({ error: 'Error al generar el Excel.' });
+  }
+};
+
+// 13 y 14. Exportaciones Consolidadas
+export const exportarPdfConsolidado = async (req, res) => {
+  try {
+    const solicitudes = await planComprasRepository.findAllSolicitudesAprobadasConDetalle();
+    if (!solicitudes.length) return res.status(404).json({ error: 'No hay solicitudes aprobadas.' });
+    generarPDFConsolidado(res, solicitudes);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al generar PDF consolidado.' });
+  }
+};
+
+export const exportarExcelConsolidado = async (req, res) => {
+  try {
+    const solicitudes = await planComprasRepository.findAllSolicitudesAprobadasConDetalle();
+    if (!solicitudes.length) return res.status(404).json({ error: 'No hay solicitudes aprobadas.' });
+    await generarExcelConsolidado(res, solicitudes);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al generar Excel consolidado.' });
   }
 };

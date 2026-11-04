@@ -16,7 +16,7 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
 
   // Estados de catálogo y áreas
   const [rubros, setRubros] = useState([]);
-  const [rubroSeleccionado, setRubroSeleccionado] = useState('');
+  const [rubroSeleccionado, setRubroSeleccionado] = useState('TODOS');
   const [areas, setAreas] = useState([]);
   const [areaSeleccionada, setAreaSeleccionada] = useState('');
   const [bienesCatalogo, setBienesCatalogo] = useState([]);
@@ -32,7 +32,7 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
 
   const [planEstado, setPlanEstado] = useState({ habilitado: true, mensaje: '' });
   const [nroConvocatoria, setNroConvocatoria] = useState('CDC:2026/01');
-  const [observacionGeneral, setObservacionGeneral] = useState(''); // 🎯 Estado de la observación general
+  const [observacionGeneral, setObservacionGeneral] = useState('');
   const [loadingRubros, setLoadingRubros] = useState(true);
   const [loadingAreas, setLoadingAreas] = useState(true);
   const [loadingBienes, setLoadingBienes] = useState(false);
@@ -84,14 +84,37 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
           });
 
           setAreas(unicas);
+          
           if (!esModoEdicion && unicas.length > 0) {
-            setAreaSeleccionada(unicas[0].id ?? unicas[0].area_id);
+            const areaPorDefecto = unicas.find(a => String(a.dependencia_id) === String(depId)) || unicas[0];
+            setAreaSeleccionada(areaPorDefecto.id ?? areaPorDefecto.area_id);
           }
         } else {
-          setAreas([]);
+          // 🎯 Fallback inteligente si la dependencia no tiene áreas cargadas
+          const nombreDependenciaFallback = usuarioLogueado.dependencia || usuarioLogueado.dependencia_nombre || 'Dependencia General';
+          const areaVirtualPorDefecto = {
+            id: 'default',
+            area_id: 'default',
+            nombre: `General - ${nombreDependenciaFallback}`,
+            dependencia_id: depId,
+            dependencia_nombre: nombreDependenciaFallback
+          };
+
+          setAreas([areaVirtualPorDefecto]);
+          setAreaSeleccionada('default');
         }
       })
-      .catch((err) => console.error('Error al obtener áreas:', err.message))
+      .catch((err) => {
+        console.error('Error al obtener áreas:', err.message);
+        const areaVirtualFallback = {
+          id: 'default',
+          area_id: 'default',
+          nombre: 'Área General de Dependencia',
+          dependencia_id: depId
+        };
+        setAreas([areaVirtualFallback]);
+        setAreaSeleccionada('default');
+      })
       .finally(() => setLoadingAreas(false));
 
     // Cargar catálogo de rubros
@@ -101,8 +124,7 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setRubros(data);
-          const primerRubro = data[0].rubro_id ?? data[0].id ?? data[0];
-          setRubroSeleccionado(primerRubro);
+          setRubroSeleccionado('TODOS');
         } else {
           setRubros([]);
         }
@@ -161,7 +183,7 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
       .trim();
   };
 
-  // Áreas filtradas con búsqueda ultra flexible
+  // Áreas filtradas con búsqueda flexible
   const areasFiltradasBuscador = useMemo(() => {
     const busquedaLimpia = limpiarTexto(busquedaAreaText);
     if (!busquedaLimpia) return areas;
@@ -179,16 +201,20 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
 
   // Objeto del área actualmente seleccionada
   const objetoAreaSeleccionada = useMemo(() => {
-    return areas.find(a => (a.id ?? a.area_id) === parseInt(areaSeleccionada, 10));
+    return areas.find(a => String(a.id ?? a.area_id) === String(areaSeleccionada));
   }, [areas, areaSeleccionada]);
 
-  // Cargar bienes filtrados por el rubro
+  // Cargar bienes filtrados por el rubro o TODOS
   useEffect(() => {
     const currentToken = token || localStorage.getItem('tupi_token') || localStorage.getItem('token');
     if (!currentToken || !rubroSeleccionado) return;
 
     setLoadingBienes(true);
-    fetchAuth(`/plan-compras/bienes-por-rubro?rubro_id=${encodeURIComponent(rubroSeleccionado)}`)
+    const url = rubroSeleccionado === 'TODOS' 
+      ? '/plan-compras/bienes-por-rubro' 
+      : `/plan-compras/bienes-por-rubro?rubro_id=${encodeURIComponent(rubroSeleccionado)}`;
+
+    fetchAuth(url)
       .then((res) => res.json())
       .then((data) => {
         setBienesCatalogo(Array.isArray(data) ? data : []);
@@ -341,10 +367,12 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
       observacion: i.observacion ? i.observacion.trim() : ''
     }));
 
+    const areaIdFinal = (!areaSeleccionada || areaSeleccionada === 'default' || isNaN(areaSeleccionada)) ? null : parseInt(areaSeleccionada, 10);
+
     const payload = {
       nro_convocatoria: nroConvocatoria.trim() || 'CDC:2026/01',
-      area_id: parseInt(areaSeleccionada, 10),
-      observaciones: observacionGeneral.trim(), // 🎯 Envío de la observación general
+      area_id: areaIdFinal,
+      observaciones: observacionGeneral.trim(),
       estado: nuevoEstado,
       renglones: itemsFormateados,
       bienes_seleccionados: itemsFormateados
@@ -439,7 +467,7 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
         </div>
       </div>
 
-      {/* BLOQUE 1: Datos Generales (Convocatoria, Área y Observaciones Generales) */}
+      {/* BLOQUE 1: Datos Generales */}
       <div className="abm-card mb-4 overflow-visible">
         <div className="card-header">
           <h2 className="card-title">1. Datos Generales de la Solicitud</h2>
@@ -447,7 +475,6 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
         
         <div className="card-body-padding">
           <div className="abm-form grid-datos-generales">
-            {/* Columna 1: Convocatoria */}
             <div className="form-group mb-0">
               <label>Nro. Convocatoria / Ref. Interna</label>
               <input
@@ -460,7 +487,6 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
               />
             </div>
 
-            {/* Columna 2: Selector de Área */}
             <div className="form-group mb-0 form-group-dropdown-wrapper" ref={dropdownAreaRef}>
               <label className="d-flex align-items-center gap-1">
                 <Building2 size={15} /> Área / Unidad Origen (*)
@@ -490,7 +516,7 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
                         <input
                           type="text"
                           className="form-control searchable-search-input"
-                          placeholder="Buscar por palabra clave (ej: estudios, patrimonio, tics)..."
+                          placeholder="Buscar por palabra clave..."
                           autoFocus
                           value={busquedaAreaText}
                           onChange={(e) => setBusquedaAreaText(e.target.value)}
@@ -500,12 +526,12 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
                       <div className="searchable-options-list">
                         {areasFiltradasBuscador.length === 0 ? (
                           <div className="searchable-no-results">
-                            No se encontraron áreas o dependencias coincidentes.
+                            No se encontraron áreas coincidentes.
                           </div>
                         ) : (
                           areasFiltradasBuscador.map((a) => {
                             const idA = a.id ?? a.area_id;
-                            const esSeleccionado = parseInt(areaSeleccionada, 10) === idA;
+                            const esSeleccionado = String(areaSeleccionada) === String(idA);
 
                             return (
                               <div
@@ -541,7 +567,6 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
               )}
             </div>
 
-            {/* Columna 3: Input de Observaciones Generales a la derecha */}
             <div className="form-group mb-0">
               <label className="d-flex align-items-center gap-1">
                 <MessageSquare size={15} /> Observaciones Generales
@@ -580,6 +605,7 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
                 value={rubroSeleccionado}
                 onChange={(e) => setRubroSeleccionado(e.target.value)}
               >
+                <option value="TODOS">-- TODOS LOS RUBROS --</option>
                 {rubros.map((r) => {
                   const idR = r.rubro_id ?? r.id ?? r;
                   const nombreR = r.rubro_nombre ?? r.nombre ?? r.desc ?? r;
