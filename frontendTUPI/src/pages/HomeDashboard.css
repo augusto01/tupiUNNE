@@ -1,0 +1,260 @@
+/* ==========================================================================
+   ESTILOS HOME DASHBOARD FULLSCREEN (TUPI UNNE)
+   ========================================================================== */
+.home-dashboard-fullscreen {
+  width: 100%;
+  min-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-sizing: border-box;
+  animation: fadeInDashboard 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeInDashboard {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- HERO BANNER --- */
+.home-hero-banner {
+  background: linear-gradient(135deg, #0a111e 0%, #131c2c 100%);
+  border-radius: 12px;
+  padding: 2.25rem 2.5rem;
+  color: #f8fafc;
+  box-shadow: 0 10px 25px -5px rgba(10, 17, 30, 0.15);
+  border: 1px solid rgba(160, 141, 82, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-banner-content {
+  position: relative;
+  z-index: 2;
+}
+
+.hero-badge-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background-color: rgba(160, 141, 82, 0.12);
+  color: #d4b96e;
+  padding: 0.35rem 0.85rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 1.2rem;
+  border: 1px solid rgba(160, 141, 82, 0.25);
+  letter-spacing: 0.02em;
+}
+
+.hero-text-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.hero-title {
+  font-size: 1.85rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.hero-subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  max-width: 680px;
+  line-height: 1.5;
+  margin: 0 0 1.5rem 0;
+}
+
+.hero-meta-badges {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.meta-badge-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: rgba(255, 255, 255, 0.06);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.meta-badge-item.role {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+/* Logo UNNE en el Hero Banner */
+.hero-logo-container {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.hero-unne-logo {
+  height: 70px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  opacity: 0.95;
+  transition: transform 0.3s ease;
+}
+
+.hero-unne-logo:hover {
+  transform: scale(1.05);
+}
+
+/* --- GRID DE ACCESOS RÁPIDOS --- */
+.home-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.home-action-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
+  position: relative;
+  overflow: hidden;
+}
+
+.home-action-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: transparent;
+  transition: background 0.25s ease;
+}
+
+.home-action-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px -5px rgba(0, 0, 0, 0.07);
+  border-color: #cbd5e1;
+}
+
+.home-action-card.primary:hover::after {
+  background: #0284c7;
+}
+
+.home-action-card:hover::after {
+  background: #A08D52;
+}
+
+.action-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.home-action-card:hover .action-icon-box {
+  transform: scale(1.08);
+}
+
+.action-icon-box.blue {
+  background-color: #e0f2fe;
+  color: #0284c7;
+}
+
+.action-icon-box.slate {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.action-icon-box.green {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.action-card-body {
+  flex-grow: 1;
+}
+
+.action-card-body h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 0.3rem 0;
+  letter-spacing: -0.01em;
+}
+
+.action-card-body p {
+  font-size: 0.825rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.action-arrow-icon {
+  color: #cbd5e1;
+  transition: transform 0.25s ease, color 0.25s ease;
+  flex-shrink: 0;
+}
+
+.home-action-card:hover .action-arrow-icon {
+  color: #0a111e;
+  transform: translateX(5px);
+}
+
+/* --- RESPONSIVIDAD MÓVIL --- */
+@media (max-width: 768px) {
+  .hero-text-row {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 1.25rem;
+  }
+
+  .hero-logo-container {
+    align-self: flex-start;
+    padding: 0.75rem 1rem;
+  }
+
+  .hero-unne-logo {
+    height: 50px;
+  }
+
+  .hero-title {
+    font-size: 1.5rem;
+  }
+
+  .home-hero-banner {
+    padding: 1.5rem;
+  }
+
+  .home-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}

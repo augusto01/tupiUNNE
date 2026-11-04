@@ -16,7 +16,7 @@ function App() {
           <Route path="/" element={<Login />} />
           <Route path="/activar-cuenta" element={<ActivarCuenta />} />
 
-          {/* Rutas Protegidas */}
+          {/* Ruta Protegida: Dashboard (Maneja internamente la pantalla principal y los módulos) */}
           <Route 
             path="/dashboard" 
             element={
@@ -26,7 +26,7 @@ function App() {
             } 
           />
 
-          {/* Ruta Protegida: Plan Anual de Compras */}
+          {/* Ruta Protegida: Plan Anual de Compras (Acceso directo opcional) */}
           <Route 
             path="/plan-compras" 
             element={

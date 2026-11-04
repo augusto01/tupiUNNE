@@ -13,13 +13,15 @@ import {
   Clock,
   ListFilter,
   Users,
-  ShieldAlert
+  ShieldAlert,
+  Home
 } from 'lucide-react';
 import UsuariosCRUD from '../Usuarios/UsuariosCRUD'; 
 import { AnalizadorExpediente } from '../Expedientes/AnalizadorExp';
 import PlanComprasABM from '../PAC/PlanComprasABM';
 import Historial from '../PAC/Historial';
 import Pendientes from '../PAC/Pendientes';
+import HomeDashboard from '../../pages/HomeDashboard';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -83,7 +85,6 @@ const Dashboard = () => {
   };
 
   // 4. Validación para Administradores y Autorizantes según jerarquía:
-  // SuperAdmin (1), Administrador (2), Autorizante (3)
   const esAdministradorOAutorizante = 
     (usuario.tipo_usuario_id !== null && usuario.tipo_usuario_id <= 3) || 
     tieneAcceso('evaluar-solicitudes') ||
@@ -161,7 +162,9 @@ const Dashboard = () => {
         </div>
 
         <div className="sidebar-menu-wrapper">
-          <span className="menu-category">Módulos Core</span>
+          
+
+          <span className="menu-category">PRINCIPAL</span>
 
           {/* MÓDULO: PLANES DE COMPRAS (PAC) */}
           {puedeVerCompras && (
@@ -210,7 +213,7 @@ const Dashboard = () => {
                     </a>
                   </li>
 
-                  {/* Solicitudes Pendientes (Habilitado para Roles 1, 2 y 3) */}
+                  {/* Solicitudes Pendientes */}
                   {esAdministradorOAutorizante && usuario.tipo_usuario_id !== 4 && (
                     <li>
                       <a 
@@ -232,7 +235,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* MÓDULO: GESTIÓN DE USUARIOS (Solo SuperAdmin - ID 1) */}
+          {/* MÓDULO: GESTIÓN DE USUARIOS */}
           {(tieneAcceso('usuarios') || usuario.tipo_usuario_id === 1) && (
             <div>
               <button 
@@ -376,14 +379,14 @@ const Dashboard = () => {
           
           <div className="content-wrapper-rel">
             {currentSection === 'panel' && (
-              <div className="content-section-fade">
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Panel Principal</h3>
-                <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
-                  Seleccione un módulo del menú lateral para comenzar a operar.
-                </p>
-              </div>
+              <HomeDashboard 
+                onNavegar={(seccion) => {
+                  if (seccion === 'plan-compras') setCurrentSection('compras-nueva');
+                  if (seccion === 'historial') setCurrentSection('compras-historial');
+                  if (seccion === 'pendientes') setCurrentSection('compras-pendientes');
+                }} 
+              />
             )}
-
             {currentSection === 'compras-nueva' && (
               <PlanComprasABM />
             )}
@@ -392,7 +395,7 @@ const Dashboard = () => {
               <Historial />
             )}
 
-            {/* RENDERIZADO PROTEGIDO DEL COMPONENTE PENDIENTES EN EL ÁREA DE TRABAJO */}
+            {/* RENDERIZADO PROTEGIDO DEL COMPONENTE PENDIENTES */}
             {currentSection === 'compras-pendientes' && (
               esAdministradorOAutorizante && usuario.tipo_usuario_id !== 4 ? (
                 <Pendientes />

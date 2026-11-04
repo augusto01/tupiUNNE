@@ -186,9 +186,10 @@ class PlanComprasRepository {
 
     for (let sol of solicitudes) {
       const [registros] = await db.query(
-        `SELECT sr.*, b.descripcion AS bien_descripcion, b.trimestre AS trimestre_base
+        `SELECT sr.*, b.descripcion AS bien_descripcion, b.trimestre AS trimestre_base, r.desc AS rubro_nombre
          FROM solicitud_registros sr
          LEFT JOIN bienes b ON sr.bien_id = b.bien_id
+         LEFT JOIN rubro r ON b.rubro_id = r.rubro_id
          WHERE sr.id_solicitud = ?`,
         [sol.id]
       );
@@ -232,9 +233,10 @@ class PlanComprasRepository {
 
     for (let sol of solicitudes) {
       const [registros] = await db.query(
-        `SELECT sr.*, b.descripcion AS bien_descripcion, b.trimestre AS trimestre_base
+        `SELECT sr.*, b.descripcion AS bien_descripcion, b.trimestre AS trimestre_base, r.desc AS rubro_nombre
          FROM solicitud_registros sr
          LEFT JOIN bienes b ON sr.bien_id = b.bien_id
+         LEFT JOIN rubro r ON b.rubro_id = r.rubro_id
          WHERE sr.id_solicitud = ?`,
         [sol.id]
       );
@@ -244,7 +246,7 @@ class PlanComprasRepository {
     return solicitudes;
   }
 
-  // 8. Obtener solicitudes por UOC / Dependencia (Corregido con LEFT JOIN de admin)
+  // 8. Obtener solicitudes por UOC / Dependencia
   async getSolicitudesPorDependencia(dependenciaId) {
     const querySolicitudes = `
       SELECT 
@@ -279,9 +281,10 @@ class PlanComprasRepository {
 
     for (let sol of solicitudes) {
       const [registros] = await db.query(
-        `SELECT sr.*, b.descripcion AS bien_descripcion, b.trimestre AS trimestre_base
+        `SELECT sr.*, b.descripcion AS bien_descripcion, b.trimestre AS trimestre_base, r.desc AS rubro_nombre
          FROM solicitud_registros sr
          LEFT JOIN bienes b ON sr.bien_id = b.bien_id
+         LEFT JOIN rubro r ON b.rubro_id = r.rubro_id
          WHERE sr.id_solicitud = ?`,
         [sol.id]
       );
@@ -372,7 +375,7 @@ class PlanComprasRepository {
     }
   }
 
-  // 12. Obtener detalle de solicitud para reportes
+  // 12. Obtener detalle de solicitud para reportes (Con el JOIN de rubros agregado)
   async findSolicitudConDetalle(id) {
     const [solRows] = await db.query(
       `SELECT 
@@ -403,9 +406,11 @@ class PlanComprasRepository {
          b.descripcion AS bien_descripcion,
          b.inciso,
          b.partida_principal,
-         b.partida_parcial
+         b.partida_parcial,
+         r.desc AS rubro_nombre
        FROM solicitud_registros sr
        JOIN bienes b ON sr.bien_id = b.bien_id
+       LEFT JOIN rubro r ON b.rubro_id = r.rubro_id
        WHERE sr.id_solicitud = ?`,
       [id]
     );
