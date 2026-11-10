@@ -12,6 +12,7 @@ class PlanComprasRepository {
     return rows;
   }
 
+  // 🎯 Actualizado con precio_dolar
   async getTodosLosBienes() {
     const query = `
       SELECT 
@@ -22,6 +23,7 @@ class PlanComprasRepository {
         partida_parcial,
         trimestre,
         COALESCE(NULLIF(precio_unitario, 0), ROUND(1000 + (RAND() * 49000), 2)) AS precio_unitario,
+        COALESCE(NULLIF(precio_dolar, 0), ROUND(10 + (RAND() * 200), 2)) AS precio_dolar,
         COALESCE(observacion, '') AS observacion
       FROM bienes
       ORDER BY descripcion ASC
@@ -80,7 +82,7 @@ class PlanComprasRepository {
     return rows;
   }
 
-  // 4. Obtener bienes por rubro
+  // 4. Obtener bienes por rubro (Actualizado con precio_dolar)
   async getBienesPorRubro(rubro_id) {
     const query = `
       SELECT 
@@ -91,6 +93,7 @@ class PlanComprasRepository {
         partida_parcial,
         trimestre,
         COALESCE(NULLIF(precio_unitario, 0), ROUND(1000 + (RAND() * 49000), 2)) AS precio_unitario,
+        COALESCE(NULLIF(precio_dolar, 0), ROUND(10 + (RAND() * 200), 2)) AS precio_dolar,
         COALESCE(observacion, '') AS observacion
       FROM bienes
       WHERE rubro_id = ?
@@ -375,7 +378,7 @@ class PlanComprasRepository {
     }
   }
 
-  // 12. Obtener detalle de solicitud para reportes (Con el JOIN de rubros agregado)
+  // 12. Obtener detalle de solicitud para reportes individuales
   async findSolicitudConDetalle(id) {
     const [solRows] = await db.query(
       `SELECT 
@@ -419,6 +422,54 @@ class PlanComprasRepository {
       solicitud: solRows[0],
       renglones
     };
+  }
+
+  // 🎯 13. Método para exportaciones masivas (Filtrado por UOC o Universidad Completa - Solo Aprobadas)
+  async findAllSolicitudesAprobadasConDetalle(dependenciaId = null) {
+    let querySolicitudes = `
+      SELECT 
+        s.id, s.nro_convocatoria, s.observaciones, s.fecha_creacion, s.estado, s.area_id,
+        u.nombre AS usuario_nombre, u.apellido AS usuario_apellido,
+        a.nombre AS area_nombre,
+        d.nombre AS dependencia_nombre,
+        admin.nombre AS admin_nombre, admin.apellido AS admin_apellido
+      FROM solicitudes s
+      JOIN usuario u ON s.usuario_id = u.usuario_id
+      LEFT JOIN areas a ON s.area_id = a.area_id
+      LEFT JOIN dependencias d ON a.dependencia_id = d.dependencia_id OR u.dependencia_id = d.dependencia_id
+      LEFT JOIN usuario admin ON s.usuario_autorizante = admin.usuario_id
+      WHERE s.estado = 'APROBADA'
+    `;
+
+    const queryParams = [];
+    if (dependenciaId) {
+      querySolicitudes += ` AND (u.dependencia_id = ? OR a.dependencia_id = ?) `;
+      queryParams.push(dependenciaId, dependenciaId);
+    }
+
+    querySolicitudes += ` ORDER BY s.id DESC `;
+
+    const [solicitudes] = await db.query(querySolicitudes, queryParams);
+    if (!solicitudes || solicitudes.length === 0) return [];
+
+    const resultadoFinal = [];
+    for (let sol of solicitudes) {
+      const [renglones] = await db.query(
+        `SELECT 
+           sr.cantidad, sr.precio_unitario, sr.observacion, 
+           b.trimestre, b.descripcion AS bien_descripcion,
+           b.inciso, b.partida_principal, b.partida_parcial,
+           r.desc AS rubro_nombre
+         FROM solicitud_registros sr
+         JOIN bienes b ON sr.bien_id = b.bien_id
+         LEFT JOIN rubro r ON b.rubro_id = r.rubro_id
+         WHERE sr.id_solicitud = ?`,
+        [sol.id]
+      );
+      resultadoFinal.push({ solicitud: sol, renglones });
+    }
+
+    return resultadoFinal;
   }
 }
 

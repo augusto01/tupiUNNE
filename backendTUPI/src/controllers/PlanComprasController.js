@@ -230,23 +230,55 @@ export const descargarExcelSolicitud = async (req, res) => {
   }
 };
 
-// 13 y 14. Exportaciones Consolidadas
-export const exportarPdfConsolidado = async (req, res) => {
+// 13 y 14. Exportaciones Consolidadas (Excel y PDF - UOC y Universidad)
+export const exportarExcelUniversidad = async (req, res) => {
   try {
-    const solicitudes = await planComprasRepository.findAllSolicitudesAprobadasConDetalle();
+    const solicitudes = await planComprasRepository.findAllSolicitudesAprobadasConDetalle(null);
     if (!solicitudes.length) return res.status(404).json({ error: 'No hay solicitudes aprobadas.' });
-    generarPDFConsolidado(res, solicitudes);
+    await generarExcelConsolidado(res, solicitudes, 'REPORTE CONSOLIDADO GENERAL DE LA UNIVERSIDAD - PLAN ANUAL DE COMPRAS UNNE');
   } catch (error) {
-    res.status(500).json({ error: 'Error al generar PDF consolidado.' });
+    console.error('Error al exportar Excel universidad:', error);
+    res.status(500).json({ error: 'Error al generar Excel consolidado de la universidad.' });
   }
 };
 
-export const exportarExcelConsolidado = async (req, res) => {
+export const exportarExcelDependencia = async (req, res) => {
   try {
-    const solicitudes = await planComprasRepository.findAllSolicitudesAprobadasConDetalle();
-    if (!solicitudes.length) return res.status(404).json({ error: 'No hay solicitudes aprobadas.' });
-    await generarExcelConsolidado(res, solicitudes);
+    const dependenciaId = req.user?.dependencia_id || req.query.dependencia_id || null;
+    if (!dependenciaId) {
+      return res.status(400).json({ error: 'No se especificó la dependencia o UOC.' });
+    }
+    const solicitudes = await planComprasRepository.findAllSolicitudesAprobadasConDetalle(dependenciaId);
+    if (!solicitudes.length) return res.status(404).json({ error: 'No hay solicitudes aprobadas para esta UOC.' });
+    await generarExcelConsolidado(res, solicitudes, `REPORTE CONSOLIDADO UOC #${dependenciaId} - PLAN ANUAL DE COMPRAS`);
   } catch (error) {
-    res.status(500).json({ error: 'Error al generar Excel consolidado.' });
+    console.error('Error al exportar Excel dependencia:', error);
+    res.status(500).json({ error: 'Error al generar Excel consolidado de la UOC.' });
+  }
+};
+
+export const exportarPdfUniversidad = async (req, res) => {
+  try {
+    const solicitudes = await planComprasRepository.findAllSolicitudesAprobadasConDetalle(null);
+    if (!solicitudes.length) return res.status(404).json({ error: 'No hay solicitudes aprobadas.' });
+    generarPDFConsolidado(res, solicitudes);
+  } catch (error) {
+    console.error('Error al exportar PDF universidad:', error);
+    res.status(500).json({ error: 'Error al generar PDF consolidado de la universidad.' });
+  }
+};
+
+export const exportarPdfDependencia = async (req, res) => {
+  try {
+    const dependenciaId = req.user?.dependencia_id || req.query.dependencia_id || null;
+    if (!dependenciaId) {
+      return res.status(400).json({ error: 'No se especificó la dependencia o UOC.' });
+    }
+    const solicitudes = await planComprasRepository.findAllSolicitudesAprobadasConDetalle(dependenciaId);
+    if (!solicitudes.length) return res.status(404).json({ error: 'No hay solicitudes aprobadas para esta UOC.' });
+    generarPDFConsolidado(res, solicitudes);
+  } catch (error) {
+    console.error('Error al exportar PDF dependencia:', error);
+    res.status(500).json({ error: 'Error al generar PDF consolidado de la UOC.' });
   }
 };

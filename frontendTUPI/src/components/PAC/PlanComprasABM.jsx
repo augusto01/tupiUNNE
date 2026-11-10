@@ -90,7 +90,6 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
             setAreaSeleccionada(areaPorDefecto.id ?? areaPorDefecto.area_id);
           }
         } else {
-          // 🎯 Fallback inteligente si la dependencia no tiene áreas cargadas
           const nombreDependenciaFallback = usuarioLogueado.dependencia || usuarioLogueado.dependencia_nombre || 'Dependencia General';
           const areaVirtualPorDefecto = {
             id: 'default',
@@ -227,6 +226,12 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
     const precio = bien.precio_unitario ?? bien.precio;
     const num = parseFloat(precio);
     return (!isNaN(num) && num > 0) ? num : 15000;
+  };
+
+  const obtenerPrecioDolarBD = (bien) => {
+    const precioDolar = bien.precio_dolar;
+    const num = parseFloat(precioDolar);
+    return (!isNaN(num) && num > 0) ? num : 120.00;
   };
 
   const bienesFiltrados = useMemo(() => {
@@ -655,22 +660,24 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
               <tr>
                 <th className="text-center" style={{ width: '60px' }}>Elegir</th>
                 <th>Descripción del Bien</th>
-                <th style={{ width: '180px' }}>Clasificación Presupuestaria</th>
-                <th className="text-center" style={{ width: '140px' }}>Trimestre Base</th>
-                <th className="text-right" style={{ width: '150px' }}>Precio Base BD ($)</th>
-                <th className="text-center" style={{ width: '100px' }}>Estado</th>
+                <th style={{ width: '160px' }}>Clasificación Presupuestaria</th>
+                <th className="text-center" style={{ width: '120px' }}>Trimestre Base</th>
+                <th className="text-right" style={{ width: '130px' }}>Precio Base ($)</th>
+                <th className="text-right" style={{ width: '130px' }}>Precio Dólar (US$)</th>
+                <th className="text-center" style={{ width: '90px' }}>Estado</th>
               </tr>
             </thead>
             <tbody>
               {loadingBienes ? (
-                <tr><td colSpan="6" className="text-center py-4">Cargando catálogo...</td></tr>
+                <tr><td colSpan="7" className="text-center py-4">Cargando catálogo...</td></tr>
               ) : bienesFiltrados.length === 0 ? (
-                <tr><td colSpan="6" className="text-center py-4 text-muted">No se encontraron bienes.</td></tr>
+                <tr><td colSpan="7" className="text-center py-4 text-muted">No se encontraron bienes.</td></tr>
               ) : (
                 bienesFiltrados.map((bien) => {
                   const idBien = parseInt(bien.bien_id ?? bien.id, 10);
                   const estaEnSolicitud = !!solicitudItems[idBien];
                   const precioMuestra = obtenerPrecioBD(bien);
+                  const precioDolarMuestra = obtenerPrecioDolarBD(bien);
 
                   return (
                     <tr key={idBien} className={estaEnSolicitud ? 'table-row-selected' : ''}>
@@ -692,6 +699,9 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
                       </td>
                       <td className="text-right font-bold">
                         ${precioMuestra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="text-right font-bold text-secondary" style={{ color: '#0369a1' }}>
+                        US$ {precioDolarMuestra.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="text-center">
                         {estaEnSolicitud ? (

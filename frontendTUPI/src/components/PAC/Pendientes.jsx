@@ -12,7 +12,8 @@ import {
   ShieldCheck, 
   Layers,
   MessageSquare,
-  FileText
+  FileText,
+  Download
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import DetalleSolicitud from './DetalleSolicitud';
@@ -23,6 +24,7 @@ const Pendientes = () => {
 
   const usuarioLogueado = user || JSON.parse(localStorage.getItem('tupi_user')) || JSON.parse(localStorage.getItem('usuario')) || {};
   const esAutorizanteUoc = parseInt(usuarioLogueado?.tipo_usuario_id, 10) === 3;
+  const esAdminGeneral = parseInt(usuarioLogueado?.tipo_usuario_id, 10) === 1 || parseInt(usuarioLogueado?.tipo_usuario_id, 10) === 2 || usuarioLogueado?.rol?.toLowerCase().includes('admin');
 
   const [solicitudes, setSolicitudes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,6 @@ const Pendientes = () => {
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [solicitudSeleccionada, setSolicitudSeleccionada] = useState(null);
   const [procesandoId, setProcesandoId] = useState(null);
-  const [exportingConsolidado, setExportingConsolidado] = useState(null);
 
   const cargarPendientes = async () => {
     setLoading(true);
@@ -150,31 +151,142 @@ const Pendientes = () => {
     }
   };
 
-  const handleDescargarConsolidado = async (tipo) => {
-    setExportingConsolidado(tipo);
-    try {
-      const endpoint = tipo === 'excel'
-        ? '/plan-compras/solicitudes/exportar/excel-consolidado'
-        : '/plan-compras/solicitudes/exportar/pdf-consolidado';
+  // 🎯 1. Exportar Consolidado UOC (Seguro con fetchAuth y Blob, detectando la dependencia del usuario)
+  // 🎯 Exportar Consolidado UOC con selección de área precargada por defecto
+  const handleExportarConsolidadoUOC = async (tipoFormato = 'excel') => {
+    const depId = usuarioLogueado?.dependencia_id || usuarioLogueado?.dependenciaId || 1;
+    const areaUsuarioId = usuarioLogueado?.area_id || '';
 
-      const res = await fetchAuth(endpoint);
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = tipo === 'excel' ? 'Plan_Anual_Compras_Consolidado.xlsx' : 'Plan_Anual_Compras_Consolidado.pdf';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-      } else {
-        Swal.fire('Error', 'No se pudo generar el consolidado.', 'error');
+    try {
+      const resAreas = await fetchAuth(`/plan-compras/areas?dependencia_id=${depId}`);
+      const areasList = resAreas.ok ? await resAreas.json() : [];
+
+      let optionsHtml = '<option value="">-- TODAS LAS ÁREAS DE LA UOC --</option>';
+      if (Array.isArray(areasList)) {
+        areasList.forEach(a => {
+          const idArea = a.id || a.area_id;
+          const esSeleccionado = String(idArea) === String(areaUsuarioId) ? 'selected' : '';
+          optionsHtml += `<option value="${idArea}" ${esSeleccionado}>${a.nombre}</option>`;
+        });
       }
+
+      const { value: areaSeleccionadaId, dismiss } = await Swal.fire({
+        title: `Exportar Consolidado UOC (${tipoFormato.toUpperCase()})`,
+        html: `
+          <p style="font-size: 0.95rem; color: #475569; margin-bottom: 15px;">
+            UOC Detectada (ID: <b>${depId}</b>). Seleccione el área a exportar (por defecto se sugiere su área actual):
+          </p>
+          <select id="swal-select-area" class="swal2-input" style="width: 85%; margin: 0 auto;">
+            ${optionsHtml}
+          </select>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: `Sí, descargar ${tipoFormato.toUpperCase()}`,
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0284c7',
+        cancelButtonColor: '#64748b',
+        preConfirm: () => {
+          return document.getElementById('swal-select-area').value;
+        }
+      });
+
+      if (dismiss === Swal.DismissReason.cancel) return;
+
+      Swal.fire({
+        title: 'Generando reporte...',
+        html: `Procesando solicitudes de la UOC (${tipoFormato.toUpperCase()})...`,
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const endpoint = tipoFormato === 'pdf' ? 'exportar/dependencia/pdf' : 'exportar/dependencia';
+      let urlQuery = `${endpoint}?dependencia_id=${depId}`;
+      if (areaSeleccionadaId) {
+        urlQuery += `&area_id=${areaSeleccionadaId}`;
+      }
+
+      const response = await fetchAuth(`/plan-compras/${urlQuery}`);
+      if (!response.ok) throw new Error('Error al generar el archivo.');
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `Consolidado_UOC_${depId}.${tipoFormato === 'pdf' ? 'pdf' : 'xlsx'}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      Swal.close();
+      Swal.fire({
+        icon: 'success',
+        title: '¡Reporte Generado!',
+        text: `El reporte se descargó correctamente.`,
+        timer: 2500,
+        showConfirmButton: false
+      });
+
     } catch (err) {
-      Swal.fire('Error', 'Error de conexión con el servidor.', 'error');
-    } finally {
-      setExportingConsolidado(null);
+      console.error('Error al exportar UOC:', err);
+      Swal.fire('Error', 'No se pudo generar el reporte consolidado de la UOC.', 'error');
+    }
+  };
+
+  // 🎯 2. Exportar Consolidado Universidad (Seguro con fetchAuth y Blob)
+  const handleExportarConsolidadoUniversidad = async (tipoFormato = 'excel') => {
+    const result = await Swal.fire({
+      title: `¿Confirmar descarga global (${tipoFormato.toUpperCase()})?`,
+      text: 'Está a punto de exportar el Plan Anual de Compras consolidado de toda la Universidad (Todas las UOCs aprobadas).',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: `Sí, exportar ${tipoFormato.toUpperCase()}`,
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#0284c7',
+      cancelButtonColor: '#64748b'
+    });
+
+    if (!result.isConfirmed) return;
+
+    Swal.fire({
+      title: 'Generando consolidado global...',
+      html: `Calculando totales y agrupando por rubro (${tipoFormato.toUpperCase()}) para toda la UNNE.`,
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    try {
+      const endpoint = tipoFormato === 'pdf' ? 'exportar/universidad/pdf' : 'exportar/universidad';
+      const response = await fetchAuth(`/plan-compras/${endpoint}`);
+      if (!response.ok) throw new Error('Error al generar el consolidado global.');
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `Consolidado_Universidad.${tipoFormato === 'pdf' ? 'pdf' : 'xlsx'}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      Swal.close();
+      Swal.fire({
+        icon: 'success',
+        title: '¡Descarga Exitosa!',
+        text: `El reporte consolidado general de la Universidad ha sido generado.`,
+        timer: 2500,
+        showConfirmButton: false
+      });
+
+    } catch (err) {
+      console.error('Error al exportar Universidad:', err);
+      Swal.fire('Error', 'Ocurrió un error al generar el consolidado de la universidad.', 'error');
     }
   };
 
@@ -230,18 +342,64 @@ const Pendientes = () => {
           </p>
         </div>
 
-        {/* Acciones de Consolidación */}
-        <div className="d-flex align-items-center gap-2 flex-wrap">
+        {/* 🎯 BOTONES DE EXPORTACIÓN MASIVA CON MÁRGENES Y OPCIONES UOC / UNIVERSIDAD */}
+        <div className="d-flex align-items-center gap-3 flex-wrap mt-2 mt-md-0">
           {esAutorizanteUoc && (
-            <div className="uoc-badge-container d-flex align-items-center gap-2 p-2 px-3 rounded me-2">
-              <Building2 size={16} />
-              <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>
-                UOC: {usuarioLogueado?.dependencia || 'Mi Dependencia'}
-              </span>
+            <div className="d-flex align-items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                className="btn-tupi btn-tupi-excel"
+                onClick={() => handleExportarConsolidadoUOC('excel')}
+                title="Descargar Excel Aprobadas UOC"
+              >
+                <FileSpreadsheet size={15} />
+                <span>Excel UOC</span>
+              </button>
+              <button
+                type="button"
+                className="btn-tupi btn-tupi-pdf"
+                onClick={() => handleExportarConsolidadoUOC('pdf')}
+                title="Descargar PDF Aprobadas UOC"
+              >
+                <FileText size={15} />
+                <span>PDF UOC</span>
+              </button>
             </div>
           )}
 
-          
+          {esAdminGeneral && (
+            <div className="d-flex align-items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                className="btn-tupi btn-tupi-excel me-1"
+                onClick={() => handleExportarConsolidadoUOC('excel')}
+                title="Seleccionar área y descargar Excel UOC"
+              >
+                <FileSpreadsheet size={15} />
+                <span>Excel UOC</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-tupi btn-tupi-primario"
+                onClick={() => handleExportarConsolidadoUniversidad('excel')}
+                title="Consolidado Excel Universidad"
+              >
+                <Download size={15} />
+                <span>Excel Universidad</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-tupi btn-tupi-pdf"
+                onClick={() => handleExportarConsolidadoUniversidad('pdf')}
+                title="Consolidado PDF Universidad"
+              >
+                <FileText size={15} />
+                <span>PDF Universidad</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -393,7 +551,6 @@ const Pendientes = () => {
                       </span>
                     </div>
 
-                    {/* 🎯 Botonera Centrada con PDF, Excel y Evaluar */}
                     <div className="solicitud-actions-group">
                       {sol.estado === 'APROBADA' && (
                         <div className="download-inline-buttons">

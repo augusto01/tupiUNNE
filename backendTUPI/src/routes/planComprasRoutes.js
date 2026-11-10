@@ -4,7 +4,7 @@ import auth from '../middlewares/authMiddleware.js';
 import { 
   getEstadoPlan, 
   getRubros, 
-  getAreas, // 👈 Nueva función importada
+  getAreas, 
   getBienesPorRubro, 
   crearSolicitud, 
   getHistorialSolicitudes, 
@@ -13,12 +13,16 @@ import {
   evaluarSolicitud,
   deleteSolicitud,
   descargarPDFSolicitud,
-  descargarExcelSolicitud
+  descargarExcelSolicitud,
+  exportarExcelUniversidad,
+  exportarExcelDependencia,
+  exportarPdfUniversidad,
+  exportarPdfDependencia
 } from '../controllers/PlanComprasController.js';
 
 const router = express.Router();
 
-//  Aplicación global del middleware de autenticación
+// Aplicación global del middleware de autenticación
 router.use(auth);
 
 // --- Rutas del Usuario Solicitante ---
@@ -35,10 +39,14 @@ router.delete('/solicitudes/:id', deleteSolicitud);
 router.get('/solicitudes-pendientes', getSolicitudesPendientes);
 router.post('/solicitudes/:id/evaluar', evaluarSolicitud);
 
-// --- Exportaciones ---
+// --- Exportaciones individuales ---
 router.get('/solicitudes/:id/pdf', descargarPDFSolicitud);
 router.get('/solicitudes/:id/excel', descargarExcelSolicitud);
 
-
+// --- Rutas de exportación masiva (Utilizan el middleware 'auth' aplicado globalmente arriba) ---
+router.get('/exportar/universidad', exportarExcelUniversidad);
+router.get('/exportar/dependencia', exportarExcelDependencia);
+router.get('/exportar/universidad/pdf', exportarPdfUniversidad);
+router.get('/exportar/dependencia/pdf', exportarPdfDependencia);
 
 export default router;

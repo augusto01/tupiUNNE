@@ -3,7 +3,7 @@ import ExcelJS from 'exceljs';
 const formatCurrency = (val) => parseFloat(val || 0);
 
 /**
- * 1. Genera el Excel de una SOLA solicitud
+ * 1. Genera el Excel de una SOLA solicitud con subtotales por rubro y autofiltros desplegables
  */
 export const generarExcelSolicitud = async (res, solicitud, renglones) => {
   const workbook = new ExcelJS.Workbook();
@@ -11,7 +11,7 @@ export const generarExcelSolicitud = async (res, solicitud, renglones) => {
   
   const worksheet = workbook.addWorksheet(`Solicitud #${solicitud.id}`);
 
-  // Encabezado Institucional
+  // Título Principal
   worksheet.mergeCells('A1:J1');
   const titleCell = worksheet.getCell('A1');
   titleCell.value = 'UNIVERSIDAD NACIONAL DEL NORDESTE - PLAN ANUAL DE COMPRAS';
@@ -21,28 +21,26 @@ export const generarExcelSolicitud = async (res, solicitud, renglones) => {
   worksheet.getRow(1).height = 30;
 
   worksheet.addRow([]);
-  worksheet.addRow(['N° Solicitud:', solicitud.id, '', 'Fecha Emisión:', solicitud.fecha_creacion ? new Date(solicitud.fecha_creacion).toLocaleDateString('es-AR') : 'N/A']);
-  worksheet.addRow(['Solicitante:', `${solicitud.usuario_nombre || ''} ${solicitud.usuario_apellido || ''}`, '', 'Convocatoria:', solicitud.nro_convocatoria || 'CDC:2026/01']);
-  worksheet.addRow(['Área Origen:', solicitud.area_nombre || 'Sin Área Asignada', '', 'UOC / Dependencia:', solicitud.dependencia_nombre || 'Rectorado UNNE']);
-  worksheet.addRow(['Autorizado por:', solicitud.admin_nombre ? `${solicitud.admin_nombre} ${solicitud.admin_apellido}` : 'Pendiente / Sistema', '', 'Estado:', solicitud.estado]);
+
+  // Bloque de metadatos con fondo amarillo claro institucional
+  const r1 = worksheet.addRow(['N° Solicitud:', solicitud.id, '', '', 'Fecha Emisión:', solicitud.fecha_creacion ? new Date(solicitud.fecha_creacion).toLocaleDateString('es-AR') : 'N/A']);
+  const r2 = worksheet.addRow(['Solicitante:', `${solicitud.usuario_nombre || ''} ${solicitud.usuario_apellido || ''}`, '', '', 'Convocatoria:', solicitud.nro_convocatoria || 'CDC:2026/01']);
+  const r3 = worksheet.addRow(['Área Origen:', solicitud.area_nombre || 'Sin Área Asignada', '', '', 'UOC / Dependencia:', solicitud.dependencia_nombre || 'Rectorado']);
+  const r4 = worksheet.addRow(['Autorizado por:', solicitud.admin_nombre ? `${solicitud.admin_nombre} ${solicitud.admin_apellido}` : 'Pendiente / Sistema', '', '', 'Estado:', solicitud.estado]);
+
+  [r1, r2, r3, r4].forEach((row) => {
+    row.getCell(1).font = { bold: true };
+    row.getCell(5).font = { bold: true };
+    row.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF08A' } };
+    });
+  });
+
   worksheet.addRow([]);
 
-  for (let r = 3; r <= 6; r++) {
-    worksheet.getCell(`A${r}`).font = { bold: true };
-    worksheet.getCell(`D${r}`).font = { bold: true };
-  }
-
   const headerRow = worksheet.addRow([
-    'Rubro',
-    'Inciso',
-    'Partida Principal',
-    'Partida Parcial',
-    'Bien / Descripción',
-    'Trimestre',
-    'Cantidad',
-    'Precio Unit. ($)',
-    'Subtotal ($)',
-    'Observación'
+    'Rubro', 'Inciso', 'Partida Principal', 'Partida Parcial',
+    'Bien / Descripción', 'Trimestre', 'Cantidad', 'Precio Unit. ($)', 'Subtotal ($)', 'Observación'
   ]);
   
   headerRow.eachCell((cell) => {
@@ -51,8 +49,11 @@ export const generarExcelSolicitud = async (res, solicitud, renglones) => {
     cell.alignment = { horizontal: 'center', vertical: 'middle' };
   });
 
+  // 🎯 Activación de autofiltro desplegable en la cabecera
+  worksheet.autoFilter = `A${headerRow.number}:J${headerRow.number}`;
+
   const renglonesOrdenados = [...renglones].sort((a, b) => {
-    const rubroA = (a.rubro_nombre || a.rubro || '').localeCompare(b.rubro_nombre || b.rubro || '');
+    const rubroA = (a.rubro_nombre || a.rubro || 'SIN RUBRO').localeCompare(b.rubro_nombre || b.rubro || 'SIN RUBRO');
     if (rubroA !== 0) return rubroA;
     const incisoA = (a.inciso || '').localeCompare(b.inciso || '');
     if (incisoA !== 0) return incisoA;
@@ -62,15 +63,41 @@ export const generarExcelSolicitud = async (res, solicitud, renglones) => {
   });
 
   let granTotal = 0;
+  let rubroActual = null;
+  let subtotalRubro = 0;
 
-  renglonesOrdenados.forEach((item) => {
+  const insertarSubtotalRubro = (nombreRubro, montoSubtotal) => {
+    const subRow = worksheet.addRow(['', '', '', `SUBTOTAL ${nombreRubro}:`, '', '', '', '', montoSubtotal, '']);
+    worksheet.mergeCells(`D${subRow.number}:H${subRow.number}`);
+    
+    subRow.getCell(4).font = { bold: true, color: { argb: 'FF0369A1' } };
+    subRow.getCell(4).alignment = { horizontal: 'right' };
+    subRow.getCell(9).font = { bold: true, color: { argb: 'FF0369A1' } };
+    subRow.getCell(9).numFmt = '$#,##0.00';
+    
+    subRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+    });
+    worksheet.addRow();
+  };
+
+  renglonesOrdenados.forEach((item, index) => {
+    const nombreRubro = item.rubro_nombre || item.rubro || 'SIN RUBRO';
     const cant = parseInt(item.cantidad, 10) || 1;
     const precio = formatCurrency(item.precio_unitario);
     const subtotal = cant * precio;
+
+    if (rubroActual !== null && rubroActual !== nombreRubro) {
+      insertarSubtotalRubro(rubroActual, subtotalRubro);
+      subtotalRubro = 0;
+    }
+
+    rubroActual = nombreRubro;
+    subtotalRubro += subtotal;
     granTotal += subtotal;
 
     const row = worksheet.addRow([
-      item.rubro_nombre || item.rubro || 'N/A',
+      nombreRubro,
       item.inciso || 'N/A',
       item.partida_principal || 'N/A',
       item.partida_parcial || 'N/A',
@@ -85,6 +112,10 @@ export const generarExcelSolicitud = async (res, solicitud, renglones) => {
     row.getCell(7).alignment = { horizontal: 'center' };
     row.getCell(8).numFmt = '$#,##0.00';
     row.getCell(9).numFmt = '$#,##0.00';
+
+    if (index === renglonesOrdenados.length - 1) {
+      insertarSubtotalRubro(rubroActual, subtotalRubro);
+    }
   });
 
   worksheet.addRow([]);
@@ -106,110 +137,162 @@ export const generarExcelSolicitud = async (res, solicitud, renglones) => {
 };
 
 /**
- * 2. Genera el Excel CONSOLIDADO con separadores claros entre solicitudes
+ * 2. Genera el Excel CONSOLIDADO con autofiltros desplegables en cada tabla de solicitud
  */
-export const generarExcelConsolidado = async (res, solicitudesConDetalle) => {
+export const generarExcelConsolidado = async (res, solicitudesConDetalle, tituloReporte = 'REPORTE CONSOLIDADO - PLAN ANUAL DE COMPRAS') => {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Sistema TUPI - UNNE';
 
   const worksheet = workbook.addWorksheet('Plan Anual Consolidado');
 
-  worksheet.mergeCells('A1:M1');
+  // Título Principal Global
+  worksheet.mergeCells('A1:J1');
   const titleCell = worksheet.getCell('A1');
-  titleCell.value = 'REPORTE CONSOLIDADO DE SOLICITUDES - PLAN ANUAL DE COMPRAS UNNE';
+  titleCell.value = tituloReporte.toUpperCase();
   titleCell.font = { name: 'Arial', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
   titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
   titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
   worksheet.getRow(1).height = 30;
 
-  const headerRow = worksheet.addRow([
-    'ID Sol.',
-    'Fecha',
-    'Área Origen',
-    'Autorizado por',
-    'Rubro',
-    'Inciso',
-    'Partida Principal',
-    'Partida Parcial',
-    'Bien / Descripción',
-    'Trimestre',
-    'Cant.',
-    'Precio Unit. ($)',
-    'Subtotal ($)'
-  ]);
-
-  headerRow.eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0284C7' } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-  });
-
   let granTotalGeneral = 0;
 
-  solicitudesConDetalle.forEach(({ solicitud, renglones }, index) => {
-    const autorizante = solicitud.admin_nombre ? `${solicitud.admin_nombre} ${solicitud.admin_apellido}` : 'Pendiente';
+  solicitudesConDetalle.forEach(({ solicitud, renglones }, solIndex) => {
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+
+    // 📋 Bloque de Encabezado en Amarillo Claro por cada Solicitud
+    const r1 = worksheet.addRow(['N° Solicitud:', solicitud.id, '', '', 'Fecha Emisión:', solicitud.fecha_creacion ? new Date(solicitud.fecha_creacion).toLocaleDateString('es-AR') : 'N/A']);
+    const r2 = worksheet.addRow(['Solicitante:', `${solicitud.usuario_nombre || ''} ${solicitud.usuario_apellido || ''}`, '', '', 'Convocatoria:', solicitud.nro_convocatoria || 'CDC:2026/01']);
+    const r3 = worksheet.addRow(['Área Origen:', solicitud.area_nombre || 'Sin Área Asignada', '', '', 'UOC / Dependencia:', solicitud.dependencia_nombre || 'Rectorado']);
+    const r4 = worksheet.addRow(['Autorizado por:', solicitud.admin_nombre ? `${solicitud.admin_nombre} ${solicitud.admin_apellido}` : 'Pendiente / Sistema', '', '', 'Estado:', solicitud.estado]);
+
+    [r1, r2, r3, r4].forEach((row) => {
+      row.getCell(1).font = { bold: true };
+      row.getCell(5).font = { bold: true };
+      row.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF08A' } };
+      });
+    });
+
+    worksheet.addRow([]);
+
+    // Cabecera de la tabla de renglones
+    const headerRow = worksheet.addRow([
+      'Rubro', 'Inciso', 'Partida Principal', 'Partida Parcial',
+      'Bien / Descripción', 'Trimestre', 'Cantidad', 'Precio Unit. ($)', 'Subtotal ($)', 'Observación'
+    ]);
     
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0284C7' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+
+    // 🎯 Habilitar los filtros desplegables automáticos (Dropdowns) en Excel
+    worksheet.autoFilter = `A${headerRow.number}:J${headerRow.number}`;
+
     const renglonesOrdenados = [...renglones].sort((a, b) => {
-      const rubA = (a.rubro_nombre || a.rubro || '').localeCompare(b.rubro_nombre || b.rubro || '');
-      if (rubA !== 0) return rubA;
-      const incA = (a.inciso || '').localeCompare(b.inciso || '');
-      if (incA !== 0) return incA;
+      const rubroA = (a.rubro_nombre || a.rubro || 'SIN RUBRO').localeCompare(b.rubro_nombre || b.rubro || 'SIN RUBRO');
+      if (rubroA !== 0) return rubroA;
+      const incisoA = (a.inciso || '').localeCompare(b.inciso || '');
+      if (incisoA !== 0) return incisoA;
       const ppA = (a.partida_principal || '').localeCompare(b.partida_principal || '');
       if (ppA !== 0) return ppA;
       return (a.partida_parcial || '').localeCompare(b.partida_parcial || '');
     });
 
-    renglonesOrdenados.forEach((r) => {
-      const cant = parseInt(r.cantidad, 10) || 1;
-      const precio = formatCurrency(r.precio_unitario);
+    let rubroActual = null;
+    let subtotalRubro = 0;
+    let totalSolicitud = 0;
+
+    const insertarSubtotalRubroConsolidado = (nombreRubro, montoSubtotal) => {
+      const subRow = worksheet.addRow(['', '', '', `SUBTOTAL ${nombreRubro}:`, '', '', '', '', montoSubtotal, '']);
+      worksheet.mergeCells(`D${subRow.number}:H${subRow.number}`);
+      
+      subRow.getCell(4).font = { bold: true, color: { argb: 'FF0369A1' } };
+      subRow.getCell(4).alignment = { horizontal: 'right' };
+      subRow.getCell(9).font = { bold: true, color: { argb: 'FF0369A1' } };
+      subRow.getCell(9).numFmt = '$#,##0.00';
+      
+      subRow.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0F2FE' } };
+      });
+      worksheet.addRow();
+    };
+
+    renglonesOrdenados.forEach((item, index) => {
+      const nombreRubro = item.rubro_nombre || item.rubro || 'SIN RUBRO';
+      const cant = parseInt(item.cantidad, 10) || 1;
+      const precio = formatCurrency(item.precio_unitario);
       const subtotal = cant * precio;
+
+      if (rubroActual !== null && rubroActual !== nombreRubro) {
+        insertarSubtotalRubroConsolidado(rubroActual, subtotalRubro);
+        subtotalRubro = 0;
+      }
+
+      rubroActual = nombreRubro;
+      subtotalRubro += subtotal;
+      totalSolicitud += subtotal;
       granTotalGeneral += subtotal;
 
       const row = worksheet.addRow([
-        solicitud.id,
-        solicitud.fecha_creacion ? new Date(solicitud.fecha_creacion).toLocaleDateString('es-AR') : '',
-        solicitud.area_nombre || 'Sin Área',
-        autorizante,
-        r.rubro_nombre || r.rubro || 'N/A',
-        r.inciso || 'N/A',
-        r.partida_principal || 'N/A',
-        r.partida_parcial || 'N/A',
-        r.bien_descripcion || r.descripcion,
-        r.trimestre || '1ER TRIMESTRE',
+        nombreRubro,
+        item.inciso || 'N/A',
+        item.partida_principal || 'N/A',
+        item.partida_parcial || 'N/A',
+        item.bien_descripcion || item.descripcion,
+        item.trimestre || '1ER TRIMESTRE',
         cant,
         precio,
-        subtotal
+        subtotal,
+        item.observacion || ''
       ]);
 
-      row.getCell(11).alignment = { horizontal: 'center' };
-      row.getCell(12).numFmt = '$#,##0.00';
-      row.getCell(13).numFmt = '$#,##0.00';
+      row.getCell(7).alignment = { horizontal: 'center' };
+      row.getCell(8).numFmt = '$#,##0.00';
+      row.getCell(9).numFmt = '$#,##0.00';
+
+      if (index === renglonesOrdenados.length - 1) {
+        insertarSubtotalRubroConsolidado(rubroActual, subtotalRubro);
+      }
     });
 
-    if (index < solicitudesConDetalle.length - 1) {
-      const separatorRow = worksheet.addRow([`--- Fin Solicitud #${solicitud.id} ---`]);
-      worksheet.mergeCells(`A${separatorRow.number}:M${separatorRow.number}`);
-      separatorRow.getCell(1).font = { italic: true, size: 9, color: { argb: 'FF64748B' } };
+    // 💵 Total General de esta Solicitud Individual
+    const filaTotalSol = worksheet.addRow(['', '', '', '', '', '', '', `TOTAL SOLICITUD #${solicitud.id}:`, totalSolicitud, '']);
+    filaTotalSol.getCell(8).font = { bold: true, size: 10 };
+    filaTotalSol.getCell(9).font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+    filaTotalSol.getCell(9).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0284C7' } };
+    filaTotalSol.getCell(9).numFmt = '$#,##0.00';
+
+    // 🎨 Franja / Separador visual entre solicitud y solicitud
+    if (solIndex < solicitudesConDetalle.length - 1) {
+      worksheet.addRow([]);
+      const separatorRow = worksheet.addRow([`--- FIN DE SOLICITUD #${solicitud.id} ---`]);
+      worksheet.mergeCells(`A${separatorRow.number}:J${separatorRow.number}`);
+      separatorRow.getCell(1).font = { italic: true, bold: true, size: 9, color: { argb: 'FF475569' } };
       separatorRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
       separatorRow.getCell(1).alignment = { horizontal: 'center' };
     }
   });
 
   worksheet.addRow([]);
-  const filaTotal = worksheet.addRow(['', '', '', '', '', '', '', '', '', '', '', 'TOTAL GENERAL:', granTotalGeneral]);
-  filaTotal.getCell(12).font = { bold: true, size: 11 };
-  filaTotal.getCell(13).font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
-  filaTotal.getCell(13).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0369A1' } };
-  filaTotal.getCell(13).numFmt = '$#,##0.00';
+  worksheet.addRow([]);
+
+  // 💰 Gran Total General de todo el reporte
+  const filaGranTotal = worksheet.addRow(['', '', '', '', '', '', '', 'GRAN TOTAL GENERAL:', granTotalGeneral, '']);
+  filaGranTotal.getCell(8).font = { bold: true, size: 11 };
+  filaGranTotal.getCell(9).font = { bold: true, size: 12, color: { argb: 'FFFFFFFF' } };
+  filaGranTotal.getCell(9).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0369A1' } };
+  filaGranTotal.getCell(9).numFmt = '$#,##0.00';
 
   worksheet.columns = [
-    { width: 10 }, { width: 12 }, { width: 25 }, { width: 22 }, { width: 25 },
-    { width: 18 }, { width: 20 }, { width: 22 }, { width: 35 }, { width: 16 },
-    { width: 10 }, { width: 16 }, { width: 18 }
+    { width: 25 }, { width: 22 }, { width: 25 }, { width: 28 }, { width: 35 },
+    { width: 16 }, { width: 10 }, { width: 16 }, { width: 18 }, { width: 30 }
   ];
 
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', 'attachment; filename="Plan_Anual_Compras_Consolidado.xlsx"');
+  res.setHeader('Content-Disposition', `attachment; filename="Plan_Anual_Compras_Consolidado.xlsx"`);
   await workbook.xlsx.write(res);
   res.end();
 };
