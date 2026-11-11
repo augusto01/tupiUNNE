@@ -3,7 +3,7 @@ import ExcelJS from 'exceljs';
 const formatCurrency = (val) => parseFloat(val || 0);
 
 /**
- * 1. Genera el Excel de una SOLA solicitud con subtotales por rubro y autofiltros desplegables
+ * 1. Genera el Excel de una SOLA solicitud con subtotales por rubro y formato completo
  */
 export const generarExcelSolicitud = async (res, solicitud, renglones) => {
   const workbook = new ExcelJS.Workbook();
@@ -22,18 +22,19 @@ export const generarExcelSolicitud = async (res, solicitud, renglones) => {
 
   worksheet.addRow([]);
 
-  // Bloque de metadatos con fondo amarillo claro institucional
-  const r1 = worksheet.addRow(['N° Solicitud:', solicitud.id, '', '', 'Fecha Emisión:', solicitud.fecha_creacion ? new Date(solicitud.fecha_creacion).toLocaleDateString('es-AR') : 'N/A']);
-  const r2 = worksheet.addRow(['Solicitante:', `${solicitud.usuario_nombre || ''} ${solicitud.usuario_apellido || ''}`, '', '', 'Convocatoria:', solicitud.nro_convocatoria || 'CDC:2026/01']);
-  const r3 = worksheet.addRow(['Área Origen:', solicitud.area_nombre || 'Sin Área Asignada', '', '', 'UOC / Dependencia:', solicitud.dependencia_nombre || 'Rectorado']);
-  const r4 = worksheet.addRow(['Autorizado por:', solicitud.admin_nombre ? `${solicitud.admin_nombre} ${solicitud.admin_apellido}` : 'Pendiente / Sistema', '', '', 'Estado:', solicitud.estado]);
+  // Bloque de metadatos con fondo amarillo institucional extendido de A hasta J
+  const r1 = worksheet.addRow(['N° Solicitud:', solicitud.id, '', '', 'Fecha Emisión:', solicitud.fecha_creacion ? new Date(solicitud.fecha_creacion).toLocaleDateString('es-AR') : 'N/A', '', '', '', '']);
+  const r2 = worksheet.addRow(['Solicitante:', `${solicitud.usuario_nombre || ''} ${solicitud.usuario_apellido || ''}`, '', '', 'Convocatoria:', solicitud.nro_convocatoria || 'CDC:2026/01', '', '', '', '']);
+  const r3 = worksheet.addRow(['Área Origen:', solicitud.area_nombre || 'Sin Área Asignada', '', '', 'UOC / Dependencia:', solicitud.dependencia_nombre || 'Rectorado', '', '', '', '']);
+  const r4 = worksheet.addRow(['Autorizado por:', solicitud.admin_nombre ? `${solicitud.admin_nombre} ${solicitud.admin_apellido}` : 'Pendiente / Sistema', '', '', 'Estado:', solicitud.estado, '', '', '', '']);
 
   [r1, r2, r3, r4].forEach((row) => {
     row.getCell(1).font = { bold: true };
     row.getCell(5).font = { bold: true };
-    row.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF08A' } };
-    });
+    // Asegurar fondo amarillo desde col A hasta J
+    for (let col = 1; col <= 10; col++) {
+      row.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF08A' } };
+    }
   });
 
   worksheet.addRow([]);
@@ -49,7 +50,6 @@ export const generarExcelSolicitud = async (res, solicitud, renglones) => {
     cell.alignment = { horizontal: 'center', vertical: 'middle' };
   });
 
-  // 🎯 Activación de autofiltro desplegable en la cabecera
   worksheet.autoFilter = `A${headerRow.number}:J${headerRow.number}`;
 
   const renglonesOrdenados = [...renglones].sort((a, b) => {
@@ -137,7 +137,7 @@ export const generarExcelSolicitud = async (res, solicitud, renglones) => {
 };
 
 /**
- * 2. Genera el Excel CONSOLIDADO con autofiltros desplegables en cada tabla de solicitud
+ * 2. Genera el Excel CONSOLIDADO con Panel de Filtros Superior y Encabezados Amarillos Completos (A-J)
  */
 export const generarExcelConsolidado = async (res, solicitudesConDetalle, tituloReporte = 'REPORTE CONSOLIDADO - PLAN ANUAL DE COMPRAS') => {
   const workbook = new ExcelJS.Workbook();
@@ -154,24 +154,68 @@ export const generarExcelConsolidado = async (res, solicitudesConDetalle, titulo
   titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
   worksheet.getRow(1).height = 30;
 
+  worksheet.addRow([]);
+
+  // 🎛️ PANEL DE FILTROS Y SELECCIÓN SUPERIOR CON DROPDOWNS
+  const panelTitle = worksheet.addRow(['PANEL DE FILTRADO RÁPIDO Y SELECCIÓN']);
+  worksheet.mergeCells(`A${panelTitle.number}:J${panelTitle.number}`);
+  panelTitle.getCell(1).font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
+  panelTitle.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } };
+  panelTitle.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+
+  // Extraer listas únicas para los dropdowns
+  const listaSolicitudes = [...new Set(solicitudesConDetalle.map(s => String(s.solicitud.id)))].join(',');
+  const listaAreas = [...new Set(solicitudesConDetalle.map(s => s.solicitud.area_nombre || 'Sin Área'))].join(',');
+  const listaAutorizantes = [...new Set(solicitudesConDetalle.map(s => s.solicitud.admin_nombre ? `${s.solicitud.admin_nombre} ${s.solicitud.admin_apellido}` : 'Sistema'))].join(',');
+
+  const f1 = worksheet.addRow(['Filtrar N° Solicitud:', '', 'Filtrar Área:', '', 'Filtrar Autorizado por:', '', '', '', '', '']);
+  const f2 = worksheet.addRow(['[Seleccione o escriba]', '', '[Seleccione o escriba]', '', '[Seleccione o escriba]', '', '', '', '', '']);
+
+  [f1, f2].forEach((row) => {
+    for (let c = 1; c <= 10; c++) {
+      row.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+      row.getCell(c).border = { top: { style: 'thin', color: { argb: 'FFCBD5E1' } }, bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } } };
+    }
+  });
+
+  // Aplicar validaciones de datos (Dropdowns) en las celdas de selección superior
+  worksheet.dataValidations.add('B3', {
+    type: 'list',
+    allowBlank: true,
+    formulae: [`"${listaSolicitudes}"`]
+  });
+
+  worksheet.dataValidations.add('D3', {
+    type: 'list',
+    allowBlank: true,
+    formulae: [`"${listaAreas}"`]
+  });
+
+  worksheet.dataValidations.add('F3', {
+    type: 'list',
+    allowBlank: true,
+    formulae: [`"${listaAutorizantes}"`]
+  });
+
+  worksheet.addRow([]);
+  worksheet.addRow([]);
+
   let granTotalGeneral = 0;
 
   solicitudesConDetalle.forEach(({ solicitud, renglones }, solIndex) => {
-    worksheet.addRow([]);
-    worksheet.addRow([]);
-
-    // 📋 Bloque de Encabezado en Amarillo Claro por cada Solicitud
-    const r1 = worksheet.addRow(['N° Solicitud:', solicitud.id, '', '', 'Fecha Emisión:', solicitud.fecha_creacion ? new Date(solicitud.fecha_creacion).toLocaleDateString('es-AR') : 'N/A']);
-    const r2 = worksheet.addRow(['Solicitante:', `${solicitud.usuario_nombre || ''} ${solicitud.usuario_apellido || ''}`, '', '', 'Convocatoria:', solicitud.nro_convocatoria || 'CDC:2026/01']);
-    const r3 = worksheet.addRow(['Área Origen:', solicitud.area_nombre || 'Sin Área Asignada', '', '', 'UOC / Dependencia:', solicitud.dependencia_nombre || 'Rectorado']);
-    const r4 = worksheet.addRow(['Autorizado por:', solicitud.admin_nombre ? `${solicitud.admin_nombre} ${solicitud.admin_apellido}` : 'Pendiente / Sistema', '', '', 'Estado:', solicitud.estado]);
+    // 📋 Bloque de Encabezado en Amarillo Claro extendido de la columna A hasta la J
+    const r1 = worksheet.addRow(['N° Solicitud:', solicitud.id, '', '', 'Fecha Emisión:', solicitud.fecha_creacion ? new Date(solicitud.fecha_creacion).toLocaleDateString('es-AR') : 'N/A', '', '', '', '']);
+    const r2 = worksheet.addRow(['Solicitante:', `${solicitud.usuario_nombre || ''} ${solicitud.usuario_apellido || ''}`, '', '', 'Convocatoria:', solicitud.nro_convocatoria || 'CDC:2026/01', '', '', '', '']);
+    const r3 = worksheet.addRow(['Área Origen:', solicitud.area_nombre || 'Sin Área Asignada', '', '', 'UOC / Dependencia:', solicitud.dependencia_nombre || 'Rectorado', '', '', '', '']);
+    const r4 = worksheet.addRow(['Autorizado por:', solicitud.admin_nombre ? `${solicitud.admin_nombre} ${solicitud.admin_apellido}` : 'Pendiente / Sistema', '', '', 'Estado:', solicitud.estado, '', '', '', '']);
 
     [r1, r2, r3, r4].forEach((row) => {
       row.getCell(1).font = { bold: true };
       row.getCell(5).font = { bold: true };
-      row.eachCell((cell) => {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF08A' } };
-      });
+      // Rellenar de amarillo toda la fila desde la columna 1 (A) hasta la 10 (J)
+      for (let col = 1; col <= 10; col++) {
+        row.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF08A' } };
+      }
     });
 
     worksheet.addRow([]);
@@ -188,7 +232,7 @@ export const generarExcelConsolidado = async (res, solicitudesConDetalle, titulo
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
     });
 
-    // 🎯 Habilitar los filtros desplegables automáticos (Dropdowns) en Excel
+    // 🎯 Habilitar los filtros desplegables automáticos (Dropdowns) de Excel
     worksheet.autoFilter = `A${headerRow.number}:J${headerRow.number}`;
 
     const renglonesOrdenados = [...renglones].sort((a, b) => {

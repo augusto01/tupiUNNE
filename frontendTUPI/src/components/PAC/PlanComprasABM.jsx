@@ -164,7 +164,7 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
       });
       setSolicitudItems(itemsMap);
     } else {
-      setNroConvocatoria('CDC:2026/01');
+      setNroConvocatoria('000001');
       setObservacionGeneral('');
       setSolicitudItems({});
     }
@@ -481,7 +481,7 @@ const PlanComprasABM = ({ solicitudAEditar = null, onCancelarEdicion = null, onG
         <div className="card-body-padding">
           <div className="abm-form grid-datos-generales">
             <div className="form-group mb-0">
-              <label>Nro. Convocatoria / Ref. Interna</label>
+              <label>Referencia Interna</label>
               <input
                 type="text"
                 className="form-control"
